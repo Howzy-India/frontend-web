@@ -1,158 +1,119 @@
-export const api = {
-  async getProjects() {
-    const res = await fetch('/api/projects');
-    if (!res.ok) throw new Error('Failed to fetch projects');
-    return res.json();
-  },
-  
-  async getLeads() {
-    const res = await fetch('/api/leads');
-    if (!res.ok) throw new Error('Failed to fetch leads');
-    return res.json();
-  },
+import { getIdToken } from '../hooks/useAuth';
 
-  async createLead(leadData: any) {
-    const res = await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(leadData)
-    });
-    if (!res.ok) throw new Error('Failed to create lead');
-    return res.json();
-  },
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
-  async autoAssignLeads() {
-    const res = await fetch('/api/leads/auto-assign', {
-      method: 'POST'
-    });
-    if (!res.ok) throw new Error('Failed to auto-assign leads');
-    return res.json();
-  },
-
-  async getEarnings() {
-    const res = await fetch('/api/earnings');
-    if (!res.ok) throw new Error('Failed to fetch earnings');
-    return res.json();
-  },
-
-  async getSubmissions(email?: string) {
-    const url = email ? `/api/submissions?email=${encodeURIComponent(email)}` : '/api/submissions';
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Failed to fetch submissions');
-    return res.json();
-  },
-
-  async createSubmission(submissionData: any) {
-    const res = await fetch('/api/submissions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submissionData)
-    });
-    if (!res.ok) throw new Error('Failed to create submission');
-    return res.json();
-  },
-
-  async updateSubmissionStatus(id: string, status: string, remarks: string) {
-    const res = await fetch(`/api/submissions/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, remarks })
-    });
-    if (!res.ok) throw new Error('Failed to update submission status');
-    return res.json();
-  },
-
-  async getAdminEnquiries() {
-    const res = await fetch('/api/enquiries');
-    if (!res.ok) throw new Error('Failed to fetch enquiries');
-    return res.json();
-  },
-
-  async getSalesTeam() {
-    const res = await fetch('/api/admin/sales-team');
-    if (!res.ok) throw new Error('Failed to fetch sales team');
-    return res.json();
-  },
-
-  async getPartners() {
-    const res = await fetch('/api/admin/partners');
-    if (!res.ok) throw new Error('Failed to fetch partners');
-    return res.json();
-  },
-
-  async assignEnquiry(id: string, assignmentData: any) {
-    const res = await fetch(`/api/admin/enquiries/${id}/assign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(assignmentData),
-    });
-    if (!res.ok) throw new Error('Failed to assign enquiry');
-    return res.json();
-  },
-
-  async getEnquiryTimeline(id: string) {
-    const res = await fetch(`/api/enquiries/${id}/timeline`);
-    if (!res.ok) throw new Error('Failed to fetch timeline');
-    return res.json();
-  },
-
-  async getPilotAssignedEnquiries() {
-    const res = await fetch('/api/pilot/assigned-enquiries');
-    if (!res.ok) throw new Error('Failed to fetch assigned enquiries');
-    return res.json();
-  },
-
-  async getPartnerAssignedEnquiries() {
-    const res = await fetch('/api/partner/assigned-enquiries');
-    if (!res.ok) throw new Error('Failed to fetch assigned enquiries');
-    return res.json();
-  },
-
-  async createEnquiry(enquiryData: any) {
-    const res = await fetch('/api/enquiries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(enquiryData)
-    });
-    if (!res.ok) throw new Error('Failed to create enquiry');
-    return res.json();
-  },
-
-  async updateEnquiryStatus(id: number, status: string, priority?: string) {
-    const res = await fetch(`/api/enquiries/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, priority })
-    });
-    if (!res.ok) throw new Error('Failed to update enquiry status');
-    return res.json();
-  },
-
-  async getClientEnquiries(email: string) {
-    const res = await fetch(`/api/client/enquiries?email=${encodeURIComponent(email)}`);
-    if (!res.ok) throw new Error('Failed to fetch client enquiries');
-    return res.json();
-  },
-
-  async trackClientLogin(loginData: any) {
-    const res = await fetch('/api/client/login-track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginData)
-    });
-    if (!res.ok) throw new Error('Failed to track login');
-    return res.json();
-  },
-
-  async getClientLogins() {
-    const res = await fetch('/api/admin/client-logins');
-    if (!res.ok) throw new Error('Failed to fetch client logins');
-    return res.json();
-  },
-
-  async getClient360(email: string) {
-    const res = await fetch(`/api/admin/client-360/${encodeURIComponent(email)}`);
-    if (!res.ok) throw new Error('Failed to fetch client 360 view');
-    return res.json();
+async function authHeaders(): Promise<Record<string, string>> {
+  try {
+    const token = await getIdToken();
+    return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+  } catch {
+    return { 'Content-Type': 'application/json' };
   }
+}
+
+async function get<T>(path: string, authenticated = true): Promise<T> {
+  const headers = authenticated ? await authHeaders() : { 'Content-Type': 'application/json' };
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function post<T>(path: string, body: unknown, authenticated = true): Promise<T> {
+  const headers = authenticated ? await authHeaders() : { 'Content-Type': 'application/json' };
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function patch<T>(path: string, body: unknown): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export const api = {
+  // ── Projects ──────────────────────────────────────────────────────
+  getProjects: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return get<any>(`/projects${qs}`, false);
+  },
+  getProject: (id: string) => get<any>(`/projects/${id}`, false),
+  getPublicStats: () => get<any>('/public/stats', false),
+
+  // ── Leads ─────────────────────────────────────────────────────────
+  getLeads: () => get<any>('/leads'),
+  createLead: (data: any) => post<any>('/leads', data),
+  updateLead: (id: string, data: any) => patch<any>(`/leads/${id}`, data),
+  autoAssignLeads: () => post<any>('/leads/auto-assign', {}),
+
+  // ── Earnings ──────────────────────────────────────────────────────
+  getEarnings: () => get<any>('/earnings'),
+
+  // ── Submissions ───────────────────────────────────────────────────
+  getAdminSubmissions: (email?: string) => {
+    const qs = email ? `?email=${encodeURIComponent(email)}` : '';
+    return get<any>(`/submissions${qs}`);
+  },
+  getPartnerSubmissions: () => get<any>('/partner/submissions'),
+  createSubmission: (data: any) => post<any>('/submissions', data),
+  updateSubmissionStatus: (id: string, status: string, remarks: string) =>
+    patch<any>(`/submissions/${id}/status`, { status, remarks }),
+
+  // ── Enquiries ─────────────────────────────────────────────────────
+  getAdminEnquiries: () => get<any>('/enquiries'),
+  createEnquiry: (data: any) => post<any>('/enquiries', data, false),
+  updateEnquiryStatus: (id: string, status: string, priority?: string) =>
+    patch<any>(`/enquiries/${id}/status`, { status, priority }),
+  getEnquiryTimeline: (id: string) => get<any>(`/enquiries/${id}/timeline`),
+  assignEnquiry: (id: string, data: any) =>
+    post<any>(`/admin/enquiries/${id}/assign`, data),
+  updatePartnerEnquiryStatus: (id: string, status: string) =>
+    patch<any>(`/partner/enquiries/${id}/status`, { status }),
+
+  // ── Admin ─────────────────────────────────────────────────────────
+  getSalesTeam: () => get<any>('/admin/sales-team'),
+  getPartners: () => get<any>('/admin/partners'),
+  getClientLogins: () => get<any>('/admin/client-logins'),
+  getClient360: (email: string) =>
+    get<any>(`/admin/client-360/${encodeURIComponent(email)}`),
+
+  // ── Client ────────────────────────────────────────────────────────
+  getClientEnquiries: (email: string) =>
+    get<any>(`/client/enquiries?email=${encodeURIComponent(email)}`),
+  trackClientLogin: (data: any) => post<any>('/client/login-track', data, false),
+
+  // ── Pilot / Partner ───────────────────────────────────────────────
+  getPilotAssignedEnquiries: () => get<any>('/pilot/assigned-enquiries'),
+  getPartnerAssignedEnquiries: () => get<any>('/partner/assigned-enquiries'),
+
+  // ── Attendance ────────────────────────────────────────────────────
+  punchIn: (data: { photo?: string; location?: { lat: number; lng: number }; userEmail?: string }) =>
+    post<any>('/attendance/punch-in', data),
+  punchOut: (data: { photo?: string; location?: { lat: number; lng: number }; userEmail?: string }) =>
+    post<any>('/attendance/punch-out', data),
+  getTodayAttendance: (email: string, date?: string) => {
+    const qs = new URLSearchParams({ email, ...(date ? { date } : {}) }).toString();
+    return get<any>(`/attendance?${qs}`);
+  },
+  getAttendanceHistory: (email: string) =>
+    get<any>(`/attendance/history?email=${encodeURIComponent(email)}`),
+  logLocation: (data: { lat: number; lng: number; userEmail?: string }) =>
+    post<any>('/attendance/location', data),
+
+  // ── Google Calendar ───────────────────────────────────────────────
+  getCalendarAuthUrl: (redirectUri: string) =>
+    get<any>(`/auth/google/url?redirectUri=${encodeURIComponent(redirectUri)}`, false),
+  getCalendarEvents: () => get<any>('/calendar/events', false),
+  createCalendarEvent: (data: any) => post<any>('/calendar/events', data, false),
+  getCalendarStatus: () => get<any>('/calendar/status', false),
 };
+

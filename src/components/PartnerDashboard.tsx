@@ -24,7 +24,6 @@ import PartnerOnboardingModal from './PartnerOnboardingModal';
 import FarmLandOnboardingModal from './FarmLandOnboardingModal';
 import PlotsOnboardingModal from './PlotsOnboardingModal';
 import AttendanceModal from './AttendanceModal';
-import { getTodayAttendance, saveAttendanceRecord, saveLocationLog, AttendanceRecord } from '../utils/attendanceStore';
 import { api } from '../services/api';
 
 interface PartnerDashboardProps {
@@ -40,7 +39,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   
   // Attendance State
-  const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
+  const [attendance, setAttendance] = useState<any | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
   
@@ -49,13 +48,18 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [assignedLeads, setAssignedLeads] = useState<any[]>([]);
 
   useEffect(() => {
+    // Always use partner-specific endpoint (authenticated)
+    api.getPartnerSubmissions()
+      .then(data => setMySubmissions(data.submissions || []))
+      .catch(() => {});
+    api.getPartnerAssignedEnquiries()
+      .then(data => setAssignedLeads(data.enquiries || []))
+      .catch(() => {});
+    // Load today's attendance from API
     if (userEmail) {
-      setAttendance(getTodayAttendance(userEmail));
-      api.getSubmissions(userEmail).then(data => setMySubmissions(data.submissions || []));
-      api.getPartnerAssignedEnquiries().then(data => setAssignedLeads(data.enquiries || []));
-    } else {
-      api.getSubmissions().then(data => setMySubmissions(data.submissions || []));
-      api.getPartnerAssignedEnquiries().then(data => setAssignedLeads(data.enquiries || []));
+      api.getTodayAttendance(userEmail)
+        .then(data => setAttendance(data.record ?? null))
+        .catch(() => {});
     }
   }, [userEmail]);
 
@@ -65,13 +69,11 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
     if (attendance?.status === 'Working' && 'geolocation' in navigator) {
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          saveLocationLog({
-            id: Date.now().toString(),
-            userEmail,
-            timestamp: new Date().toISOString(),
+          api.logLocation({
             lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
+            lng: position.coords.longitude,
+            userEmail,
+          }).catch(() => {});
         },
         (error) => console.error('Location tracking error:', error),
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
@@ -82,44 +84,31 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
     };
   }, [attendance, userEmail]);
 
-  const handleAttendanceSubmit = (data: { photo: string; location: { lat: number; lng: number } }) => {
-    const now = new Date();
-    const today = now.toISOString().split('T')[0];
-    
-    if (attendanceType === 'in') {
-      const newRecord: AttendanceRecord = {
-        id: Date.now().toString(),
-        userEmail,
-        date: today,
-        punchInTime: now.toISOString(),
-        punchOutTime: null,
-        punchInLocation: data.location,
-        punchOutLocation: null,
-        punchInPhoto: data.photo,
-        punchOutPhoto: null,
-        status: 'Working'
-      };
-      saveAttendanceRecord(newRecord);
-      setAttendance(newRecord);
-    } else if (attendance && attendanceType === 'out') {
-      const updatedRecord: AttendanceRecord = {
-        ...attendance,
-        punchOutTime: now.toISOString(),
-        punchOutLocation: data.location,
-        punchOutPhoto: data.photo,
-        status: 'Completed'
-      };
-      saveAttendanceRecord(updatedRecord);
-      setAttendance(updatedRecord);
+  const handleAttendanceSubmit = async (data: { photo: string; location: { lat: number; lng: number } }) => {
+    try {
+      if (attendanceType === 'in') {
+        await api.punchIn({ photo: data.photo, location: data.location, userEmail });
+      } else {
+        await api.punchOut({ photo: data.photo, location: data.location, userEmail });
+      }
+      // Refresh attendance state from API
+      if (userEmail) {
+        const result = await api.getTodayAttendance(userEmail);
+        setAttendance(result.record ?? null);
+      }
+      setIsAttendanceModalOpen(false);
+    } catch (error) {
+      console.error('Attendance error:', error);
     }
   };
 
-  const showBuilderOnboarding = userEmail === '1234@gmail.com' || (!userEmail.includes('1234') && !userEmail.includes('45678'));
-  const showPartnerOnboarding = userEmail === '45678@gmail.com' || (!userEmail.includes('1234') && !userEmail.includes('45678'));
+  // All authenticated partners can see both onboarding options
+  const showBuilderOnboarding = true;
+  const showPartnerOnboarding = true;
 
-  const handleStatusUpdate = async (id: number, status: string) => {
+  const handleStatusUpdate = async (id: string, status: string) => {
     try {
-      await api.updateEnquiryStatus(id, status);
+      await api.updatePartnerEnquiryStatus(id, status);
       const data = await api.getPartnerAssignedEnquiries();
       setAssignedLeads(data.enquiries || []);
     } catch (error) {

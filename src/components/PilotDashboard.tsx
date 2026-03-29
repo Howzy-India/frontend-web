@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { io } from 'socket.io-client';
 import { 
   Building, 
   Sparkles, 
@@ -29,10 +28,10 @@ import {
   Clock
 } from 'lucide-react';
 import Logo from './Logo';
-import { UPCOMING_PROJECTS, EARNINGS, LISTED_PLOTS, LISTED_FARM_LANDS } from '../data/mockData';
 import GoogleCalendarWidget from './GoogleCalendarWidget';
 import TasksWidget from './TasksWidget';
 import { api } from '../services/api';
+import { useNotifications } from '../hooks/useNotifications';
 
 const maskContact = (contact: string | undefined) => {
   if (!contact) return 'N/A';
@@ -56,7 +55,7 @@ interface PilotDashboardProps {
   onLogout: () => void;
 }
 
-function AssignedLeadsView({ assignedLeads, onStatusUpdate }: { assignedLeads: any[], onStatusUpdate: (id: number, status: string) => void }) {
+function AssignedLeadsView({ assignedLeads, onStatusUpdate }: { assignedLeads: any[], onStatusUpdate: (id: string, status: string) => void }) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="p-6 border-b border-slate-200 flex justify-between items-center">
@@ -150,10 +149,13 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
   const [assignedLeads, setAssignedLeads] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
   const [newLeadToast, setNewLeadToast] = useState<any>(null);
+  const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
+  const [earnings, setEarnings] = useState<any>({ totalEarningValue: '₹0', totalBookingsMonth: 0, bookings: [] });
+  const [listedPlots, setListedPlots] = useState<any[]>([]);
+  const [listedFarmLands, setListedFarmLands] = useState<any[]>([]);
 
-  const socketRef = useRef<any>(null);
+  const firestoreNotifications = useNotifications('pilot');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -172,29 +174,22 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
     };
     fetchData();
 
-    socketRef.current = io();
-    socketRef.current.emit('join', 'pilot');
-
-    socketRef.current.on('new-notification', (notification: any) => {
-      setNotifications(prev => [notification, ...prev]);
-      if (notification.type === 'new-lead') {
-        setNewLeadToast(notification);
-        setTimeout(() => setNewLeadToast(null), 4000);
-      }
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
+    api.getProjects({ type: 'Plot' }).then(d => setListedPlots(d.projects ?? [])).catch(() => {});
+    api.getProjects({ type: 'Farm Land' }).then(d => setListedFarmLands(d.projects ?? [])).catch(() => {});
+    api.getProjects().then(d => {
+      const upcoming = (d.projects ?? []).filter((p: any) => p.status === 'Upcoming' || p.projectStatus === 'Upcoming');
+      setUpcomingProjects(upcoming);
+    }).catch(() => {});
+    api.getEarnings().then(d => setEarnings(d)).catch(() => {});
   }, []);
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  const unreadCount = firestoreNotifications.filter(n => !n.read).length;
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, unread: false })));
+    setShowNotifications(false);
   };
 
-  const handleStatusUpdate = async (id: number, status: string) => {
+  const handleStatusUpdate = async (id: string, status: string) => {
     try {
       await api.updateEnquiryStatus(id, status);
       const data = await api.getPilotAssignedEnquiries();
@@ -347,30 +342,28 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
                       </button>
                     </div>
                     <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {notifications.length > 0 ? (
+                      {firestoreNotifications.length > 0 ? (
                         <div className="divide-y divide-slate-50">
-                          {notifications.map((notification) => {
-                            const Icon = notification.icon === 'AlertTriangle' ? AlertTriangle : 
-                                         notification.icon === 'CheckCircle' ? CheckCircle2 : Megaphone;
+                          {firestoreNotifications.map((notification) => {
+                            const Icon = notification.type === 'alert' ? AlertTriangle :
+                                         notification.type === 'success' ? CheckCircle2 : Megaphone;
+                            const colorClass = notification.type === 'alert' ? 'bg-amber-100 text-amber-600' :
+                                               notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' :
+                                               'bg-indigo-100 text-indigo-600';
                             return (
                               <div 
                                 key={notification.id} 
                                 className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${
-                                  notification.unread ? 'bg-indigo-50/30' : ''
+                                  !notification.read ? 'bg-indigo-50/30' : ''
                                 }`}
                               >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                  notification.color === 'indigo' ? 'bg-indigo-100 text-indigo-600' :
-                                  notification.color === 'amber' ? 'bg-amber-100 text-amber-600' :
-                                  notification.color === 'emerald' ? 'bg-emerald-100 text-emerald-600' :
-                                  'bg-blue-100 text-blue-600'
-                                }`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
                                   <Icon className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-bold text-slate-900 truncate">{notification.title}</p>
+                                  <p className="text-xs font-bold text-slate-900 truncate">{notification.type}</p>
                                   <p className="text-[10px] text-slate-500 leading-relaxed mt-0.5">{notification.message}</p>
-                                  <p className="text-[9px] text-slate-400 mt-1">{notification.time}</p>
+                                  <p className="text-[9px] text-slate-400 mt-1">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}</p>
                                 </div>
                               </div>
                             );
@@ -399,14 +392,14 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
             className="max-w-6xl mx-auto"
           >
             {activeTab === 'listed' && <ListedProjectsView projects={projects.filter(p => p.propertyType === 'project')} />}
-            {activeTab === 'plots' && <ListedPlotsView projects={projects.filter(p => p.propertyType === 'plot')} />}
-            {activeTab === 'farmlands' && <ListedFarmLandsView projects={projects.filter(p => p.propertyType === 'farmland')} />}
-            {activeTab === 'upcoming' && <UpcomingProjectsView />}
+            {activeTab === 'plots' && <ListedPlotsView projects={listedPlots} />}
+            {activeTab === 'farmlands' && <ListedFarmLandsView projects={listedFarmLands} />}
+            {activeTab === 'upcoming' && <UpcomingProjectsView projects={upcomingProjects} />}
             {activeTab === 'leads' && <LeadsView leads={leads} projects={projects} onUploadDeed={handleUploadDeed} onCreateLead={handleCreateLead} onUpdateLead={handleUpdateLead} />}
             {activeTab === 'assigned-leads' && <AssignedLeadsView assignedLeads={assignedLeads} onStatusUpdate={handleStatusUpdate} />}
             {activeTab === 'visited' && <SiteVisitedView leads={leads} projects={projects} />}
             {activeTab === 'booked' && <BookedClientsView leads={leads} projects={projects} onUploadDeed={handleUploadDeed} />}
-            {activeTab === 'earnings' && <EarningsView />}
+            {activeTab === 'earnings' && <EarningsView earnings={earnings} />}
             {activeTab === 'calendar' && (
               <div className="h-[600px]">
                 <GoogleCalendarWidget />
@@ -1043,11 +1036,11 @@ function ListedFarmLandsView({ projects = [] }: { projects?: any[] }) {
   );
 }
 
-function UpcomingProjectsView() {
+function UpcomingProjectsView({ projects = [] }: { projects?: any[] }) {
   const [locationFilter, setLocationFilter] = useState("All");
-  const uniqueLocations = ["All", ...Array.from(new Set(UPCOMING_PROJECTS.map(p => p.location)))];
+  const uniqueLocations = ["All", ...Array.from(new Set(projects.map(p => p.location)))];
   
-  const filteredProjects = UPCOMING_PROJECTS.filter(project => 
+  const filteredProjects = projects.filter(project => 
     locationFilter === "All" || project.location === locationFilter
   );
 
@@ -1670,7 +1663,7 @@ function BookedClientsView({ leads, projects = [], onUploadDeed }: { leads: any[
   );
 }
 
-function EarningsView() {
+function EarningsView({ earnings = { totalEarningValue: '₹0', totalBookingsMonth: 0, bookings: [] } }: { earnings?: any }) {
   return (
     <div className="space-y-8">
       
@@ -1681,7 +1674,7 @@ function EarningsView() {
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
           <h3 className="text-indigo-100 font-medium mb-2 relative z-10">Total Earnings (This Month)</h3>
-          <p className="text-5xl font-bold text-white font-mono relative z-10">{EARNINGS.totalEarningValue}</p>
+          <p className="text-5xl font-bold text-white font-mono relative z-10">{earnings.totalEarningValue}</p>
         </motion.div>
         
         <motion.div 
@@ -1689,7 +1682,7 @@ function EarningsView() {
           className="bg-white border border-slate-200 rounded-3xl p-8 flex flex-col justify-center shadow-sm"
         >
           <h3 className="text-slate-500 font-medium mb-2">Total Bookings</h3>
-          <p className="text-5xl font-bold text-slate-900 font-mono">{EARNINGS.totalBookingsMonth}</p>
+          <p className="text-5xl font-bold text-slate-900 font-mono">{earnings.totalBookingsMonth}</p>
         </motion.div>
       </div>
 
@@ -1705,7 +1698,7 @@ function EarningsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {EARNINGS.bookings.map(booking => (
+              {earnings.bookings.map((booking: any) => (
                 <tr key={booking.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4">
                     <p className="font-semibold text-slate-900">{booking.clientName}</p>

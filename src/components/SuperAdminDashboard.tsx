@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { usePagination } from '../hooks/usePagination';
 import { motion, AnimatePresence } from 'motion/react';
-import { io } from 'socket.io-client';
+import { useNotifications } from '../hooks/useNotifications';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 import { 
   LayoutDashboard, 
   Users, 
@@ -79,7 +81,6 @@ import {
   Cell
 } from 'recharts';
 import Logo from './Logo';
-import { LISTED_PLOTS, LISTED_FARM_LANDS, SOCIAL_MEDIA_LEADS } from '../data/mockData';
 import { api } from '../services/api';
 import AdminVerificationPanel from './AdminVerificationPanel';
 import BulkPropertyUpload from './BulkPropertyUpload';
@@ -136,56 +137,31 @@ const PARTNERS_DATA = [
   { name: "Vikram Rao", franchise: "Chennai", status: "Active", deals: 12, earnings: "₹4.8L" },
 ];
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    type: 'partner',
-    title: 'New Howzer Onboarded',
-    message: 'Howzy Pune has successfully completed onboarding.',
-    time: '5 mins ago',
-    unread: true,
-    icon: UserPlus,
-    color: 'indigo'
-  },
-  {
-    id: 2,
-    type: 'stock',
-    title: 'Low Stock Alert',
-    message: 'Prestige High Fields has only 3 units remaining.',
-    time: '1 hour ago',
-    unread: true,
-    icon: AlertTriangle,
-    color: 'amber'
-  },
-  {
-    id: 3,
-    type: 'revenue',
-    title: 'Revenue Milestone',
-    message: 'Platform revenue crossed ₹12 Cr this month!',
-    time: '3 hours ago',
-    unread: false,
-    icon: TrendingUp,
-    color: 'emerald'
-  },
-  {
-    id: 4,
-    type: 'partner',
-    title: 'New Howzer Request',
-    message: 'Howzy Vizag is requesting access to the platform.',
-    time: '5 hours ago',
-    unread: false,
-    icon: ShieldCheck,
-    color: 'blue'
-  },
-];
-
 export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterConfigChange }: SuperAdminDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [leads, setLeads] = useState<any[]>([]);
+  const [listedPlots, setListedPlots] = useState<any[]>([]);
+  const [listedFarmLands, setListedFarmLands] = useState<any[]>([]);
+  const [socialMediaLeads, setSocialMediaLeads] = useState<any[]>([]);
+
+  const adminNotifications = useNotifications('admin');
+
+  useEffect(() => {
+    setNotifications(adminNotifications.map(n => ({
+      id: n.id,
+      type: n.type,
+      title: n.message,
+      message: n.message,
+      time: n.createdAt ? new Date(n.createdAt).toLocaleString() : 'just now',
+      unread: !n.read,
+      icon: Bell,
+      color: 'indigo',
+    })));
+  }, [adminNotifications]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -201,6 +177,13 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       }
     };
     fetchData();
+
+    api.getProjects({ type: 'Plot' }).then(d => setListedPlots(d.projects ?? [])).catch(() => {});
+    api.getProjects({ type: 'Farm Land' }).then(d => setListedFarmLands(d.projects ?? [])).catch(() => {});
+    api.getLeads().then(d => {
+      const smLeads = (d.leads ?? []).filter((l: any) => l.campaign_source || l.campaignSource);
+      setSocialMediaLeads(smLeads);
+    }).catch(() => {});
   }, []);
 
   const unreadCount = notifications.filter(n => n.unread).length;
@@ -232,25 +215,15 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     { id: 'settings', label: 'System Settings', icon: Settings },
   ], []);
 
-  const socketRef = React.useRef<any>(null);
 
-  useEffect(() => {
-    socketRef.current = io();
-    socketRef.current.emit('join', 'admin');
-
-    socketRef.current.on('new-notification', (notification: any) => {
-      setNotifications(prev => [notification, ...prev]);
+  const handleBroadcast = React.useCallback(async (notification: any) => {
+    await addDoc(collection(db, 'notifications'), {
+      room: 'pilot',
+      type: 'broadcast',
+      message: notification.message,
+      read: false,
+      createdAt: serverTimestamp(),
     });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, []);
-
-  const handleBroadcast = React.useCallback((notification: any) => {
-    if (socketRef.current) {
-      socketRef.current.emit('send-broadcast', notification);
-    }
   }, []);
 
   const activeView = React.useMemo(() => {
@@ -259,7 +232,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'enquiries': return <AdminEnquiriesPanel />;
       case 'client-logins': return <ClientLoginDashboard />;
       case 'leads': return <GlobalLeadsView leads={leads} />;
-      case 'social-leads': return <SocialMediaLeadsView />;
+      case 'social-leads': return <SocialMediaLeadsView leads={socialMediaLeads} />;
       case 'lead-allocation': return <LeadAllocationManager />;
       case 'bulk-lead-upload': return <BulkLeadUpload />;
       case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'project')} />;
@@ -1202,15 +1175,15 @@ const SystemSettings = React.memo(function SystemSettings() {
   );
 });
 
-const SocialMediaLeadsView = React.memo(function SocialMediaLeadsView() {
+const SocialMediaLeadsView = React.memo(function SocialMediaLeadsView({ leads: socialMediaLeads }: { leads: any[] }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sourceFilter, setSourceFilter] = useState('All');
 
-  const uniqueStatuses = ['All', ...Array.from(new Set(SOCIAL_MEDIA_LEADS.map(l => l.status)))];
-  const uniqueSources = ['All', ...Array.from(new Set(SOCIAL_MEDIA_LEADS.map(l => l.campaignSource)))];
+  const uniqueStatuses = ['All', ...Array.from(new Set(socialMediaLeads.map(l => l.status)))];
+  const uniqueSources = ['All', ...Array.from(new Set(socialMediaLeads.map(l => l.campaignSource)))];
 
-  const filteredLeads = SOCIAL_MEDIA_LEADS.filter(lead => {
+  const filteredLeads = socialMediaLeads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           lead.campaignName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;

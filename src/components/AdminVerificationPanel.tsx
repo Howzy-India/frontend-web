@@ -16,7 +16,7 @@ export default function AdminVerificationPanel() {
 
   const fetchSubmissions = async () => {
     try {
-      const data = await api.getSubmissions();
+      const data = await api.getAdminSubmissions();
       // Filter only Farm Land, Plot, Partner, and Builder submissions
       const filtered = data.submissions.filter((s: any) => s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Partner' || s.type === 'Builder');
       setSubmissions(filtered);

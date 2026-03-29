@@ -17,7 +17,7 @@ export default function ClientListingsVerification() {
   const fetchListings = async () => {
     setIsLoading(true);
     try {
-      const data = await api.getSubmissions();
+      const data = await api.getAdminSubmissions();
       const propertyListings = data.submissions.filter((s: any) => 
         (s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Residential' || s.type === 'Commercial')
       );

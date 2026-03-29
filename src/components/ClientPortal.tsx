@@ -6,7 +6,7 @@ import { api } from '../services/api';
 import FarmLandOnboardingModal from './FarmLandOnboardingModal';
 import PlotsOnboardingModal from './PlotsOnboardingModal';
 import Footer from './Footer';
-import { io } from 'socket.io-client';
+import { useEnquiryUpdates } from '../hooks/useNotifications';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -181,20 +181,22 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
       fetchMyListings();
       fetchEnquiries();
 
-      // Connect to socket for notifications
-      const socket = io();
-      socket.emit('join', userEmail); // Join a room with the user's email
-
-      socket.on('enquiry-status-update', (notification) => {
-        setNotifications(prev => [notification, ...prev]);
-        fetchEnquiries(); // Refresh enquiries when status changes
-      });
-
-      return () => {
-        socket.disconnect();
-      };
     }
   }, [userEmail]);
+
+  const enquiryUpdates = useEnquiryUpdates(userEmail || null);
+
+  useEffect(() => {
+    if (enquiryUpdates.length > 0) {
+      const latest = enquiryUpdates[0];
+      setNotifications(prev => [{
+        id: latest.id ?? Date.now().toString(),
+        message: latest.action ?? 'Enquiry updated',
+        type: 'enquiry-update',
+        unread: true,
+      }, ...prev.slice(0, 19)]);
+    }
+  }, [enquiryUpdates]);
 
   const fetchProperties = async () => {
     try {
@@ -227,7 +229,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
 
   const fetchMyListings = async () => {
     try {
-      const data = await api.getSubmissions(userEmail);
+      const data = await api.getAdminSubmissions(userEmail);
       const listings = data.submissions.filter((s: any) => 
         (s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Residential' || s.type === 'Commercial')
       );

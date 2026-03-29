@@ -3,6 +3,31 @@ build/
 dist/
 coverage/
 .DS_Store
+Thumbs.db
 *.log
-.env*
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Environment — never commit real secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 !.env.example
+!.env.production    # template only (no real values)
+
+# IDE
+.vscode/
+.idea/
+
+# Credentials
+*.pem
+*.key
+service-account*.json
+*-credentials.json
+google-services.json
+GoogleService-Info.plist

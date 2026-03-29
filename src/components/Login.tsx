@@ -1,171 +1,139 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Building2, Lock, User, Sparkles, MapPin, Home } from 'lucide-react';
+import { Sparkles, MapPin, Home, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from './Logo';
-import ClientAuthModal from './ClientAuthModal';
+import { useAuth } from '../hooks/useAuth';
+import type { AppRole } from '../hooks/useAuth';
 
 interface LoginProps {
-  onLogin: (role: 'agent' | 'owner' | 'admin' | 'client', email: string) => void;
+  onLogin: (role: AppRole, email: string) => void;
 }
 
 export default function Login({ onLogin }: LoginProps) {
-  const [email, setEmail] = useState('1234@gmail.com');
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const { signInWithGoogle, error } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setLocalError(null);
+    try {
+      const user = await signInWithGoogle();
+      onLogin(user.role ?? 'client', user.email ?? '');
+    } catch (err: any) {
+      setLocalError(err?.message ?? 'Sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const displayError = localError ?? error;
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background Elements */}
+      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div 
-          animate={{ 
-            rotate: [0, 360],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-[120px]" 
+        <motion.div
+          animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
+          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-[120px]"
         />
-        <motion.div 
-          animate={{ 
-            rotate: [360, 0],
-            scale: [1, 1.5, 1],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tl from-indigo-400/20 to-purple-400/20 blur-[120px]" 
+        <motion.div
+          animate={{ rotate: [360, 0], scale: [1, 1.5, 1] }}
+          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tl from-indigo-400/20 to-purple-400/20 blur-[120px]"
         />
       </div>
 
       {/* Floating Icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         className="absolute top-1/4 left-[15%] hidden lg:flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-slate-100"
       >
         <Home className="w-8 h-8 text-indigo-500" />
       </motion.div>
-
       <motion.div
         animate={{ y: [0, 25, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         className="absolute bottom-1/3 right-[15%] hidden lg:flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-slate-100"
       >
         <MapPin className="w-10 h-10 text-purple-500" />
       </motion.div>
-
       <motion.div
         animate={{ y: [0, -15, 0], rotate: [0, 10, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
         className="absolute top-1/3 right-[20%] hidden lg:flex items-center justify-center w-14 h-14 bg-white rounded-full shadow-xl shadow-purple-500/10 border border-slate-100"
       >
         <Sparkles className="w-6 h-6 text-purple-500" />
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.7, type: "spring", bounce: 0.4 }}
+        transition={{ duration: 0.7, type: 'spring', bounce: 0.4 }}
         className="w-full max-w-[440px] bg-white/70 backdrop-blur-2xl border border-white/50 p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] relative z-10"
       >
-        <div className="flex justify-center mb-10 relative">
+        <div className="flex justify-center mb-10">
           <Logo className="h-16" />
         </div>
-        
+
         <div className="text-center mb-10">
-          <motion.p 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-slate-500 font-medium"
-          >
-            Enter your credentials to access the dashboard
-          </motion.p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome to Howzy</h2>
+          <p className="text-slate-500 font-medium">
+            Sign in with your Google account to access your dashboard
+          </p>
         </div>
 
-        <motion.form 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="space-y-6" 
-          onSubmit={(e) => { e.preventDefault(); onLogin('agent', email); }}
+        {displayError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4"
+          >
+            <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-700 font-medium">{displayError}</p>
+          </motion.div>
+        )}
+
+        <motion.button
+          whileHover={{ scale: loading ? 1 : 1.02, y: loading ? 0 : -2 }}
+          whileTap={{ scale: loading ? 1 : 0.98 }}
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed text-slate-700 font-bold py-4 rounded-2xl transition-all border border-slate-200 shadow-md hover:shadow-lg"
         >
-          <div className="space-y-2 group">
-            <label className="text-sm font-bold text-slate-700 ml-1">Email / Username</label>
-            <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input 
-                type="text" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/50 backdrop-blur-sm border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-slate-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
-                placeholder="Enter your email"
+          {loading ? (
+            <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+          ) : (
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
               />
-            </div>
-          </div>
-
-          <div className="space-y-2 group">
-            <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input 
-                type="password" 
-                className="w-full bg-white/50 backdrop-blur-sm border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-slate-900 font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
-                placeholder="••••••••"
-                defaultValue="password"
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
               />
-            </div>
-          </div>
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
+            </svg>
+          )}
+          {loading ? 'Signing in…' : 'Continue with Google'}
+        </motion.button>
 
-          <div className="pt-6 space-y-4">
-            <motion.button 
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              type="button"
-              onClick={() => onLogin('agent', email)}
-              className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-indigo-600/20 relative overflow-hidden group"
-            >
-              <span className="relative z-10">Login as Howzy Partner</span>
-              <div className="absolute inset-0 h-full w-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
-            </motion.button>
-            <div className="grid grid-cols-3 gap-3">
-              <motion.button 
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => onLogin('owner', email)}
-                className="w-full bg-white hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl transition-all border border-slate-200 shadow-sm hover:shadow-md text-xs"
-              >
-                Howzer
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => setIsClientModalOpen(true)}
-                className="w-full bg-white hover:bg-indigo-50 text-indigo-700 font-bold py-3 rounded-xl transition-all border border-indigo-200 shadow-sm hover:shadow-md text-xs"
-              >
-                Client
-              </motion.button>
-              <motion.button 
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                type="button"
-                onClick={() => onLogin('admin', email)}
-                className="w-full bg-slate-900 hover:bg-black text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-slate-900/20 text-xs"
-              >
-                Admin
-              </motion.button>
-            </div>
-          </div>
-        </motion.form>
+        <p className="mt-8 text-center text-xs text-slate-400 leading-relaxed">
+          Your role (Admin, Agent, Partner, or Client) is determined by your account.
+          <br />
+          Contact your administrator if you need access.
+        </p>
       </motion.div>
-
-      <ClientAuthModal 
-        isOpen={isClientModalOpen} 
-        onClose={() => setIsClientModalOpen(false)} 
-        onLogin={(clientEmail) => {
-          setIsClientModalOpen(false);
-          onLogin('client', clientEmail);
-        }} 
-      />
     </div>
   );
 }

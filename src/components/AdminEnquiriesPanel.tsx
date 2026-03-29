@@ -57,7 +57,7 @@ export default function AdminEnquiriesPanel() {
     }
   };
 
-  const handleStatusUpdate = async (id: number, status: string, priority?: string) => {
+  const handleStatusUpdate = async (id: string, status: string, priority?: string) => {
     try {
       await api.updateEnquiryStatus(id, status, priority);
       fetchEnquiries();
