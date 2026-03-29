@@ -44,6 +44,17 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "dist",
       sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom"],
+            "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage"],
+            "vendor-motion": ["motion/react"],
+            "vendor-charts": ["recharts"],
+            "vendor-icons": ["lucide-react"],
+          },
+        },
+      },
     },
   };
 });

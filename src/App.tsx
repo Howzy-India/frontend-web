@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Splash from './components/Splash';
 import Login from './components/Login';
 import Greetings from './components/Greetings';
-import PilotDashboard from './components/PilotDashboard';
-import PartnerDashboard from './components/PartnerDashboard';
-import SuperAdminDashboard from './components/SuperAdminDashboard';
-import ClientPortal from './components/ClientPortal';
 import { useAuth } from './hooks/useAuth';
 import type { AppRole } from './hooks/useAuth';
 import { api } from './services/api';
+
+const PilotDashboard = lazy(() => import('./components/PilotDashboard'));
+const PartnerDashboard = lazy(() => import('./components/PartnerDashboard'));
+const SuperAdminDashboard = lazy(() => import('./components/SuperAdminDashboard'));
+const ClientPortal = lazy(() => import('./components/ClientPortal'));
 
 type ViewState =
   | 'splash'
@@ -110,32 +111,34 @@ export default function App() {
           transition={pageTransition}
           className="min-h-screen w-full"
         >
-          {view === 'splash' && <Splash />}
-          {view === 'login' && <Login onLogin={handleLogin} />}
-          {view === 'greetings' && user && (
-            <Greetings onContinue={handleContinue} role={mapRoleForGreeting(user.role)} />
-          )}
-          {view === 'pilot_dashboard' && (
-            <PilotDashboard onLogout={handleLogout} />
-          )}
-          {view === 'partner_dashboard' && (
-            <PartnerDashboard onLogout={handleLogout} userEmail={user?.email ?? ''} />
-          )}
-          {view === 'super_admin_dashboard' && (
-            <SuperAdminDashboard
-              onLogout={handleLogout}
-              footerConfig={footerConfig}
-              onFooterConfigChange={setFooterConfig}
-            />
-          )}
-          {view === 'client_portal' && (
-            <ClientPortal
-              onLogout={handleLogout}
-              onLoginClick={() => setView('login')}
-              userEmail={user?.email ?? ''}
-              footerConfig={footerConfig}
-            />
-          )}
+          <Suspense fallback={<Splash />}>
+            {view === 'splash' && <Splash />}
+            {view === 'login' && <Login onLogin={handleLogin} />}
+            {view === 'greetings' && user && (
+              <Greetings onContinue={handleContinue} role={mapRoleForGreeting(user.role)} />
+            )}
+            {view === 'pilot_dashboard' && (
+              <PilotDashboard onLogout={handleLogout} />
+            )}
+            {view === 'partner_dashboard' && (
+              <PartnerDashboard onLogout={handleLogout} userEmail={user?.email ?? ''} />
+            )}
+            {view === 'super_admin_dashboard' && (
+              <SuperAdminDashboard
+                onLogout={handleLogout}
+                footerConfig={footerConfig}
+                onFooterConfigChange={setFooterConfig}
+              />
+            )}
+            {view === 'client_portal' && (
+              <ClientPortal
+                onLogout={handleLogout}
+                onLoginClick={() => setView('login')}
+                userEmail={user?.email ?? ''}
+                footerConfig={footerConfig}
+              />
+            )}
+          </Suspense>
         </motion.div>
       </AnimatePresence>
     </div>
