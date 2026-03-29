@@ -1,0 +1,9 @@
+{
+  "name": "UI upgrade ",
+  "description": "Real estate agent franchise owner app and dashboard with attendance and location tracking",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "geolocation"
+  ]
+}
