@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, Plus, ExternalLink, Clock, MapPin, X, Loader2 } from 'lucide-react';
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/howzy-api/us-central1/api';
+
 export default function GoogleCalendarWidget() {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function GoogleCalendarWidget() {
 
   const checkConnectionStatus = async () => {
     try {
-      const res = await fetch('/api/calendar/status');
+      const res = await fetch(`${BASE_URL}/calendar/status`);
       const data = await res.json();
       setIsConnected(data.connected);
       if (data.connected) {
@@ -39,7 +41,7 @@ export default function GoogleCalendarWidget() {
   const fetchEvents = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/calendar/events');
+      const res = await fetch(`${BASE_URL}/calendar/events`);
       if (res.ok) {
         const data = await res.json();
         setEvents(data.events || []);
@@ -54,7 +56,7 @@ export default function GoogleCalendarWidget() {
   const handleConnect = async () => {
     try {
       const redirectUri = `${window.location.origin}/auth/google/callback`;
-      const response = await fetch(`/api/auth/google/url?redirectUri=${encodeURIComponent(redirectUri)}`);
+      const response = await fetch(`${BASE_URL}/auth/google/url?redirectUri=${encodeURIComponent(redirectUri)}`);
       if (!response.ok) throw new Error('Failed to get auth URL');
       
       const { url } = await response.json();
@@ -76,7 +78,7 @@ export default function GoogleCalendarWidget() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('cloudfunctions.net')) {
         return;
       }
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
@@ -96,7 +98,7 @@ export default function GoogleCalendarWidget() {
       const startDateTime = new Date(`${date}T${startTime}`).toISOString();
       const endDateTime = new Date(`${date}T${endTime}`).toISOString();
 
-      const res = await fetch('/api/calendar/events', {
+      const res = await fetch(`${BASE_URL}/calendar/events`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

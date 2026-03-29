@@ -67,6 +67,8 @@ export const api = {
   createSubmission: (data: any) => post<any>('/submissions', data),
   updateSubmissionStatus: (id: string, status: string, remarks: string) =>
     patch<any>(`/submissions/${id}/status`, { status, remarks }),
+  updateSubmissionDetails: (id: string, details: any) =>
+    patch<any>(`/submissions/${id}`, details),
 
   // ── Enquiries ─────────────────────────────────────────────────────
   getAdminEnquiries: () => get<any>('/enquiries'),
