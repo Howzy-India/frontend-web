@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -36,56 +35,8 @@ async function startServer() {
   app.use(express.json());
   app.use(cookieParser());
   const httpServer = createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
-    }
-  });
 
   const PORT = 3000;
-
-  // Socket.io logic
-  io.on("connection", (socket) => {
-    console.log("A user connected:", socket.id);
-
-    // Join rooms based on role (simple simulation)
-    socket.on("join", (role) => {
-      socket.join(role);
-      console.log(`User ${socket.id} joined room: ${role}`);
-    });
-
-    // Handle broadcast from Super Admin to Pilots
-    socket.on("send-broadcast", (notification) => {
-      console.log("Broadcasting notification to pilots:", notification);
-      // In a real app, we'd save this to a DB
-      io.to("pilot").emit("new-notification", {
-        ...notification,
-        id: Date.now(),
-        time: "Just now",
-        unread: true
-      });
-    });
-
-    // Handle new lead creation
-    socket.on("new-lead", (lead) => {
-      console.log("New lead added:", lead.name);
-      io.to("pilot").emit("new-notification", {
-        id: Date.now(),
-        type: "new-lead",
-        title: "New Lead Added",
-        message: `${lead.name} is looking for a ${lead.lookingBhk} in ${lead.locationPreferred}.`,
-        time: "Just now",
-        unread: true,
-        icon: "Users",
-        color: "emerald"
-      });
-    });
-
-    socket.on("disconnect", () => {
-      console.log("User disconnected:", socket.id);
-    });
-  });
 
   // API routes
   app.get("/api/health", (req, res) => {
@@ -174,18 +125,6 @@ async function startServer() {
       `);
       insert.run(id, name, budget, location_preferred, looking_bhk, contact, milestone, project_id, document_uploaded ? 1 : 0, status || 'New');
       res.json({ success: true, id });
-      
-      // Emit socket event
-      io.to("pilot").emit("new-notification", {
-        id: Date.now(),
-        type: "new-lead",
-        title: "New Lead Added",
-        message: `${name} is looking for a ${looking_bhk} in ${location_preferred}.`,
-        time: "Just now",
-        unread: true,
-        icon: "Users",
-        color: "emerald"
-      });
     } catch (error) {
       console.error("Error creating lead:", error);
       res.status(500).json({ error: "Failed to create lead" });
@@ -264,18 +203,6 @@ async function startServer() {
       `);
       insert.run(id, type, name, email, 'Pending', JSON.stringify(details || {}));
       res.json({ success: true, id });
-      
-      // Emit socket event
-      io.to("admin").emit("new-notification", {
-        id: Date.now(),
-        type: "new-submission",
-        title: "New Submission",
-        message: `New ${type} submission from ${name}.`,
-        time: "Just now",
-        unread: true,
-        icon: "FileText",
-        color: "indigo"
-      });
     } catch (error) {
       console.error("Error creating submission:", error);
       res.status(500).json({ error: "Failed to create submission" });
@@ -345,20 +272,6 @@ async function startServer() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       insert.run(id, email, phone || null, device_type || 'Unknown', browser || 'Unknown', ip_address || 'Unknown', location || 'Unknown', status || 'Success', failure_reason || null);
-      
-      // Emit socket event to admin for security alerts if failed
-      if (status === 'Failed') {
-        io.to("admin").emit("new-notification", {
-          id: Date.now(),
-          type: "security-alert",
-          title: "Failed Login Attempt",
-          message: `Failed login attempt for ${email}. Reason: ${failure_reason}`,
-          time: "Just now",
-          unread: true,
-          icon: "AlertTriangle",
-          color: "red"
-        });
-      }
 
       res.json({ success: true, id });
     } catch (error) {
@@ -431,18 +344,6 @@ async function startServer() {
       `);
       const id = Date.now().toString();
       const result = insert.run(id, client_name, phone, email, property_id, property_name, property_type, location, enquiry_type, source || 'Website', 'New');
-      
-      // Emit socket event to admin
-      io.to("admin").emit("new-notification", {
-        id: Date.now(),
-        type: "new-enquiry",
-        title: "New Enquiry Received",
-        message: `${client_name} enquired about ${property_name}.`,
-        time: "Just now",
-        unread: true,
-        icon: "Inbox",
-        color: "amber"
-      });
 
       res.json({ success: true, id });
     } catch (error) {
@@ -507,43 +408,6 @@ async function startServer() {
       insertTimeline.run(Date.now().toString(), id, 'Assigned', details.join(', '), 'Admin');
 
       const enquiry = db.prepare("SELECT * FROM enquiries WHERE id = ?").get(id) as any;
-      if (enquiry && enquiry.email) {
-        io.to(enquiry.email).emit("enquiry-status-update", {
-          id: Date.now(),
-          enquiryId: id,
-          title: "Enquiry Assigned",
-          message: "Your enquiry has been assigned. Our team will contact you shortly.",
-          status: "Assigned",
-          time: "Just now",
-          unread: true
-        });
-      }
-
-      if (salesId) {
-        io.to("pilot").emit("new-notification", {
-          id: Date.now(),
-          type: "lead-assigned",
-          title: "New Lead Assigned",
-          message: `You have been assigned a new lead: ${enquiry.client_name}`,
-          time: "Just now",
-          unread: true,
-          icon: "UserCheck",
-          color: "indigo"
-        });
-      }
-
-      if (partnerId) {
-        io.to("partner").emit("new-notification", {
-          id: Date.now(),
-          type: "enquiry-assigned",
-          title: "New Enquiry Assigned",
-          message: `You have been assigned a new enquiry: ${enquiry.client_name}`,
-          time: "Just now",
-          unread: true,
-          icon: "Briefcase",
-          color: "emerald"
-        });
-      }
 
       res.json({ success: true });
     } catch (error) {
@@ -595,18 +459,6 @@ async function startServer() {
       insertTimeline.run(Date.now().toString(), id, `Status changed to ${status}`, priority ? `Priority set to ${priority}` : null, 'System');
 
       const enquiry = db.prepare("SELECT * FROM enquiries WHERE id = ?").get(id) as any;
-      if (enquiry && enquiry.email) {
-        // Emit socket event to the specific client
-        io.to(enquiry.email).emit("enquiry-status-update", {
-          id: Date.now(),
-          enquiryId: id,
-          title: "Enquiry Status Updated",
-          message: `Your enquiry for ${enquiry.property_name} is now ${status}.`,
-          status: status,
-          time: "Just now",
-          unread: true
-        });
-      }
       
       res.json({ success: true });
     } catch (error) {
