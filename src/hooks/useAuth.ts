@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User,
@@ -28,6 +29,19 @@ export const getIdToken = async (): Promise<string> => {
   return user.getIdToken();
 };
 
+const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
+  const tokenResult = await firebaseUser.getIdTokenResult(true);
+  const role = (tokenResult.claims.role as AppRole) ?? 'client';
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName: firebaseUser.displayName,
+    photoURL: firebaseUser.photoURL,
+    role,
+    idToken: tokenResult.token,
+  };
+};
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,18 +51,7 @@ export function useAuth() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
       if (firebaseUser) {
         try {
-          // Force refresh to get latest custom claims (role)
-          const tokenResult = await firebaseUser.getIdTokenResult(true);
-          const role = (tokenResult.claims.role as AppRole) ?? 'client';
-          const idToken = tokenResult.token;
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
-            role,
-            idToken,
-          });
+          setUser(await toAuthUser(firebaseUser));
         } catch {
           setUser(null);
         }
@@ -64,16 +67,24 @@ export function useAuth() {
     setError(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const tokenResult = await result.user.getIdTokenResult(true);
-      const role = (tokenResult.claims.role as AppRole) ?? 'client';
-      const authUser: AuthUser = {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName,
-        photoURL: result.user.photoURL,
-        role,
-        idToken: tokenResult.token,
-      };
+      const authUser = await toAuthUser(result.user);
+      setUser(authUser);
+      return authUser;
+    } catch (err: any) {
+      const msg = err?.message ?? 'Sign-in failed';
+      setError(msg);
+      throw err;
+    }
+  };
+
+  const signInWithEmailPassword = async (
+    email: string,
+    password: string
+  ): Promise<AuthUser> => {
+    setError(null);
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const authUser = await toAuthUser(result.user);
       setUser(authUser);
       return authUser;
     } catch (err: any) {
@@ -88,5 +99,5 @@ export function useAuth() {
     setUser(null);
   };
 
-  return { user, loading, error, signInWithGoogle, logout };
+  return { user, loading, error, signInWithGoogle, signInWithEmailPassword, logout };
 }
