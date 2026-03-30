@@ -38,7 +38,7 @@ jobs:
         run: npm run build
 
       - name: Authenticate to Google Cloud (Workload Identity Federation)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed
         with:
           workload_identity_provider: projects/923565373621/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-actions-deploy@howzy-api.iam.gserviceaccount.com
