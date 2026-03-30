@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   signInWithPopup,
+  signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User,
@@ -83,10 +84,36 @@ export function useAuth() {
     }
   };
 
+  const signInWithEmailPassword = async (
+    email: string,
+    password: string
+  ): Promise<AuthUser> => {
+    setError(null);
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const tokenResult = await result.user.getIdTokenResult(true);
+      const role = (tokenResult.claims.role as AppRole) ?? 'client';
+      const authUser: AuthUser = {
+        uid: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName,
+        photoURL: result.user.photoURL,
+        role,
+        idToken: tokenResult.token,
+      };
+      setUser(authUser);
+      return authUser;
+    } catch (err: any) {
+      const msg = err?.message ?? 'Sign-in failed';
+      setError(msg);
+      throw err;
+    }
+  };
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
   };
 
-  return { user, loading, error, signInWithGoogle, logout };
+  return { user, loading, error, signInWithGoogle, signInWithEmailPassword, logout };
 }
