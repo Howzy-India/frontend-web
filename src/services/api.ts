@@ -40,6 +40,16 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+async function del<T>(path: string): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export const api = {
   // ── Projects ──────────────────────────────────────────────────────
   getProjects: (params?: Record<string, string>) => {
@@ -84,6 +94,14 @@ export const api = {
   // ── Admin ─────────────────────────────────────────────────────────
   getSalesTeam: () => get<any>('/admin/sales-team'),
   getPartners: () => get<any>('/admin/partners'),
+  getAdminUsers: () => get<any>('/admin/users'),
+  createAdminUser: (data: { email: string; password: string; displayName: string }) =>
+    post<any>('/admin/users', data),
+  updateAdminUser: (
+    uid: string,
+    data: { email?: string; password?: string; displayName?: string; status?: 'active' | 'disabled' }
+  ) => patch<any>(`/admin/users/${uid}`, data),
+  deleteAdminUser: (uid: string) => del<any>(`/admin/users/${uid}`),
   getClientLogins: () => get<any>('/admin/client-logins'),
   getClient360: (email: string) =>
     get<any>(`/admin/client-360/${encodeURIComponent(email)}`),
