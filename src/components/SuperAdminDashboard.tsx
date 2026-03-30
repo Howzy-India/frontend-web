@@ -97,6 +97,15 @@ interface SuperAdminDashboardProps {
   onFooterConfigChange?: (config: any) => void;
 }
 
+interface AdminUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: string;
+  status: 'active' | 'disabled';
+  createdAt?: string;
+}
+
 const PLATFORM_STATS = [
   { title: "Total Revenue", value: "₹12.4 Cr", trend: "+15.2%", icon: DollarSign, color: "emerald" },
   { title: "Total Partners", value: "1,240", trend: "+42", icon: Users, color: "indigo" },
@@ -206,6 +215,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     { id: 'bulk-property-upload', label: 'Bulk Property Upload', icon: FileSpreadsheet },
     { id: 'client-listings', label: 'Client Listings', icon: UserCheck },
     { id: 'agents', label: 'Partner Management', icon: Users },
+    { id: 'admin-users', label: 'Admin Users', icon: ShieldCheck },
     { id: 'attendance', label: 'Attendance & Tracking', icon: MapPin },
     { id: 'verification', label: 'Verification Panel', icon: CheckCircle },
     { id: 'alerts', label: 'Messages & Alerts', icon: Megaphone },
@@ -241,6 +251,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'bulk-property-upload': return <BulkPropertyUpload />;
       case 'client-listings': return <ClientListingsVerification />;
       case 'agents': return <PilotManagement />;
+      case 'admin-users': return <AdminUsersManagement />;
       case 'attendance': return <AttendanceTrackingView />;
       case 'verification': return <AdminVerificationPanel />;
       case 'alerts': return <MessagesAndAlertsView onBroadcast={handleBroadcast} />;
@@ -1117,6 +1128,224 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
           </div>
         </div>
       )}
+    </div>
+  );
+});
+
+const AdminUsersManagement = React.memo(function AdminUsersManagement() {
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ displayName: '', email: '', password: '' });
+
+  const loadUsers = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.getAdminUsers();
+      setUsers(response.users ?? []);
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load admin users');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUsers();
+  }, [loadUsers]);
+
+  const handleCreate = async () => {
+    if (!form.displayName || !form.email || !form.password) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.createAdminUser({
+        displayName: form.displayName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
+      setForm({ displayName: '', email: '', password: '' });
+      await loadUsers();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to create admin user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdate = async (uid: string, data: { displayName?: string; email?: string; password?: string; status?: 'active' | 'disabled' }) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.updateAdminUser(uid, data);
+      await loadUsers();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to update admin user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (uid: string, email: string) => {
+    if (!window.confirm(`Delete admin user ${email}? This cannot be undone.`)) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await api.deleteAdminUser(uid);
+      await loadUsers();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to delete admin user');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+        <h3 className="text-xl font-bold text-slate-900 mb-2">Create Admin User</h3>
+        <p className="text-sm text-slate-500 mb-6">Only super admins can create and manage admin accounts.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input
+            type="text"
+            value={form.displayName}
+            onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+            placeholder="Full Name"
+            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          />
+          <input
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+            placeholder="Email"
+            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          />
+          <input
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+            placeholder="Temporary Password"
+            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          />
+        </div>
+
+        <div className="mt-5 flex items-center gap-3">
+          <button
+            onClick={handleCreate}
+            disabled={saving || !form.displayName || !form.email || !form.password}
+            className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Create Admin'}
+          </button>
+          {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900">Admin Users</h3>
+          <button
+            onClick={() => void loadUsers()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                <th className="px-8 py-4">Name</th>
+                <th className="px-8 py-4">Email</th>
+                <th className="px-8 py-4">Role</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>Loading admin users...</td>
+                </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>No admin users found.</td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5 font-bold text-slate-900">{user.displayName || '-'}</td>
+                    <td className="px-8 py-5 text-sm text-slate-600">{user.email}</td>
+                    <td className="px-8 py-5 text-sm text-slate-600">{user.role}</td>
+                    <td className="px-8 py-5">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            const nextName = window.prompt('Update display name', user.displayName ?? '');
+                            if (nextName && nextName.trim() && nextName !== user.displayName) {
+                              void handleUpdate(user.uid, { displayName: nextName.trim() });
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
+                        >
+                          Edit Name
+                        </button>
+                        <button
+                          onClick={() => {
+                            const nextEmail = window.prompt('Update email', user.email ?? '');
+                            if (nextEmail && nextEmail.trim() && nextEmail !== user.email) {
+                              void handleUpdate(user.uid, { email: nextEmail.trim() });
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
+                        >
+                          Edit Email
+                        </button>
+                        <button
+                          onClick={() => {
+                            const nextPassword = window.prompt('Set new password (min 6 chars)');
+                            if (nextPassword && nextPassword.trim().length >= 6) {
+                              void handleUpdate(user.uid, { password: nextPassword.trim() });
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
+                        >
+                          Reset Password
+                        </button>
+                        <button
+                          onClick={() => void handleUpdate(user.uid, { status: user.status === 'active' ? 'disabled' : 'active' })}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${user.status === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
+                        >
+                          {user.status === 'active' ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          onClick={() => void handleDelete(user.uid, user.email)}
+                          className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 });
