@@ -17,6 +17,7 @@ firebase-debug.*.log
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 !.env.example
 !.env.production    # template only (no real values)
 
