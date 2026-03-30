@@ -2,7 +2,6 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import Splash from './components/Splash';
 import Login from './components/Login';
-import Greetings from './components/Greetings';
 import { useAuth } from './hooks/useAuth';
 import type { AppRole } from './hooks/useAuth';
 import { api } from './services/api';
@@ -14,16 +13,22 @@ const ClientPortal = lazy(() => import('./components/ClientPortal'));
 
 type ViewState =
   | 'splash'
-  | 'login'
-  | 'greetings'
   | 'pilot_dashboard'
   | 'partner_dashboard'
   | 'super_admin_dashboard'
   | 'client_portal';
 
+function getBrowserName(userAgent: string): string {
+  if (userAgent.includes('Chrome')) return 'Chrome';
+  if (userAgent.includes('Firefox')) return 'Firefox';
+  if (userAgent.includes('Safari')) return 'Safari';
+  return 'Other';
+}
+
 export default function App() {
   const { user, loading: authLoading, logout } = useAuth();
   const [view, setView] = useState<ViewState>('splash');
+  const [isLoginOverlayOpen, setIsLoginOverlayOpen] = useState(false);
   const [footerConfig, setFooterConfig] = useState<any>(null);
 
   // Show splash on first load, then route based on auth state
@@ -42,6 +47,7 @@ export default function App() {
   useEffect(() => {
     if (view === 'splash' || authLoading) return;
     if (user) {
+      setIsLoginOverlayOpen(false);
       setView(roleToView(user.role));
     }
   }, [user, authLoading]);
@@ -66,29 +72,20 @@ export default function App() {
         await api.trackClientLogin({
           email,
           device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
-          browser: navigator.userAgent.includes('Chrome')
-            ? 'Chrome'
-            : navigator.userAgent.includes('Firefox')
-            ? 'Firefox'
-            : navigator.userAgent.includes('Safari')
-            ? 'Safari'
-            : 'Other',
+          browser: getBrowserName(navigator.userAgent),
           status: 'Success',
         });
       } catch {
         // Non-critical — don't block login
       }
     }
-    setView('greetings');
-  };
-
-  const handleContinue = () => {
-    if (!user) return;
-    setView(roleToView(user.role));
+    setIsLoginOverlayOpen(false);
+    setView(roleToView(role));
   };
 
   const handleLogout = async () => {
     await logout();
+    setIsLoginOverlayOpen(false);
     setView('client_portal');
   };
 
@@ -113,10 +110,6 @@ export default function App() {
         >
           <Suspense fallback={<Splash />}>
             {view === 'splash' && <Splash />}
-            {view === 'login' && <Login onLogin={handleLogin} />}
-            {view === 'greetings' && user && (
-              <Greetings onContinue={handleContinue} role={mapRoleForGreeting(user.role)} />
-            )}
             {view === 'pilot_dashboard' && (
               <PilotDashboard onLogout={handleLogout} />
             )}
@@ -131,23 +124,27 @@ export default function App() {
               />
             )}
             {view === 'client_portal' && (
-              <ClientPortal
-                onLogout={handleLogout}
-                onLoginClick={() => setView('login')}
-                userEmail={user?.email ?? ''}
-                footerConfig={footerConfig}
-              />
+              <>
+                <ClientPortal
+                  onLogout={handleLogout}
+                  onLoginClick={() => setIsLoginOverlayOpen(true)}
+                  userEmail={user?.email ?? ''}
+                  footerConfig={footerConfig}
+                />
+                <AnimatePresence>
+                  {isLoginOverlayOpen && (
+                    <Login
+                      onLogin={handleLogin}
+                      onClose={() => setIsLoginOverlayOpen(false)}
+                      variant="modal"
+                    />
+                  )}
+                </AnimatePresence>
+              </>
             )}
           </Suspense>
         </motion.div>
       </AnimatePresence>
     </div>
   );
-}
-
-function mapRoleForGreeting(role: AppRole): 'agent' | 'owner' | 'admin' | 'client' {
-  if (role === 'super_admin' || role === 'admin') return 'admin';
-  if (role === 'agent') return 'agent';
-  if (role === 'partner') return 'owner';
-  return 'client';
 }

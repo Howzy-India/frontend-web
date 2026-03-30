@@ -1,15 +1,33 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, MapPin, Home, AlertCircle, Loader2, Mail, Lock } from 'lucide-react';
+import { Sparkles, MapPin, Home, AlertCircle, Loader2, Mail, Lock, X } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '../hooks/useAuth';
 import type { AppRole } from '../hooks/useAuth';
 
 interface LoginProps {
   onLogin: (role: AppRole, email: string) => void;
+  onClose?: () => void;
+  variant?: 'page' | 'modal';
 }
 
-type LoginMethod = 'google' | 'password';
+interface ErrorBannerProps {
+  message: string;
+}
+
+interface GoogleSignInButtonProps {
+  loading: boolean;
+  onClick: () => void;
+}
+
+interface EmailPasswordFormProps {
+  loading: boolean;
+  email: string;
+  password: string;
+  setEmail: (value: string) => void;
+  setPassword: (value: string) => void;
+  onSubmit: () => void;
+}
 
 function GoogleIcon() {
   return (
@@ -34,29 +52,7 @@ function GoogleIcon() {
   );
 }
 
-function LoginMethodToggle({
-  loginMethod,
-  setLoginMethod,
-}: {
-  loginMethod: LoginMethod;
-  setLoginMethod: (method: LoginMethod) => void;
-}) {
-  const buttonClass = (method: LoginMethod) =>
-    `flex-1 py-2 text-sm font-bold rounded-lg transition-all ${loginMethod === method ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`;
-
-  return (
-    <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
-      <button type="button" onClick={() => setLoginMethod('google')} className={buttonClass('google')}>
-        Google
-      </button>
-      <button type="button" onClick={() => setLoginMethod('password')} className={buttonClass('password')}>
-        Email & Password
-      </button>
-    </div>
-  );
-}
-
-function ErrorBanner({ message }: { message: string }) {
+function ErrorBanner({ message }: Readonly<ErrorBannerProps>) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -72,10 +68,7 @@ function ErrorBanner({ message }: { message: string }) {
 function GoogleSignInButton({
   loading,
   onClick,
-}: {
-  loading: boolean;
-  onClick: () => void;
-}) {
+}: Readonly<GoogleSignInButtonProps>) {
   return (
     <motion.button
       whileHover={{ scale: loading ? 1 : 1.02, y: loading ? 0 : -2 }}
@@ -97,16 +90,15 @@ function EmailPasswordForm({
   setEmail,
   setPassword,
   onSubmit,
-}: {
-  loading: boolean;
-  email: string;
-  password: string;
-  setEmail: (value: string) => void;
-  setPassword: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-}) {
+}: Readonly<EmailPasswordFormProps>) {
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+      className="space-y-4"
+    >
       <div className="relative">
         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         <input
@@ -143,13 +135,13 @@ function EmailPasswordForm({
   );
 }
 
-export default function Login({ onLogin }: LoginProps) {
+export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<LoginProps>) {
   const { signInWithGoogle, signInWithEmailPassword, error } = useAuth();
   const [loading, setLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>('google');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const isModal = variant === 'modal';
 
   const authenticate = async (
     signInAction: () => Promise<{ role: AppRole; email: string | null }>,
@@ -167,13 +159,12 @@ export default function Login({ onLogin }: LoginProps) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    await authenticate(signInWithGoogle, 'Sign-in failed. Please try again.');
+  const handleGoogleSignIn = () => {
+    void authenticate(signInWithGoogle, 'Sign-in failed. Please try again.');
   };
 
-  const handleEmailPasswordSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await authenticate(
+  const handleEmailPasswordSignIn = () => {
+    void authenticate(
       () => signInWithEmailPassword(email.trim(), password),
       'Sign-in failed. Please check your credentials.'
     );
@@ -182,50 +173,71 @@ export default function Login({ onLogin }: LoginProps) {
   const displayError = localError ?? error;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-[120px]"
-        />
-        <motion.div
-          animate={{ rotate: [360, 0], scale: [1, 1.5, 1] }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tl from-indigo-400/20 to-purple-400/20 blur-[120px]"
-        />
-      </div>
+    <div
+      className={
+        isModal
+          ? 'fixed inset-0 z-[120] bg-slate-950/45 backdrop-blur-sm flex items-center justify-center p-4'
+          : 'min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden'
+      }
+    >
+      {!isModal && (
+        <>
+          {/* Animated Background */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <motion.div
+              animate={{ rotate: [0, 360], scale: [1, 1.2, 1] }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+              className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-br from-purple-400/20 to-indigo-400/20 blur-[120px]"
+            />
+            <motion.div
+              animate={{ rotate: [360, 0], scale: [1, 1.5, 1] }}
+              transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+              className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tl from-indigo-400/20 to-purple-400/20 blur-[120px]"
+            />
+          </div>
 
-      {/* Floating Icons */}
-      <motion.div
-        animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-1/4 left-[15%] hidden lg:flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-slate-100"
-      >
-        <Home className="w-8 h-8 text-indigo-500" />
-      </motion.div>
-      <motion.div
-        animate={{ y: [0, 25, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-        className="absolute bottom-1/3 right-[15%] hidden lg:flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-slate-100"
-      >
-        <MapPin className="w-10 h-10 text-purple-500" />
-      </motion.div>
-      <motion.div
-        animate={{ y: [0, -15, 0], rotate: [0, 10, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-        className="absolute top-1/3 right-[20%] hidden lg:flex items-center justify-center w-14 h-14 bg-white rounded-full shadow-xl shadow-purple-500/10 border border-slate-100"
-      >
-        <Sparkles className="w-6 h-6 text-purple-500" />
-      </motion.div>
+          {/* Floating Icons */}
+          <motion.div
+            animate={{ y: [0, -20, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute top-1/4 left-[15%] hidden lg:flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-slate-100"
+          >
+            <Home className="w-8 h-8 text-indigo-500" />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, 25, 0] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+            className="absolute bottom-1/3 right-[15%] hidden lg:flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-slate-100"
+          >
+            <MapPin className="w-10 h-10 text-purple-500" />
+          </motion.div>
+          <motion.div
+            animate={{ y: [0, -15, 0], rotate: [0, 10, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+            className="absolute top-1/3 right-[20%] hidden lg:flex items-center justify-center w-14 h-14 bg-white rounded-full shadow-xl shadow-purple-500/10 border border-slate-100"
+          >
+            <Sparkles className="w-6 h-6 text-purple-500" />
+          </motion.div>
+        </>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 40, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.7, type: 'spring', bounce: 0.4 }}
-        className="w-full max-w-[440px] bg-white/70 backdrop-blur-2xl border border-white/50 p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] relative z-10"
+        className={`w-full max-w-[440px] bg-white/70 backdrop-blur-2xl border border-white/50 p-10 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] relative z-10 ${isModal ? 'max-h-[92vh] overflow-y-auto' : ''}`}
       >
+        {isModal && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-white/90 rounded-full transition-colors"
+            aria-label="Close login"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
         <div className="flex justify-center mb-10">
           <Logo className="h-16" />
         </div>
@@ -237,13 +249,9 @@ export default function Login({ onLogin }: LoginProps) {
           </p>
         </div>
 
-        <LoginMethodToggle loginMethod={loginMethod} setLoginMethod={setLoginMethod} />
-
         {displayError && <ErrorBanner message={displayError} />}
 
-        {loginMethod === 'google' ? (
-          <GoogleSignInButton loading={loading} onClick={handleGoogleSignIn} />
-        ) : (
+        <div className="space-y-5">
           <EmailPasswordForm
             loading={loading}
             email={email}
@@ -252,7 +260,15 @@ export default function Login({ onLogin }: LoginProps) {
             setPassword={setPassword}
             onSubmit={handleEmailPasswordSignIn}
           />
-        )}
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <div className="h-px flex-1 bg-slate-200" />
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">or</span>
+            <div className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <GoogleSignInButton loading={loading} onClick={handleGoogleSignIn} />
+        </div>
 
         <p className="mt-8 text-center text-xs text-slate-400 leading-relaxed">
           Your role (Admin, Agent, Partner, or Client) is determined by your account.
