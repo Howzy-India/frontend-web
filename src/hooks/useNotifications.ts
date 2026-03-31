@@ -34,20 +34,30 @@ export function useNotifications(room: string | null, maxItems = 20) {
       limit(maxItems)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: AppNotification[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          type: data.type ?? 'info',
-          message: data.message ?? '',
-          room: data.room,
-          read: data.read ?? false,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
-        };
-      });
-      setNotifications(items);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items: AppNotification[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: data.type ?? 'info',
+            message: data.message ?? '',
+            room: data.room,
+            read: data.read ?? false,
+            createdAt: data.createdAt?.toDate?.()?.toISOString() ?? null,
+          };
+        });
+        setNotifications(items);
+      },
+      (error) => {
+        if (error.code === 'permission-denied') {
+          setNotifications([]);
+          return;
+        }
+        console.error('notifications listener failed', error);
+      }
+    );
 
     return unsubscribe;
   }, [room, maxItems]);
@@ -67,19 +77,29 @@ export function useEnquiryUpdates(email: string | null) {
 
     const q = query(
       collection(db, 'enquiry_timeline'),
-      where('client_email', '==', email),
+      where('created_by', '==', email),
       orderBy('created_at', 'desc'),
       limit(10)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        created_at: doc.data().created_at?.toDate?.()?.toISOString() ?? null,
-      }));
-      setUpdates(items);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate?.()?.toISOString() ?? null,
+        }));
+        setUpdates(items);
+      },
+      (error) => {
+        if (error.code === 'permission-denied') {
+          setUpdates([]);
+          return;
+        }
+        console.error('enquiry updates listener failed', error);
+      }
+    );
 
     return unsubscribe;
   }, [email]);
