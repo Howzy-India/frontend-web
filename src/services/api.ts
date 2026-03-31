@@ -103,6 +103,7 @@ export const api = {
   ) => patch<any>(`/admin/users/${uid}`, data),
   deleteAdminUser: (uid: string) => del<any>(`/admin/users/${uid}`),
   getClientLogins: () => get<any>('/admin/client-logins'),
+  getClientLoginStats: () => get<any>('/admin/client-login-stats'),
   getClient360: (email: string) =>
     get<any>(`/admin/client-360/${encodeURIComponent(email)}`),
 
