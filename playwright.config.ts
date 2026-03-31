@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+
+// Load E2E credentials from .env.test.local (gitignored — never commit real values)
+config({ path: '.env.test.local' });
 
 export default defineConfig({
   testDir: './e2e',

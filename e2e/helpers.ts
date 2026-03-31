@@ -1,30 +1,80 @@
-// Shared test helpers and credentials
-export const CREDENTIALS = {
-  superAdmin: { email: 'super_admin@howzy.in', password: 'Howzy@123', role: 'super_admin' },
-  admin:      { email: 'admin@howzy.in',       password: 'Howzy@123', role: 'admin' },
-  client:     { email: 'client@howzy.in',      password: 'Howzy@123', role: 'client' },
-};
+import { Page } from '@playwright/test';
 
 export const APP_URL = 'https://howzy-web.web.app';
 export const API_BASE = 'https://us-central1-howzy-api.cloudfunctions.net/api';
 
-/**
- * Signs in via the email/password form on the page.
- * Waits for the login overlay to appear and fills in credentials.
- */
-import { Page, expect } from '@playwright/test';
+// Credentials are read from environment variables — never hardcoded.
+// Set them in .env.test.local (gitignored) before running tests.
+export const CREDENTIALS = {
+  superAdmin: {
+    email: process.env['E2E_SUPER_ADMIN_EMAIL'] ?? '',
+    password: process.env['E2E_SUPER_ADMIN_PASSWORD'] ?? '',
+    role: 'super_admin',
+  },
+  admin: {
+    email: process.env['E2E_ADMIN_EMAIL'] ?? '',
+    password: process.env['E2E_ADMIN_PASSWORD'] ?? '',
+    role: 'admin',
+  },
+  client: {
+    email: process.env['E2E_CLIENT_EMAIL'] ?? '',
+    password: process.env['E2E_CLIENT_PASSWORD'] ?? '',
+    role: 'client',
+  },
+};
 
-export async function loginAs(page: Page, creds: { email: string; password: string }) {
-  // Click login button if overlay isn't already open
-  const overlay = page.locator('[data-testid="login-overlay"], form').filter({ hasText: /sign in|log in/i }).first();
-  const loginBtn = page.locator('button').filter({ hasText: /sign in|log in|login/i }).first();
-
-  if (!(await overlay.isVisible().catch(() => false))) {
-    await loginBtn.click();
+/** Opens the login form (overlay or page) if not already visible. */
+async function ensureLoginFormOpen(page: Page): Promise<void> {
+  await page.goto(APP_URL, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
+  const emailInput = page.locator('input[placeholder="Email Address"]');
+  if (!(await emailInput.isVisible().catch(() => false))) {
+    await page.locator('button').filter({ hasText: /sign in|login/i }).first()
+      .click({ timeout: 10_000 })
+      .catch(() => {});
     await page.waitForTimeout(500);
   }
+}
 
-  await page.fill('input[type="email"]', creds.email);
-  await page.fill('input[type="password"]', creds.password);
-  await page.click('button[type="submit"], button:has-text("Sign In"), button:has-text("Login")');
+/** Signs in with any email/password and waits for the app to settle. */
+export async function signIn(page: Page, email: string, password: string): Promise<void> {
+  await ensureLoginFormOpen(page);
+  await page.locator('input[placeholder="Email Address"]').fill(email);
+  await page.locator('input[placeholder="Password"]').fill(password);
+  await page.locator('button:has-text("Sign in with Email")').click();
+  await page.waitForTimeout(3000);
+}
+
+/** Signs in as super_admin and waits for the dashboard. */
+export async function signInAsSuperAdmin(page: Page): Promise<void> {
+  await signIn(page, CREDENTIALS.superAdmin.email, CREDENTIALS.superAdmin.password);
+  await page.waitForTimeout(1000);
+}
+
+/** Signs in as admin and waits for the dashboard. */
+export async function signInAsAdmin(page: Page): Promise<void> {
+  await signIn(page, CREDENTIALS.admin.email, CREDENTIALS.admin.password);
+  await page.waitForTimeout(1000);
+}
+
+/** Signs in as client and waits for the portal. */
+export async function signInAsClient(page: Page): Promise<void> {
+  await signIn(page, CREDENTIALS.client.email, CREDENTIALS.client.password);
+  await page.waitForTimeout(1000);
+}
+
+/** Navigates to a named sidebar tab in the admin dashboard. */
+export async function navigateToDashboardTab(page: Page, tabName: string): Promise<void> {
+  const tab = page.locator('button, a, li').filter({ hasText: tabName }).first();
+  await tab.click({ timeout: 10_000 });
+  await page.waitForTimeout(2000);
+}
+
+/** Clicks the Logout button (icon-only, matched by aria-label). */
+export async function logout(page: Page): Promise<void> {
+  const btn = page.getByRole('button', { name: 'Logout' }).first();
+  if (await btn.isVisible().catch(() => false)) {
+    await btn.click();
+    await page.waitForTimeout(1500);
+  }
 }
