@@ -152,3 +152,95 @@ export async function deleteProperty(idToken: string, id: string): Promise<void>
     headers: { Authorization: `Bearer ${idToken}` },
   });
 }
+
+/** Creates an enquiry via the public API and returns its id. */
+export async function seedEnquiry(payload: {
+  client_name: string;
+  email: string;
+  phone?: string;
+  property_id?: string;
+  property_name?: string;
+  property_type?: string;
+  location?: string;
+  enquiry_type?: string;
+}): Promise<string> {
+  const resp = await fetch(`${API_BASE}/enquiries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, source: 'e2e-test' }),
+  });
+  if (!resp.ok) {
+    throw new Error(`seedEnquiry failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json() as { id: string };
+  return data.id;
+}
+
+/** Updates enquiry status to 'Cancelled' to "soft-delete" a test enquiry. */
+export async function cancelEnquiry(idToken: string, id: string): Promise<void> {
+  await fetch(`${API_BASE}/enquiries/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ status: 'Cancelled' }),
+  }).catch(() => {});
+}
+
+/** Creates a lead via the public API and returns its id. */
+export async function seedLead(payload: {
+  name: string;
+  contact?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  budget?: string;
+  location_preferred?: string;
+  looking_bhk?: string;
+  milestone?: string;
+  propertyType?: string;
+}): Promise<string> {
+  const contact = payload.contact ?? payload.phone ?? payload.email ?? '';
+  const location_preferred = payload.location_preferred ?? payload.city ?? '';
+  const resp = await fetch(`${API_BASE}/leads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: payload.name,
+      budget: payload.budget ?? '',
+      contact,
+      location_preferred,
+      looking_bhk: payload.looking_bhk ?? '',
+      milestone: payload.milestone ?? 'Initial',
+      campaign_source: 'e2e-test',
+    }),
+  });
+  if (!resp.ok) {
+    throw new Error(`seedLead failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json() as { id: string };
+  return data.id;
+}
+
+/** Creates a user with any role via the admin API, returns uid. */
+export async function createUserWithRole(
+  idToken: string,
+  payload: { email: string; password: string; displayName: string; role: string },
+): Promise<string> {
+  const resp = await fetch(`${API_BASE}/admin/create-user`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    throw new Error(`createUserWithRole failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json() as { uid: string };
+  return data.uid;
+}
+
+/** Deletes a user provisioned via createUserWithRole. */
+export async function deleteCreatedUser(idToken: string, uid: string): Promise<void> {
+  await fetch(`${API_BASE}/admin/create-user/${uid}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${idToken}` },
+  }).catch(() => {});
+}
