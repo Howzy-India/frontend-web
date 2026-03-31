@@ -70,6 +70,28 @@ export async function navigateToDashboardTab(page: Page, tabName: string): Promi
   await page.waitForTimeout(2000);
 }
 
+/** Clicks Refresh on the dashboard and waits for data to reload. */
+export async function refreshDashboard(page: Page): Promise<void> {
+  const refreshBtn = page.getByRole('button', { name: 'Refresh' }).first();
+  if (await refreshBtn.isVisible().catch(() => false)) {
+    await refreshBtn.click();
+    await page.waitForTimeout(3000);
+  }
+}
+
+/** Opens a second browser tab, signs in as client, runs an optional action, then closes the tab. */
+export async function withClientSession(
+  context: import('@playwright/test').BrowserContext,
+  action?: (clientPage: Page) => Promise<void>,
+): Promise<void> {
+  const clientPage = await context.newPage();
+  await signInAsClient(clientPage);
+  if (action) {
+    await action(clientPage);
+  }
+  await clientPage.close();
+}
+
 /** Clicks the Logout button (icon-only, matched by aria-label). */
 export async function logout(page: Page): Promise<void> {
   const btn = page.getByRole('button', { name: 'Logout' }).first();

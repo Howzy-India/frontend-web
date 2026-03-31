@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { signInAsSuperAdmin, signInAsAdmin, signInAsClient, APP_URL } from './helpers';
+import { signIn, signInAsSuperAdmin, signInAsAdmin, signInAsClient } from './helpers';
 
 test.describe('Authentication', () => {
   test('TC-AUTH-01: Super admin login lands on SuperAdminDashboard', async ({ page }) => {
@@ -23,16 +23,7 @@ test.describe('Authentication', () => {
   });
 
   test('TC-AUTH-04: Invalid credentials show error', async ({ page }) => {
-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(2000);
-    const emailInput = page.locator('input[placeholder="Email Address"]');
-    if (!(await emailInput.isVisible().catch(() => false))) {
-      await page.locator('button').filter({ hasText: /sign in|login/i }).first().click({ timeout: 10_000 }).catch(() => {});
-      await page.waitForTimeout(500);
-    }
-    await page.locator('input[placeholder="Email Address"]').fill('wrong@howzy.in');
-    await page.locator('input[placeholder="Password"]').fill('wrongpassword');
-    await page.locator('button:has-text("Sign in with Email")').click();
+    await signIn(page, 'wrong@howzy.in', 'wrongpassword');
     await expect(page.locator('text=/invalid|wrong|failed|error/i').first()).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: 'e2e/screenshots/auth-invalid.png' });
   });
