@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePagination } from '../hooks/usePagination';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotifications } from '../hooks/useNotifications';
+import { useAuth } from '../hooks/useAuth';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
@@ -1133,6 +1134,8 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
 });
 
 const AdminUsersManagement = React.memo(function AdminUsersManagement() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1206,6 +1209,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
 
   return (
     <div className="space-y-6">
+      {isSuperAdmin && (
       <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
         <h3 className="text-xl font-bold text-slate-900 mb-2">Create Admin User</h3>
         <p className="text-sm text-slate-500 mb-6">Only super admins can create and manage admin accounts.</p>
@@ -1245,6 +1249,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
           {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
         </div>
       </div>
+      )}
 
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
