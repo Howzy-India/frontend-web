@@ -15,8 +15,8 @@ test.describe('Super Admin — Client Login Dashboard', () => {
     await page.screenshot({ path: 'e2e/screenshots/client-logins-stats.png', fullPage: false });
   });
 
-  test('TC-CLD-02: Client login is tracked after sign-in', async ({ page, context }) => {
-    await withClientSession(context, async (clientPage) => {
+  test('TC-CLD-02: Client login is tracked after sign-in', async ({ page, browser }) => {
+    await withClientSession(browser, async (clientPage) => {
       await clientPage.screenshot({ path: 'e2e/screenshots/client-logged-in.png' });
     });
     await page.waitForTimeout(5000);
@@ -25,8 +25,8 @@ test.describe('Super Admin — Client Login Dashboard', () => {
     await page.screenshot({ path: 'e2e/screenshots/client-login-tracked.png', fullPage: false });
   });
 
-  test('TC-CLD-03: Logout time is recorded after client signs out', async ({ page, context }) => {
-    await withClientSession(context, (clientPage) => logout(clientPage));
+  test('TC-CLD-03: Logout time is recorded after client signs out', async ({ page, browser }) => {
+    await withClientSession(browser, (clientPage) => logout(clientPage));
     await page.waitForTimeout(5000);
     await refreshDashboard(page);
     await expect(page.locator(`text=${CREDENTIALS.client.email}`).first()).toBeVisible({ timeout: 15_000 });
