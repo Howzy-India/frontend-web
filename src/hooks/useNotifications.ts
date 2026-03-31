@@ -51,7 +51,7 @@ export function useNotifications(room: string | null, maxItems = 20) {
         setNotifications(items);
       },
       (error) => {
-        if (error.code === 'permission-denied') {
+        if (error.code === 'permission-denied' || error.code === 'failed-precondition') {
           setNotifications([]);
           return;
         }
@@ -93,7 +93,7 @@ export function useEnquiryUpdates(email: string | null) {
         setUpdates(items);
       },
       (error) => {
-        if (error.code === 'permission-denied') {
+        if (error.code === 'permission-denied' || error.code === 'failed-precondition') {
           setUpdates([]);
           return;
         }

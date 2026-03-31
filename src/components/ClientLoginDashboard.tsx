@@ -27,12 +27,26 @@ export default function ClientLoginDashboard() {
   const fetchData = useCallback(async (silent = false) => {
     if (!silent) setRefreshing(true);
     try {
-      const [loginsData, statsData] = await Promise.all([
+      const [loginsData, statsData] = await Promise.allSettled([
         api.getClientLogins(),
         api.getClientLoginStats(),
       ]);
-      setLogins(loginsData.logins);
-      setStats(statsData);
+
+      const logins: any[] = loginsData.status === 'fulfilled' ? loginsData.value.logins : [];
+      setLogins(logins);
+
+      if (statsData.status === 'fulfilled') {
+        setStats(statsData.value);
+      } else {
+        // Derive stats from logins when the stats endpoint is unavailable
+        const todayStr = new Date().toDateString();
+        setStats({
+          totalUsers: new Set(logins.map((l: any) => l.email)).size,
+          activeToday: new Set(logins.filter((l: any) => new Date(l.login_time).toDateString() === todayStr).map((l: any) => l.email)).size,
+          totalLogins: logins.length,
+          failedAttempts: logins.filter((l: any) => l.status === 'Failed').length,
+        });
+      }
       setLastRefreshed(new Date());
     } catch (error) {
       console.error('Failed to fetch client login data:', error);
