@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Monitor, Smartphone, Globe, ShieldAlert, CheckCircle2, XCircle, Clock, User, Building2, MapPin, Tag, Mail, Phone, Activity } from 'lucide-react';
+import { Search, Filter, Monitor, Smartphone, Globe, ShieldAlert, CheckCircle2, XCircle, Clock, User, Building2, MapPin, Tag, Mail, Activity, RefreshCw, Wifi } from 'lucide-react';
 import { api } from '../services/api';
 import AssignmentPanel from './AssignmentPanel';
 
+const POLL_INTERVAL_MS = 30_000;
+
 export default function ClientLoginDashboard() {
   const [logins, setLogins] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, totalLogins: 0, failedAttempts: 0 });
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [deviceFilter, setDeviceFilter] = useState('All');
@@ -17,19 +22,32 @@ export default function ClientLoginDashboard() {
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
   const [timelineData, setTimelineData] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    fetchLogins();
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setRefreshing(true);
+    try {
+      const [loginsData, statsData] = await Promise.all([
+        api.getClientLogins(),
+        api.getClientLoginStats(),
+      ]);
+      setLogins(loginsData.logins);
+      setStats(statsData);
+      setLastRefreshed(new Date());
+    } catch (error) {
+      console.error('Failed to fetch client login data:', error);
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
   }, []);
 
-  const fetchLogins = async () => {
-    try {
-      const data = await api.getClientLogins();
-      setLogins(data.logins);
-    } catch (error) {
-      console.error('Failed to fetch logins:', error);
-    }
-  };
+  useEffect(() => {
+    fetchData();
+    intervalRef.current = setInterval(() => fetchData(true), POLL_INTERVAL_MS);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [fetchData]);
 
   const openUser360 = async (email: string) => {
     setSelectedUser(email);
@@ -64,12 +82,6 @@ export default function ClientLoginDashboard() {
     return matchesSearch && matchesStatus && matchesDevice;
   });
 
-  // Calculate metrics
-  const totalUsers = new Set(logins.map(l => l.email)).size;
-  const activeToday = new Set(logins.filter(l => new Date(l.login_time).toDateString() === new Date().toDateString()).map(l => l.email)).size;
-  const totalLogins = logins.length;
-  const failedAttempts = logins.filter(l => l.status === 'Failed').length;
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end">
@@ -77,15 +89,34 @@ export default function ClientLoginDashboard() {
           <h2 className="text-2xl font-bold text-slate-900">Client Login Dashboard</h2>
           <p className="text-slate-500">Monitor client access and platform usage</p>
         </div>
+        {/* Live indicator */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <Wifi className="w-3 h-3" />
+            Live · {lastRefreshed ? `Updated ${lastRefreshed.toLocaleTimeString()}` : 'Loading…'}
+          </div>
+          <button
+            onClick={() => fetchData()}
+            disabled={refreshing}
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors disabled:opacity-50"
+            title="Refresh now"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { title: 'Total Users', value: totalUsers, icon: User, color: 'indigo' },
-          { title: 'Active Today', value: activeToday, icon: Activity, color: 'emerald' },
-          { title: 'Total Logins', value: totalLogins, icon: Globe, color: 'blue' },
-          { title: 'Failed Attempts', value: failedAttempts, icon: ShieldAlert, color: 'red' }
+          { title: 'Total Users', value: stats.totalUsers, icon: User, color: 'indigo' },
+          { title: 'Active Today', value: stats.activeToday, icon: Activity, color: 'emerald' },
+          { title: 'Total Logins', value: stats.totalLogins, icon: Globe, color: 'blue' },
+          { title: 'Failed Attempts', value: stats.failedAttempts, icon: ShieldAlert, color: 'red' }
         ].map((metric, i) => (
           <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${metric.color}-50 text-${metric.color}-600`}>
