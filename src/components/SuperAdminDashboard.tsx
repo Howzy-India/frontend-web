@@ -1041,25 +1041,33 @@ const AllPropertiesView = React.memo(function AllPropertiesView({ type, data }: 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {displayData.map((item, i) => (
-                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-8 py-5">
-                    <span className="font-bold text-slate-900">{item.name}</span>
-                  </td>
-                  <td className="px-8 py-5 text-sm text-indigo-600 font-medium">{item.developerName || item.builderName}</td>
-                  <td className="px-8 py-5 text-sm text-slate-500 font-medium">{item.location}</td>
-                  <td className="px-8 py-5">
-                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md text-[10px] font-bold">
-                      Verified
-                    </span>
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+              {displayData.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-12 text-center text-slate-400 text-sm">
+                    No {type.toLowerCase()} found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                displayData.map((item, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5">
+                      <span className="font-bold text-slate-900">{item.name}</span>
+                    </td>
+                    <td className="px-8 py-5 text-sm text-indigo-600 font-medium">{item.developerName || item.builderName}</td>
+                    <td className="px-8 py-5 text-sm text-slate-500 font-medium">{item.location}</td>
+                    <td className="px-8 py-5">
+                      <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md text-[10px] font-bold">
+                        {item.status ?? 'Listed'}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
       </div>

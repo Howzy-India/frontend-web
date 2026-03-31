@@ -57,6 +57,16 @@ export const api = {
     return get<any>(`/projects${qs}`, false);
   },
   getProject: (id: string) => get<any>(`/projects/${id}`, false),
+  addProperty: (data: {
+    name: string;
+    location?: string;
+    developerName?: string;
+    propertyType: 'project' | 'plot' | 'farmland';
+    projectType?: string;
+    city?: string;
+    reraNumber?: string;
+    status?: string;
+  }) => post<any>('/admin/properties', data),
   getPublicStats: () => get<any>('/public/stats', false),
 
   // ── Leads ─────────────────────────────────────────────────────────
