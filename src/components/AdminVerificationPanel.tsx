@@ -5,7 +5,7 @@ import { api } from '../services/api';
 
 export default function AdminVerificationPanel() {
   const [submissions, setSubmissions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'All' | 'Farm Land' | 'Plot' | 'Partner' | 'Builder'>('All');
+  const [activeTab, setActiveTab] = useState<'All' | 'Farm Land' | 'Plot' | 'Project' | 'Partner' | 'Builder'>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [remarks, setRemarks] = useState('');
@@ -17,8 +17,8 @@ export default function AdminVerificationPanel() {
   const fetchSubmissions = async () => {
     try {
       const data = await api.getAdminSubmissions();
-      // Filter only Farm Land, Plot, Partner, and Builder submissions
-      const filtered = data.submissions.filter((s: any) => s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Partner' || s.type === 'Builder');
+      // Filter only Farm Land, Plot, Project, Partner, and Builder submissions
+      const filtered = data.submissions.filter((s: any) => s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Project' || s.type === 'Partner' || s.type === 'Builder');
       setSubmissions(filtered);
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
@@ -52,14 +52,14 @@ export default function AdminVerificationPanel() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h3 className="text-2xl font-bold text-slate-900">Verification Panel</h3>
-          <p className="text-slate-500">Review and approve Farm Land, Plot, Partner, and Builder onboarding submissions.</p>
+          <p className="text-slate-500">Review and approve Farm Land, Plot, Project, Partner, and Builder onboarding submissions.</p>
         </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
-            {['All', 'Farm Land', 'Plot', 'Partner', 'Builder'].map(tab => (
+            {['All', 'Farm Land', 'Plot', 'Project', 'Partner', 'Builder'].map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
@@ -111,6 +111,7 @@ export default function AdminVerificationPanel() {
                       <div className="flex items-center gap-2">
                         {sub.type === 'Farm Land' ? <Trees className="w-4 h-4 text-amber-500" /> : 
                          sub.type === 'Plot' ? <Map className="w-4 h-4 text-blue-500" /> : 
+                         sub.type === 'Project' ? <Building2 className="w-4 h-4 text-violet-500" /> :
                          sub.type === 'Builder' ? <Building2 className="w-4 h-4 text-emerald-500" /> :
                          <UserPlus className="w-4 h-4 text-indigo-500" />}
                         <span className="text-slate-600">{sub.type}</span>
