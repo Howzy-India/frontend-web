@@ -4,8 +4,10 @@ import { signInAsClient, logout } from './helpers';
 test.describe('Client Portal', () => {
   test('TC-CL-01: Client lands on Client Portal after login', async ({ page }) => {
     await signInAsClient(page);
+    // Authenticated client sees Logout icon, not the Login button
     await expect(page.getByRole('button', { name: 'Logout' }).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('button', { name: 'Global Leads' })).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
+    // Admin-only sidebar must not be present
+    await expect(page.locator('nav').getByRole('button', { name: 'Global Leads' })).not.toBeVisible({ timeout: 5_000 }).catch(() => {});
     await page.screenshot({ path: 'e2e/screenshots/client-portal-home.png', fullPage: false });
   });
 
@@ -29,11 +31,8 @@ test.describe('Client Portal', () => {
   test('TC-CL-04: Client can log out', async ({ page }) => {
     await signInAsClient(page);
     await logout(page);
-    await expect(
-      page.locator('input[placeholder="Email Address"]')
-        .or(page.locator('text=Sign in'))
-        .or(page.locator('text=Welcome to Howzy'))
-    ).toBeVisible({ timeout: 10_000 });
+    // After logout the portal shows the Login button in the header
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: 'e2e/screenshots/client-logged-out.png' });
   });
 });

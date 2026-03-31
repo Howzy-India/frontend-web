@@ -79,17 +79,18 @@ export async function refreshDashboard(page: Page): Promise<void> {
   }
 }
 
-/** Opens a second browser tab, signs in as client, runs an optional action, then closes the tab. */
+/** Opens an isolated browser context, signs in as client, runs an optional action, then closes it. */
 export async function withClientSession(
-  context: import('@playwright/test').BrowserContext,
+  browser: import('@playwright/test').Browser,
   action?: (clientPage: Page) => Promise<void>,
 ): Promise<void> {
-  const clientPage = await context.newPage();
+  const clientContext = await browser.newContext();
+  const clientPage = await clientContext.newPage();
   await signInAsClient(clientPage);
   if (action) {
     await action(clientPage);
   }
-  await clientPage.close();
+  await clientContext.close();
 }
 
 /** Clicks the Logout button (icon-only, matched by aria-label). */
