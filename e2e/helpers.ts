@@ -1,7 +1,8 @@
 import { Page } from '@playwright/test';
 
 export const APP_URL = 'https://howzy-web.web.app';
-export const API_BASE = 'https://us-central1-howzy-api.cloudfunctions.net/api';
+export const API_BASE = process.env['E2E_API_BASE'] ?? 'https://us-central1-howzy-api.cloudfunctions.net/api';
+const FIREBASE_API_KEY = process.env['E2E_FIREBASE_API_KEY'] ?? '';
 
 // Credentials are read from environment variables — never hardcoded.
 // Set them in .env.test.local (gitignored) before running tests.
@@ -100,4 +101,54 @@ export async function logout(page: Page): Promise<void> {
     await btn.click();
     await page.waitForTimeout(1500);
   }
+}
+
+// ── API helpers for test data seeding ──────────────────────────────────────
+
+/** Returns a Firebase ID token for a given user. */
+export async function getIdToken(email: string, password: string): Promise<string> {
+  const resp = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    },
+  );
+  if (!resp.ok) {
+    throw new Error(`Firebase signIn failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json() as { idToken: string };
+  return data.idToken;
+}
+
+/** Creates a property via the admin API and returns its id. */
+export async function seedProperty(
+  idToken: string,
+  payload: {
+    name: string;
+    location?: string;
+    developerName?: string;
+    propertyType: 'project' | 'plot' | 'farmland';
+    projectType?: string;
+  },
+): Promise<string> {
+  const resp = await fetch(`${API_BASE}/admin/properties`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok) {
+    throw new Error(`seedProperty failed: ${resp.status} ${await resp.text()}`);
+  }
+  const data = await resp.json() as { id: string };
+  return data.id;
+}
+
+/** Deletes a property by id via the admin API. */
+export async function deleteProperty(idToken: string, id: string): Promise<void> {
+  await fetch(`${API_BASE}/admin/properties/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
 }
