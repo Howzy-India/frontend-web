@@ -30,6 +30,7 @@ export default function App() {
   const [view, setView] = useState<ViewState>('splash');
   const [isLoginOverlayOpen, setIsLoginOverlayOpen] = useState(false);
   const [footerConfig, setFooterConfig] = useState<any>(null);
+  const clientLoginIdRef = React.useRef<string | null>(null);
 
   // Show splash on first load, then route based on auth state
   useEffect(() => {
@@ -69,12 +70,13 @@ export default function App() {
   const handleLogin = async (role: AppRole, email: string) => {
     if (role === 'client') {
       try {
-        await api.trackClientLogin({
+        const result = await api.trackClientLogin({
           email,
           device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
           browser: getBrowserName(navigator.userAgent),
           status: 'Success',
         });
+        if (result?.id) clientLoginIdRef.current = result.id;
       } catch {
         // Non-critical — don't block login
       }
@@ -84,6 +86,14 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    if (clientLoginIdRef.current) {
+      try {
+        await api.trackClientLogout(clientLoginIdRef.current);
+      } catch {
+        // Non-critical — don't block logout
+      }
+      clientLoginIdRef.current = null;
+    }
     await logout();
     setIsLoginOverlayOpen(false);
     setView('client_portal');

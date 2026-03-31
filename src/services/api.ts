@@ -111,6 +111,7 @@ export const api = {
   getClientEnquiries: (email: string) =>
     get<any>(`/client/enquiries?email=${encodeURIComponent(email)}`),
   trackClientLogin: (data: any) => post<any>('/client/login-track', data, false),
+  trackClientLogout: (id: string) => post<any>('/client/logout-track', { id }, false),
 
   // ── Pilot / Partner ───────────────────────────────────────────────
   getPilotAssignedEnquiries: () => get<any>('/pilot/assigned-enquiries'),
