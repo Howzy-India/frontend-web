@@ -119,10 +119,10 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
             © HOWZY 2026 | All Rights Reserved
           </div>
           <div className="flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-600">
-            <button className="hover:text-indigo-400 transition-colors">Privacy</button>
-            <button className="hover:text-indigo-400 transition-colors">Terms</button>
-            <button className="hover:text-indigo-400 transition-colors">Contact</button>
-            <button className="hover:text-indigo-400 transition-colors">FAQs</button>
+            <button onClick={() => onCompanyClick?.('Privacy Policy')} className="hover:text-indigo-400 transition-colors">Privacy</button>
+            <button onClick={() => onCompanyClick?.('Terms & Conditions')} className="hover:text-indigo-400 transition-colors">Terms</button>
+            <button onClick={() => onCompanyClick?.('Contact')} className="hover:text-indigo-400 transition-colors">Contact</button>
+            <button onClick={() => onCompanyClick?.('FAQs')} className="hover:text-indigo-400 transition-colors">FAQs</button>
           </div>
         </div>
       </div>

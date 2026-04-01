@@ -389,7 +389,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <button className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">
+            <button onClick={() => setActiveTab("About")} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">
               Contact Us
             </button>
             {userEmail ? (
@@ -1449,7 +1449,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                 </p>
               </div>
               <div className="h-64 bg-slate-200 rounded-3xl overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1560518883-ce09059eeefa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Office" className="w-full h-full object-cover" />
+                <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Office" className="w-full h-full object-cover" />
               </div>
             </div>
 
@@ -1548,7 +1548,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         }}
         onCompanyClick={(item: string) => {
           if (item === 'About HOWZY') setActiveTab("About");
-          else if (item === 'Careers') setActiveTab("About"); // Or a dedicated careers section
+          else if (item === 'Careers') setActiveTab("About");
+          else if (item === 'Contact' || item === 'Privacy Policy' || item === 'Terms & Conditions' || item === 'FAQs') setActiveTab("About");
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />
