@@ -302,7 +302,7 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
       {/* Main Content */}
       <main className="flex-1 h-screen overflow-y-auto p-6 md:p-10 pt-20 md:pt-10">
         <div className="max-w-6xl mx-auto mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-bold text-slate-900 pl-12 md:pl-0">
             {tabs.find(t => t.id === activeTab)?.label}
           </h1>
           

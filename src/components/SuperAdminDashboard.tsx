@@ -366,8 +366,8 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
 
       {/* Main Content */}
       <main className="flex-1 h-screen overflow-y-auto bg-slate-50/50">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-8 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-900">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900 pl-12 md:pl-0">
             {tabs.find(t => t.id === activeTab)?.label}
           </h2>
           
