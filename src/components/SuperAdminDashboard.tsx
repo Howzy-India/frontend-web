@@ -1187,7 +1187,7 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
                 </button>
                 <button type="submit" disabled={submitting}
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-60">
-                  {submitting ? 'Submitting…' : userRole === 'super_admin' ? 'Add Property' : 'Submit for Approval'}
+                  {submitting ? 'Submitting…' : userRole === 'super_admin' ? `Add ${type === 'Farm Lands' ? 'Farm Land' : type.slice(0, -1)}` : 'Submit for Approval'}
                 </button>
               </div>
             </form>

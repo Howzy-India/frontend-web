@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { CheckCircle } from 'lucide-react';
 import Splash from './components/Splash';
 import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
@@ -30,6 +31,7 @@ export default function App() {
   const [view, setView] = useState<ViewState>('splash');
   const [isLoginOverlayOpen, setIsLoginOverlayOpen] = useState(false);
   const [footerConfig, setFooterConfig] = useState<any>(null);
+  const [showLogoutBanner, setShowLogoutBanner] = useState(false);
   const clientLoginIdRef = React.useRef<string | null>(null);
 
   // Show splash on first load, then route based on auth state
@@ -97,6 +99,8 @@ export default function App() {
     await logout();
     setIsLoginOverlayOpen(false);
     setView('client_portal');
+    setShowLogoutBanner(true);
+    setTimeout(() => setShowLogoutBanner(false), 3000);
   };
 
   const pageVariants = {
@@ -108,6 +112,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30 overflow-x-hidden">
+      {showLogoutBanner && (
+        <div className="fixed top-6 right-6 z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold animate-fade-in">
+          <CheckCircle className="w-4 h-4 shrink-0" />
+          Logged out successfully
+        </div>
+      )}
       <AnimatePresence mode="wait">
         <motion.div
           key={view}

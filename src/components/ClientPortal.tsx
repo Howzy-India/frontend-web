@@ -140,7 +140,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     corner: '',
     type: '',
     transaction: '',
-    area: ''
+    area: '',
+    trendingArea: ''
   });
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
@@ -322,6 +323,10 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     let matchesFilters = true;
     
     if (filters.location && p.details?.city?.toLowerCase() !== filters.location.toLowerCase()) {
+      matchesFilters = false;
+    }
+
+    if (filters.trendingArea && p.details?.location?.toLowerCase() !== filters.trendingArea.toLowerCase()) {
       matchesFilters = false;
     }
 
@@ -820,7 +825,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                       onClick={() => setProjectCategory(cat.id as any)}
                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors ${
                         projectCategory === cat.id 
-                          ? `bg-${cat.color}-600 text-white shadow-md` 
+                          ? 'bg-indigo-600 text-white shadow-md' 
                           : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
@@ -839,10 +844,11 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     <button 
                       onClick={() => {
                         setSearchTerm('');
+                        setProjectCategory('All');
                         setFilters({
                           location: '', bhk: '', priceRange: '', possession: '', gated: '', age: '', 
                           furnishing: '', ownership: '', size: '', approval: '', corner: '', 
-                          type: '', transaction: '', area: ''
+                          type: '', transaction: '', area: '', trendingArea: ''
                         });
                       }}
                       className="text-sm text-indigo-600 font-medium hover:underline"
@@ -1165,9 +1171,9 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     ).map(loc => (
                       <button
                         key={loc}
-                        onClick={() => setFilters({...filters, location: loc})}
+                        onClick={() => setFilters({...filters, trendingArea: loc})}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                          filters.location === loc 
+                          filters.trendingArea === loc 
                             ? 'bg-indigo-600 text-white shadow-md' 
                             : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
                         }`}
