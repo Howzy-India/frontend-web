@@ -249,7 +249,7 @@ export default function AdminEnquiriesPanel() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl z-50 overflow-hidden"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl z-50 overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="text-xl font-bold text-slate-900">Enquiry Details</h3>
@@ -261,7 +261,7 @@ export default function AdminEnquiriesPanel() {
                 </button>
               </div>
               
-              <div className="p-8 space-y-8">
+              <div className="p-8 space-y-8 overflow-y-auto flex-1">
                 {/* Client Info */}
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
