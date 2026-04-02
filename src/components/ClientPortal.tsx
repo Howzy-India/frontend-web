@@ -199,6 +199,13 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     }
   }, [enquiryUpdates]);
 
+  // Refresh enquiries whenever user opens the My Enquiries tab
+  useEffect(() => {
+    if (dashboardTab === 'My Enquiries' && userEmail) {
+      fetchEnquiries();
+    }
+  }, [dashboardTab, userEmail]);
+
   const fetchProperties = async () => {
     try {
       const projectsData = await api.getProjects();
