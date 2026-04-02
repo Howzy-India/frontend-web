@@ -113,7 +113,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30 overflow-x-hidden">
       {showLogoutBanner && (
-        <div className="fixed top-6 right-6 z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold animate-fade-in">
+        <div className="fixed z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold
+          bottom-6 left-1/2 -translate-x-1/2
+          md:bottom-auto md:top-6 md:left-1/2 md:-translate-x-1/2 md:translate-y-0">
           <CheckCircle className="w-4 h-4 shrink-0" />
           Logged out successfully
         </div>
