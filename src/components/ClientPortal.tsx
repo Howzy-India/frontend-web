@@ -140,7 +140,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     corner: '',
     type: '',
     transaction: '',
-    area: ''
+    area: '',
+    trendingArea: ''
   });
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
@@ -325,6 +326,10 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
       matchesFilters = false;
     }
 
+    if (filters.trendingArea && p.details?.location?.toLowerCase() !== filters.trendingArea.toLowerCase()) {
+      matchesFilters = false;
+    }
+
     const activeConfigCat = currentCat === 'Projects' ? 'Apartments' : currentCat;
     
     if (activeConfigCat === 'Apartments') {
@@ -389,7 +394,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
-            <button className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">
+            <button onClick={() => setActiveTab("About")} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">
               Contact Us
             </button>
             {userEmail ? (
@@ -820,7 +825,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                       onClick={() => setProjectCategory(cat.id as any)}
                       className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-colors ${
                         projectCategory === cat.id 
-                          ? `bg-${cat.color}-600 text-white shadow-md` 
+                          ? 'bg-indigo-600 text-white shadow-md' 
                           : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
@@ -839,10 +844,11 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     <button 
                       onClick={() => {
                         setSearchTerm('');
+                        setProjectCategory('All');
                         setFilters({
                           location: '', bhk: '', priceRange: '', possession: '', gated: '', age: '', 
                           furnishing: '', ownership: '', size: '', approval: '', corner: '', 
-                          type: '', transaction: '', area: ''
+                          type: '', transaction: '', area: '', trendingArea: ''
                         });
                       }}
                       className="text-sm text-indigo-600 font-medium hover:underline"
@@ -1165,9 +1171,9 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     ).map(loc => (
                       <button
                         key={loc}
-                        onClick={() => setFilters({...filters, location: loc})}
+                        onClick={() => setFilters({...filters, trendingArea: loc})}
                         className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                          filters.location === loc 
+                          filters.trendingArea === loc 
                             ? 'bg-indigo-600 text-white shadow-md' 
                             : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
                         }`}
@@ -1449,7 +1455,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                 </p>
               </div>
               <div className="h-64 bg-slate-200 rounded-3xl overflow-hidden">
-                <img src="https://images.unsplash.com/photo-1560518883-ce09059eeefa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Office" className="w-full h-full object-cover" />
+                <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Office" className="w-full h-full object-cover" />
               </div>
             </div>
 
@@ -1548,7 +1554,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         }}
         onCompanyClick={(item: string) => {
           if (item === 'About HOWZY') setActiveTab("About");
-          else if (item === 'Careers') setActiveTab("About"); // Or a dedicated careers section
+          else if (item === 'Careers') setActiveTab("About");
+          else if (item === 'Contact' || item === 'Privacy Policy' || item === 'Terms & Conditions' || item === 'FAQs') setActiveTab("About");
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       />

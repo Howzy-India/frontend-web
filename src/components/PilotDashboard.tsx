@@ -258,7 +258,7 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
               transition={{ delay: 1.6, duration: 0.5 }}
               className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-md ml-2"
             >
-              Partner
+              Pilot
             </motion.span>
           </div>
 
