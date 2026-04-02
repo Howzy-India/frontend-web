@@ -540,7 +540,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
           <div className="space-y-12 md:space-y-16 pb-12">
             {/* Category Selector (Airbnb Style) */}
             <div className="sticky top-[86px] z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60 -mx-4 px-4 md:-mx-10 md:px-10 shadow-sm">
-              <div className="flex gap-8 overflow-x-auto py-4 scrollbar-hide">
+              <div className="flex gap-8 overflow-x-auto py-4 scrollbar-hide md:justify-center">
                 {[
                   { id: 'All', name: 'Explore All', icon: Sparkles, color: 'indigo' },
                   { id: 'Projects', name: 'New Projects', icon: Building2, color: 'blue' },
