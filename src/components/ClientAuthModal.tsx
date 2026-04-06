@@ -1,7 +1,6 @@
-import React, { useState, useId } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, ArrowRight, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
+import { useOtpForm } from '../hooks/useOtpForm';
 
 interface ClientAuthModalProps {
   isOpen: boolean;
@@ -10,48 +9,22 @@ interface ClientAuthModalProps {
 }
 
 export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuthModalProps) {
-  const { sendOtp, verifyOtp, otpLoading, error } = useAuth();
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [localError, setLocalError] = useState<string | null>(null);
-  const recaptchaId = useId();
-
-  const displayError = localError ?? error;
-
-  const formatPhone = (raw: string) => {
-    const digits = raw.replace(/\D/g, '');
-    return digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    try {
-      await sendOtp(formatPhone(phone), recaptchaId);
-      setStep('otp');
-    } catch (err: any) {
-      setLocalError(err?.message ?? 'Failed to send OTP. Please try again.');
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    try {
-      const user = await verifyOtp(otp.trim());
-      onLogin(user.email ?? user.uid);
+  const {
+    phone, setPhone,
+    otp, setOtp,
+    step,
+    displayError,
+    recaptchaId,
+    otpLoading,
+    handleSendOtp,
+    handleVerifyOtp,
+    handleBack,
+  } = useOtpForm({
+    onSuccess: (emailOrUid) => {
+      onLogin(emailOrUid);
       onClose();
-    } catch (err: any) {
-      setLocalError(err?.message ?? 'Invalid OTP. Please try again.');
-    }
-  };
-
-  const handleBack = () => {
-    setStep('phone');
-    setOtp('');
-    setLocalError(null);
-  };
+    },
+  });
 
   if (!isOpen) return null;
 

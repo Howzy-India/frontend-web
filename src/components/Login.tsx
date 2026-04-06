@@ -1,8 +1,7 @@
-import React, { useState, useId } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, MapPin, Home, AlertCircle, Loader2, Phone, X, ArrowRight, RotateCcw } from 'lucide-react';
 import Logo from './Logo';
-import { useAuth } from '../hooks/useAuth';
+import { useOtpForm } from '../hooks/useOtpForm';
 import type { AppRole } from '../hooks/useAuth';
 
 interface LoginProps {
@@ -25,41 +24,20 @@ function ErrorBanner({ message }: Readonly<{ message: string }>) {
 }
 
 export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<LoginProps>) {
-  const { sendOtp, verifyOtp, otpLoading, error } = useAuth();
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [localError, setLocalError] = useState<string | null>(null);
-  const recaptchaId = useId();
+  const {
+    phone, setPhone,
+    otp, setOtp,
+    step,
+    displayError,
+    recaptchaId,
+    otpLoading,
+    handleSendOtp,
+    handleVerifyOtp,
+    handleBack,
+  } = useOtpForm({
+    onSuccess: (emailOrUid) => onLogin('client', emailOrUid),
+  });
   const isModal = variant === 'modal';
-  const displayError = localError ?? error;
-
-  const formatPhone = (raw: string) => {
-    const digits = raw.replace(/\D/g, '');
-    return digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    try {
-      await sendOtp(formatPhone(phone), recaptchaId);
-      setStep('otp');
-    } catch (err: any) {
-      setLocalError(err?.message ?? 'Failed to send OTP. Check the number and try again.');
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError(null);
-    try {
-      const user = await verifyOtp(otp.trim());
-      onLogin(user.role ?? 'client', user.email ?? user.uid);
-    } catch (err: any) {
-      setLocalError(err?.message ?? 'Invalid OTP. Please try again.');
-    }
-  };
 
   return (
     <div
@@ -171,7 +149,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
               {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               {otpLoading ? 'Verifying…' : 'Verify OTP'}
             </motion.button>
-            <button type="button" onClick={() => { setStep('phone'); setOtp(''); }}
+            <button type="button" onClick={handleBack}
               className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 text-sm font-medium py-2 transition-colors">
               <RotateCcw className="w-3.5 h-3.5" /> Change number / Resend OTP
             </button>
