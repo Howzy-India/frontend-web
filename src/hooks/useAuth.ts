@@ -6,9 +6,10 @@ import {
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth, createRecaptchaVerifier, clearRecaptchaVerifier } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { auth, createRecaptchaVerifier, clearRecaptchaVerifier, functions } from '../firebase';
 
-export type AppRole = 'super_admin' | 'admin' | 'agent' | 'partner' | 'client' | null;
+export type AppRole = 'super_admin' | 'admin' | 'sales_agent' | 'sourcing_agent' | 'client' | null;
 
 export interface AuthUser {
   uid: string;
@@ -31,6 +32,7 @@ export const getIdToken = async (): Promise<string> => {
 };
 
 const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
+  // Force-refresh so we always get the latest custom claims from DB sync
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   const role = (tokenResult.claims.role as AppRole) ?? 'client';
   return {
@@ -78,7 +80,6 @@ export function useAuth() {
       const verifier = createRecaptchaVerifier(recaptchaContainerId);
       const confirmation = await signInWithPhoneNumber(auth, phone, verifier);
       confirmationRef.current = confirmation;
-      // Verifier served its purpose — clear it so it can't be reused accidentally
       clearRecaptchaVerifier();
     } catch (err: any) {
       clearRecaptchaVerifier();
@@ -91,7 +92,9 @@ export function useAuth() {
   };
 
   /**
-   * Step 2: Verify the OTP entered by the user.
+   * Step 2: Verify the OTP, then sync role from Firestore DB via Cloud Function.
+   * The syncUserRole function reads users/{uid}, sets/confirms custom claims,
+   * and returns the DB-assigned role. Token is force-refreshed after.
    */
   const verifyOtp = async (otp: string): Promise<AuthUser> => {
     setError(null);
@@ -99,9 +102,19 @@ export function useAuth() {
     try {
       if (!confirmationRef.current) throw new Error('No OTP sent yet. Please request OTP first.');
       const result = await confirmationRef.current.confirm(otp);
+      confirmationRef.current = null;
+
+      // Sync role from DB — sets/confirms custom claims server-side
+      try {
+        const syncUserRole = httpsCallable(functions, 'syncUserRole');
+        await syncUserRole({});
+      } catch {
+        // Non-critical: role defaults to 'client' if sync fails
+      }
+
+      // Force-refresh token to pick up freshly-set custom claim
       const authUser = await toAuthUser(result.user);
       setUser(authUser);
-      confirmationRef.current = null;
       return authUser;
     } catch (err: any) {
       const msg = err?.message ?? 'OTP verification failed';

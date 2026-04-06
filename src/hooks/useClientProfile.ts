@@ -25,14 +25,38 @@ export async function getClientProfile(uid: string): Promise<ClientProfile | nul
   return snap.data() as ClientProfile;
 }
 
-/** Creates or overwrites the profile document for the given uid. */
+/**
+ * Creates or overwrites the client profile document.
+ * Also updates the users/{uid} doc with demographics so the DB is
+ * the single source of truth for all user data.
+ */
 export async function saveClientProfile(
   uid: string,
   data: Omit<ClientProfile, 'uid' | 'createdAt'>,
 ): Promise<void> {
+  const now = serverTimestamp();
+
+  // Write to client_profiles (detailed client-specific data)
   await setDoc(doc(db, 'client_profiles', uid), {
     ...data,
     uid,
-    createdAt: serverTimestamp(),
+    createdAt: now,
   });
+
+  // Also sync demographics into users/{uid} (role-authoritative collection)
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      uid,
+      name: data.name,
+      phone: data.phone,
+      email: data.email,
+      lookingFor: data.lookingFor,
+      contactTime: data.contactTime,
+      role: 'client',
+      status: 'active',
+      updatedAt: now,
+    },
+    { merge: true },
+  );
 }
