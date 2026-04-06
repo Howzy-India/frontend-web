@@ -43,12 +43,16 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
     onSuccess: async (user: AuthUser) => {
       const role = user.role ?? 'client';
       if (role === 'client') {
-        const profile = await getClientProfile(user.uid);
-        if (profile) {
-          onLogin(role, profile.name);
-        } else {
-          setSignupUser(user);
+        try {
+          const profile = await getClientProfile(user.uid);
+          if (profile) {
+            onLogin(role, profile.name);
+            return;
+          }
+        } catch {
+          // Permission error or network issue — treat as new user
         }
+        setSignupUser(user);
       } else {
         onLogin(role, user.displayName ?? user.email ?? user.uid);
       }
