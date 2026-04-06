@@ -88,13 +88,26 @@ export default function ClientLoginDashboard() {
     }
   };
 
-  const filteredLogins = logins.filter(login => {
-    const matchesSearch = login.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (login.phone && login.phone.includes(searchTerm));
-    const matchesStatus = statusFilter === 'All' || login.status === statusFilter;
-    const matchesDevice = deviceFilter === 'All' || login.device_type === deviceFilter;
-    return matchesSearch && matchesStatus && matchesDevice;
-  });
+  const isActiveSession = (loginTime: string) =>
+    Date.now() - new Date(loginTime).getTime() < 30 * 60 * 1000;
+
+  const filteredLogins = logins
+    .filter(login => {
+      const matchesSearch = login.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (login.phone && login.phone.includes(searchTerm));
+      const matchesStatus = statusFilter === 'All' || login.status === statusFilter;
+      const matchesDevice = deviceFilter === 'All' || login.device_type === deviceFilter;
+      return matchesSearch && matchesStatus && matchesDevice;
+    })
+    // Active sessions (last 30 min) float to top
+    .sort((a, b) => {
+      const aActive = isActiveSession(a.login_time) ? 1 : 0;
+      const bActive = isActiveSession(b.login_time) ? 1 : 0;
+      if (bActive !== aActive) return bActive - aActive;
+      return new Date(b.login_time).getTime() - new Date(a.login_time).getTime();
+    });
+
+  const activeCount = logins.filter(l => l.status === 'Success' && isActiveSession(l.login_time)).length;
 
   return (
     <div className="space-y-6">
@@ -125,19 +138,26 @@ export default function ClientLoginDashboard() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
           { title: 'Total Users', value: stats.totalUsers, icon: User, color: 'indigo' },
-          { title: 'Active Today', value: stats.activeToday, icon: Activity, color: 'emerald' },
-          { title: 'Total Logins', value: stats.totalLogins, icon: Globe, color: 'blue' },
+          { title: 'Active Now', value: activeCount, icon: Activity, color: 'emerald' },
+          { title: 'Active Today', value: stats.activeToday, icon: Activity, color: 'blue' },
+          { title: 'Total Logins', value: stats.totalLogins, icon: Globe, color: 'slate' },
           { title: 'Failed Attempts', value: stats.failedAttempts, icon: ShieldAlert, color: 'red' }
         ].map((metric, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div key={i} className={`bg-white p-6 rounded-2xl border shadow-sm ${i === 1 ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`}>
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-${metric.color}-50 text-${metric.color}-600`}>
               <metric.icon className="w-6 h-6" />
+              {i === 1 && (
+                <span className="absolute top-2 right-2 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              )}
             </div>
             <p className="text-sm font-medium text-slate-500 mb-1">{metric.title}</p>
-            <h3 className="text-2xl font-bold text-slate-900">{metric.value}</h3>
+            <h3 className={`text-2xl font-bold ${i === 1 ? 'text-emerald-600' : 'text-slate-900'}`}>{metric.value}</h3>
           </div>
         ))}
       </div>
@@ -225,6 +245,15 @@ export default function ClientLoginDashboard() {
                       {login.status === 'Success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
                       {login.status}
                     </span>
+                    {login.status === 'Success' && isActiveSession(login.login_time) && (
+                      <span className="ml-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                        </span>
+                        ACTIVE
+                      </span>
+                    )}
                     {login.failure_reason && <div className="text-xs text-red-500 mt-1">{login.failure_reason}</div>}
                   </td>
                   <td className="p-4 text-right">
