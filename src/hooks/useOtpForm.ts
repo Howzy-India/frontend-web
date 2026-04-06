@@ -1,8 +1,9 @@
 import { useState, useId } from 'react';
 import { useAuth } from './useAuth';
+import type { AuthUser } from './useAuth';
 
 interface UseOtpFormOptions {
-  onSuccess: (emailOrUid: string) => void;
+  onSuccess: (user: AuthUser) => void;
 }
 
 export function useOtpForm({ onSuccess }: UseOtpFormOptions) {
@@ -36,7 +37,7 @@ export function useOtpForm({ onSuccess }: UseOtpFormOptions) {
     setLocalError(null);
     try {
       const user = await verifyOtp(otp.trim());
-      onSuccess(user.email ?? user.uid);
+      onSuccess(user);
     } catch (err: unknown) {
       setLocalError((err as Error)?.message ?? 'Invalid OTP. Please try again.');
     }

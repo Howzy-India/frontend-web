@@ -1,14 +1,20 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Phone, ArrowRight, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 import { useOtpForm } from '../hooks/useOtpForm';
+import { getClientProfile } from '../hooks/useClientProfile';
+import ClientSignupModal from './ClientSignupModal';
+import type { AuthUser } from '../hooks/useAuth';
 
 interface ClientAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (email: string) => void;
+  onLogin: (name: string) => void;
 }
 
 export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuthModalProps) {
+  const [signupUser, setSignupUser] = useState<AuthUser | null>(null);
+
   const {
     phone, setPhone,
     otp, setOtp,
@@ -20,13 +26,31 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
     handleVerifyOtp,
     handleBack,
   } = useOtpForm({
-    onSuccess: (emailOrUid) => {
-      onLogin(emailOrUid);
-      onClose();
+    onSuccess: async (user: AuthUser) => {
+      const profile = await getClientProfile(user.uid);
+      if (profile) {
+        onLogin(profile.name);
+        onClose();
+      } else {
+        setSignupUser(user);
+      }
     },
   });
 
   if (!isOpen) return null;
+
+  if (signupUser) {
+    return (
+      <ClientSignupModal
+        uid={signupUser.uid}
+        phone={phone}
+        onComplete={(name) => {
+          onLogin(name);
+          onClose();
+        }}
+      />
+    );
+  }
 
   return (
     <AnimatePresence>

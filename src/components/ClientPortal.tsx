@@ -66,10 +66,11 @@ interface ClientPortalProps {
   onLogout: () => void;
   onLoginClick?: () => void;
   userEmail?: string;
+  userName?: string;
   footerConfig?: any;
 }
 
-export default function ClientPortal({ onLogout, onLoginClick, userEmail, footerConfig }: ClientPortalProps) {
+export default function ClientPortal({ onLogout, onLoginClick, userEmail, userName, footerConfig }: ClientPortalProps) {
   const [activeTab, setActiveTab] = useState<'Home' | 'Projects' | 'Services' | 'About' | 'Dashboard'>('Home');
   const [landingCategory, setLandingCategory] = useState<'All' | 'Resale' | 'Projects' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
@@ -317,7 +318,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
       if (property) {
         try {
           const newEnquiry = {
-            client_name: userEmail.split('@')[0],
+            client_name: userName || userEmail.split('@')[0],
             phone: 'Not provided',
             email: userEmail,
             property_id: property.id,
@@ -343,7 +344,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     }
     try {
       const newEnquiry = {
-        client_name: userEmail.split('@')[0], // Fallback name
+        client_name: userName || userEmail.split('@')[0],
         phone: 'Not provided', // In a real app, get this from user profile
         email: userEmail,
         property_id: property.id,
@@ -532,8 +533,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     )}
                   </AnimatePresence>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm" aria-label="User Profile">
-                  {userEmail.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm" aria-label="User Profile" title={userName || userEmail}>
+                  {(userName || userEmail || '?').charAt(0).toUpperCase()}
                 </div>
                 <button 
                   onClick={onLogout}
@@ -1273,7 +1274,9 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         {activeTab === 'Dashboard' && userEmail && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">My Dashboard</h2>
+              <h2 className="text-2xl font-bold text-slate-900">
+                {userName ? `Welcome back, ${userName}! 👋` : 'My Dashboard'}
+              </h2>
               <p className="text-slate-500">Manage your properties, enquiries, and saved projects.</p>
             </div>
 
