@@ -157,6 +157,11 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
   const [savedProperties, setSavedProperties] = useState<string[]>([]);
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [myListings, setMyListings] = useState<any[]>([]);
+  const [myResaleListings, setMyResaleListings] = useState<any[]>([]);
+  const [isResaleModalOpen, setIsResaleModalOpen] = useState(false);
+  const [resaleForm, setResaleForm] = useState({ title: '', description: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '' });
+  const [resaleSubmitting, setResaleSubmitting] = useState(false);
+  const [resaleSubmitMsg, setResaleSubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('All');
@@ -180,6 +185,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
     fetchProperties();
     if (userEmail) {
       fetchMyListings();
+      fetchMyResaleListings();
       fetchEnquiries();
 
     }
@@ -208,9 +214,11 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
 
   const fetchProperties = async () => {
     try {
-      const projectsData = await api.getProjects();
+      const [projectsData, resaleData] = await Promise.all([
+        api.getProjects(),
+        api.getResaleProperties().catch(() => ({ resaleProperties: [] })),
+      ]);
 
-      // Map projects to the same format
       const mappedProjects = projectsData.projects.map((p: any) => {
         let type = 'Residential';
         if (p.propertyType === 'plot') type = 'Plot';
@@ -229,7 +237,23 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         };
       });
 
-      setProperties(mappedProjects);
+      const mappedResale = (resaleData.resaleProperties ?? []).map((r: any) => ({
+        id: r.id,
+        name: r.title,
+        type: 'Re-Sale',
+        details: {
+          location: r.location || r.city,
+          description: r.description,
+          price: r.price,
+          city: r.city,
+          bedrooms: r.bedrooms,
+          bathrooms: r.bathrooms,
+          area: r.area,
+          propertyType: r.propertyType,
+        }
+      }));
+
+      setProperties([...mappedProjects, ...mappedResale]);
     } catch (error) {
       console.error('Failed to fetch properties:', error);
     }
@@ -244,6 +268,35 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
       setMyListings(listings);
     } catch (error) {
       console.error('Failed to fetch my listings:', error);
+    }
+  };
+
+  const fetchMyResaleListings = async () => {
+    try {
+      const data = await api.getMyResaleProperties();
+      setMyResaleListings(data.resaleProperties ?? []);
+    } catch {
+      setMyResaleListings([]);
+    }
+  };
+
+  const handleResaleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResaleSubmitting(true);
+    setResaleSubmitMsg(null);
+    try {
+      await api.submitResaleProperty({
+        ...resaleForm,
+        bedrooms: resaleForm.bedrooms ? Number(resaleForm.bedrooms) : undefined,
+        bathrooms: resaleForm.bathrooms ? Number(resaleForm.bathrooms) : undefined,
+      });
+      setResaleSubmitMsg({ type: 'success', text: 'Property submitted for review! You\'ll be notified once approved.' });
+      setResaleForm({ title: '', description: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '' });
+      fetchMyResaleListings();
+    } catch (err: any) {
+      setResaleSubmitMsg({ type: 'error', text: err?.message ?? 'Submission failed. Please try again.' });
+    } finally {
+      setResaleSubmitting(false);
     }
   };
 
@@ -366,6 +419,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
   });
 
   return (
+    <React.Fragment>
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -1326,6 +1380,12 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                     <p className="text-slate-500">Manage properties you have uploaded.</p>
                     <div className="flex gap-3">
                       <button 
+                        onClick={() => { if (!userEmail) { onLoginClick?.(); return; } setIsResaleModalOpen(true); setResaleSubmitMsg(null); }}
+                        className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-700 transition-colors"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Add Resale
+                      </button>
+                      <button 
                         onClick={() => setIsFarmLandModalOpen(true)}
                         className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-xl font-bold hover:bg-amber-100 transition-colors"
                       >
@@ -1386,6 +1446,62 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                           )}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+
+                  {/* Resale submissions */}
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                      <RefreshCw className="w-5 h-5 text-amber-600" /> My Resale Submissions
+                    </h3>
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                              <th className="p-4 font-semibold">Title</th>
+                              <th className="p-4 font-semibold">Type</th>
+                              <th className="p-4 font-semibold">City</th>
+                              <th className="p-4 font-semibold">Price</th>
+                              <th className="p-4 font-semibold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                              {myResaleListings.length > 0 ? myResaleListings.map((r: any) => {
+                              const badgeCls = r.status === 'Listed'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : r.status === 'Rejected'
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200';
+                              return (
+                              <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="p-4">
+                                  <div className="font-medium text-slate-900">{r.title}</div>
+                                  <div className="text-xs text-slate-500">ID: {r.id}</div>
+                                </td>
+                                <td className="p-4 text-slate-600">{r.propertyType}</td>
+                                <td className="p-4 text-slate-600">{r.city}</td>
+                                <td className="p-4 text-slate-600">{r.price}</td>
+                                <td className="p-4">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${badgeCls}`}>
+                                    {r.status === 'Listed' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                    {r.status === 'Rejected' && <X className="w-3.5 h-3.5" />}
+                                    {r.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
+                                    {r.status}
+                                  </span>
+                                </td>
+                              </tr>
+                              );
+                            }) : (
+                              <tr>
+                                <td colSpan={5} className="p-8 text-center text-slate-500">
+                                  No resale submissions yet. Click "Add Resale" to get started.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1772,6 +1888,124 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         }}
       />
     </div>
+
+    {/* Resale Property Submission Modal */}
+    <AnimatePresence>
+      {isResaleModalOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsResaleModalOpen(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Submit Resale Property</h2>
+                  <p className="text-sm text-slate-500">Our team will review and list it within 24–48 hrs</p>
+                </div>
+              </div>
+              <button onClick={() => setIsResaleModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResaleSubmit} className="p-6 space-y-4">
+              {resaleSubmitMsg && (
+                <div className={`p-4 rounded-xl text-sm font-medium ${resaleSubmitMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  {resaleSubmitMsg.text}
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="resale-title" className="block text-sm font-semibold text-slate-700 mb-1.5">Property Title *</label>
+                <input id="resale-title" required value={resaleForm.title} onChange={e => setResaleForm(f => ({...f, title: e.target.value}))}
+                  placeholder="e.g. 3BHK Apartment in Kondapur"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="resale-type" className="block text-sm font-semibold text-slate-700 mb-1.5">Property Type *</label>
+                  <select id="resale-type" required value={resaleForm.propertyType} onChange={e => setResaleForm(f => ({...f, propertyType: e.target.value}))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
+                    {['Apartment','Villa','Independent House','Plot','Commercial'].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="resale-price" className="block text-sm font-semibold text-slate-700 mb-1.5">Price *</label>
+                  <input id="resale-price" required value={resaleForm.price} onChange={e => setResaleForm(f => ({...f, price: e.target.value}))}
+                    placeholder="e.g. ₹85 Lakhs"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="resale-city" className="block text-sm font-semibold text-slate-700 mb-1.5">City *</label>
+                  <input id="resale-city" required value={resaleForm.city} onChange={e => setResaleForm(f => ({...f, city: e.target.value}))}
+                    placeholder="e.g. Hyderabad"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label htmlFor="resale-area" className="block text-sm font-semibold text-slate-700 mb-1.5">Area (sq ft)</label>
+                  <input id="resale-area" value={resaleForm.area} onChange={e => setResaleForm(f => ({...f, area: e.target.value}))}
+                    placeholder="e.g. 1450"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="resale-location" className="block text-sm font-semibold text-slate-700 mb-1.5">Location / Address</label>
+                <input id="resale-location" value={resaleForm.location} onChange={e => setResaleForm(f => ({...f, location: e.target.value}))}
+                  placeholder="e.g. Kondapur, near HITEC City"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="resale-bedrooms" className="block text-sm font-semibold text-slate-700 mb-1.5">Bedrooms</label>
+                  <input id="resale-bedrooms" type="number" min={1} max={10} value={resaleForm.bedrooms} onChange={e => setResaleForm(f => ({...f, bedrooms: e.target.value}))}
+                    placeholder="e.g. 3"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label htmlFor="resale-bathrooms" className="block text-sm font-semibold text-slate-700 mb-1.5">Bathrooms</label>
+                  <input id="resale-bathrooms" type="number" min={1} max={10} value={resaleForm.bathrooms} onChange={e => setResaleForm(f => ({...f, bathrooms: e.target.value}))}
+                    placeholder="e.g. 2"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="resale-description" className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                <textarea id="resale-description" rows={3} value={resaleForm.description} onChange={e => setResaleForm(f => ({...f, description: e.target.value}))}
+                  placeholder="Describe the property, highlights, nearby amenities..."
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+              </div>
+
+              <button type="submit" disabled={resaleSubmitting}
+                className="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2">
+                {resaleSubmitting ? <><Clock className="w-4 h-4 animate-spin" /> Submitting...</> : <><RefreshCw className="w-4 h-4" /> Submit for Review</>}
+              </button>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </React.Fragment>
   );
 }
 

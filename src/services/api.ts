@@ -147,5 +147,34 @@ export const api = {
   getCalendarEvents: () => get<any>('/calendar/events', false),
   createCalendarEvent: (data: any) => post<any>('/calendar/events', data, false),
   getCalendarStatus: () => get<any>('/calendar/status', false),
+
+  // ── Resale Properties ─────────────────────────────────────────────
+  getResaleProperties: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return get<any>(`/resale${qs}`, false);
+  },
+  getResaleProperty: (id: string) => get<any>(`/resale/${id}`, false),
+  submitResaleProperty: (data: {
+    title: string;
+    description?: string;
+    price: string;
+    propertyType: string;
+    city: string;
+    location?: string;
+    area?: string;
+    bedrooms?: number;
+    bathrooms?: number;
+    images?: string[];
+  }) => post<any>('/resale', data),
+  getMyResaleProperties: () => get<any>('/resale/mine'),
+  getAdminResaleProperties: (params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return get<any>(`/admin/resale${qs}`);
+  },
+  createAdminResaleProperty: (data: any) => post<any>('/admin/resale', data),
+  updateResaleStatus: (id: string, status: 'Listed' | 'Rejected', remarks?: string) =>
+    patch<any>(`/admin/resale/${id}/status`, { status, ...(remarks ? { remarks } : {}) }),
+  updateResaleProperty: (id: string, data: any) => patch<any>(`/admin/resale/${id}`, data),
+  deleteResaleProperty: (id: string) => del<any>(`/admin/resale/${id}`),
 };
 
