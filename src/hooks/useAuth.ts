@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  signInWithPopup,
-  signInWithEmailAndPassword,
+  signInWithPhoneNumber,
+  ConfirmationResult,
   signOut,
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { auth, createRecaptchaVerifier } from '../firebase';
 
 export type AppRole = 'super_admin' | 'admin' | 'agent' | 'partner' | 'client' | null;
 
@@ -45,7 +45,9 @@ const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
@@ -63,41 +65,53 @@ export function useAuth() {
     return unsubscribe;
   }, []);
 
-  const signInWithGoogle = async (): Promise<AuthUser> => {
+  /**
+   * Step 1: Send OTP to the given phone number (E.164 format, e.g. +919876543210).
+   * `recaptchaContainerId` must be the id of a DOM element to attach the invisible reCAPTCHA.
+   */
+  const sendOtp = async (phone: string, recaptchaContainerId: string): Promise<void> => {
     setError(null);
+    setOtpLoading(true);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const authUser = await toAuthUser(result.user);
-      setUser(authUser);
-      return authUser;
+      const verifier = createRecaptchaVerifier(recaptchaContainerId);
+      const confirmation = await signInWithPhoneNumber(auth, phone, verifier);
+      confirmationRef.current = confirmation;
     } catch (err: any) {
-      const msg = err?.message ?? 'Sign-in failed';
+      const msg = err?.message ?? 'Failed to send OTP';
       setError(msg);
       throw err;
+    } finally {
+      setOtpLoading(false);
     }
   };
 
-  const signInWithEmailPassword = async (
-    email: string,
-    password: string
-  ): Promise<AuthUser> => {
+  /**
+   * Step 2: Verify the OTP entered by the user.
+   */
+  const verifyOtp = async (otp: string): Promise<AuthUser> => {
     setError(null);
+    setOtpLoading(true);
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
+      if (!confirmationRef.current) throw new Error('No OTP sent yet. Please request OTP first.');
+      const result = await confirmationRef.current.confirm(otp);
       const authUser = await toAuthUser(result.user);
       setUser(authUser);
+      confirmationRef.current = null;
       return authUser;
     } catch (err: any) {
-      const msg = err?.message ?? 'Sign-in failed';
+      const msg = err?.message ?? 'OTP verification failed';
       setError(msg);
       throw err;
+    } finally {
+      setOtpLoading(false);
     }
   };
 
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    confirmationRef.current = null;
   };
 
-  return { user, loading, error, signInWithGoogle, signInWithEmailPassword, logout };
+  return { user, loading, otpLoading, error, sendOtp, verifyOtp, logout };
 }
