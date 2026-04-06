@@ -13,6 +13,7 @@ export type AppRole = 'super_admin' | 'admin' | 'agent' | 'partner' | 'client' |
 export interface AuthUser {
   uid: string;
   email: string | null;
+  phoneNumber: string | null;
   displayName: string | null;
   photoURL: string | null;
   role: AppRole;
@@ -35,6 +36,7 @@ const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
   return {
     uid: firebaseUser.uid,
     email: firebaseUser.email,
+    phoneNumber: firebaseUser.phoneNumber,
     displayName: firebaseUser.displayName,
     photoURL: firebaseUser.photoURL,
     role,

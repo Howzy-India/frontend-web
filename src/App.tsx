@@ -74,9 +74,10 @@ export default function App() {
   const handleLogin = async (role: AppRole, name: string) => {
     if (role === 'client') {
       setClientName(name);
+      const identifier = user?.email ?? user?.phoneNumber ?? name;
       try {
         const result = await api.trackClientLogin({
-          email: name,
+          email: identifier,
           device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
           browser: getBrowserName(navigator.userAgent),
           status: 'Success',
@@ -154,8 +155,7 @@ export default function App() {
                 <ClientPortal
                   onLogout={handleLogout}
                   onLoginClick={() => setIsLoginOverlayOpen(true)}
-                  userEmail={user?.email ?? ''}
-                  userName={clientName || (user?.displayName ?? '')}
+                  userEmail={user?.email ?? user?.phoneNumber ?? ''}
                   footerConfig={footerConfig}
                 />
                 <AnimatePresence>
