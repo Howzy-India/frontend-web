@@ -60,10 +60,9 @@ export default function App() {
       case 'super_admin':
       case 'admin':
         return 'super_admin_dashboard';
-      case 'agent':
+      case 'sales_agent':
+      case 'sourcing_agent':
         return 'pilot_dashboard';
-      case 'partner':
-        return 'partner_dashboard';
       default:
         return 'client_portal';
     }
