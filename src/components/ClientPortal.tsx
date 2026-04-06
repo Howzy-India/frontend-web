@@ -1406,6 +1406,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                         <thead>
                           <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                             <th className="p-4 font-semibold">Property Name</th>
+                            <th className="p-4 font-semibold">Category</th>
                             <th className="p-4 font-semibold">Type</th>
                             <th className="p-4 font-semibold">Location</th>
                             <th className="p-4 font-semibold">Submitted Date</th>
@@ -1413,74 +1414,49 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {myListings.length > 0 ? (
-                            myListings.map((listing) => (
-                              <tr key={listing.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="p-4">
-                                  <div className="font-medium text-slate-900">{listing.name}</div>
-                                  <div className="text-xs text-slate-500">ID: {listing.id}</div>
-                                </td>
-                                <td className="p-4 text-slate-600">{listing.type}</td>
-                                <td className="p-4 text-slate-600">{listing.details?.location || listing.details?.city || 'N/A'}</td>
-                                <td className="p-4 text-slate-600">{listing.date}</td>
-                                <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                    listing.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    listing.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                  }`}>
-                                    {listing.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                    {listing.status === 'Rejected' && <X className="w-3.5 h-3.5" />}
-                                    {listing.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
-                                    {listing.status}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={5} className="p-8 text-center text-slate-500">
-                                You haven't uploaded any properties yet.
+                          {myListings.map((listing) => (
+                            <tr key={`listing-${listing.id}`} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-4">
+                                <div className="font-medium text-slate-900">{listing.name}</div>
+                                <div className="text-xs text-slate-500">ID: {listing.id}</div>
+                              </td>
+                              <td className="p-4">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-xs font-medium">{listing.type === 'Farm Land' ? 'Farm Land' : 'Plot'}</span>
+                              </td>
+                              <td className="p-4 text-slate-600">{listing.type}</td>
+                              <td className="p-4 text-slate-600">{listing.details?.location || listing.details?.city || 'N/A'}</td>
+                              <td className="p-4 text-slate-600">{listing.date}</td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                  listing.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                  listing.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                                  'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                  {listing.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  {listing.status === 'Rejected' && <X className="w-3.5 h-3.5" />}
+                                  {listing.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
+                                  {listing.status}
+                                </span>
                               </td>
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Resale submissions */}
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                      <RefreshCw className="w-5 h-5 text-amber-600" /> My Resale Submissions
-                    </h3>
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                              <th className="p-4 font-semibold">Title</th>
-                              <th className="p-4 font-semibold">Type</th>
-                              <th className="p-4 font-semibold">City</th>
-                              <th className="p-4 font-semibold">Price</th>
-                              <th className="p-4 font-semibold">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                              {myResaleListings.length > 0 ? myResaleListings.map((r: any) => {
-                              const badgeCls = r.status === 'Listed'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : r.status === 'Rejected'
-                                  ? 'bg-red-50 text-red-700 border-red-200'
-                                  : 'bg-amber-50 text-amber-700 border-amber-200';
-                              return (
-                              <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                          ))}
+                          {myResaleListings.map((r: any) => {
+                            const badgeCls = r.status === 'Listed'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : r.status === 'Rejected'
+                                ? 'bg-red-50 text-red-700 border-red-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200';
+                            return (
+                              <tr key={`resale-${r.id}`} className="hover:bg-slate-50 transition-colors">
                                 <td className="p-4">
                                   <div className="font-medium text-slate-900">{r.title}</div>
                                   <div className="text-xs text-slate-500">ID: {r.id}</div>
                                 </td>
+                                <td className="p-4">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-medium">Re-Sale</span>
+                                </td>
                                 <td className="p-4 text-slate-600">{r.propertyType}</td>
-                                <td className="p-4 text-slate-600">{r.city}</td>
+                                <td className="p-4 text-slate-600">{r.location || r.city || 'N/A'}</td>
                                 <td className="p-4 text-slate-600">{r.price}</td>
                                 <td className="p-4">
                                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${badgeCls}`}>
@@ -1491,17 +1467,17 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                                   </span>
                                 </td>
                               </tr>
-                              );
-                            }) : (
-                              <tr>
-                                <td colSpan={5} className="p-8 text-center text-slate-500">
-                                  No resale submissions yet. Click "Add Resale" to get started.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                            );
+                          })}
+                          {myListings.length === 0 && myResaleListings.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="p-8 text-center text-slate-500">
+                                You haven't uploaded any properties yet.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
