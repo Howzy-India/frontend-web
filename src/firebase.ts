@@ -1,9 +1,8 @@
 // Firebase app config for howzy-api project
 // The frontend (howzy-web hosting) connects to howzy-api for Auth, Firestore, Functions, and Storage.
-// Fill in the values from Firebase Console → howzy-api project → Project Settings → Your apps → Web app
 
 import { initializeApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, RecaptchaVerifier } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -22,10 +21,10 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
-export const googleProvider = new GoogleAuthProvider();
 
-// Request profile + email scopes
-googleProvider.addScope('profile');
-googleProvider.addScope('email');
+/** Creates an invisible reCAPTCHA verifier attached to the given DOM element id. */
+export function createRecaptchaVerifier(containerId: string): RecaptchaVerifier {
+  return new RecaptchaVerifier(auth, containerId, { size: 'invisible' });
+}
 
 export default app;
