@@ -23,8 +23,26 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 /** Creates an invisible reCAPTCHA verifier attached to the given DOM element id. */
+// Module-level cache so we only ever have one verifier alive at a time.
+let _recaptchaVerifier: RecaptchaVerifier | null = null;
+
 export function createRecaptchaVerifier(containerId: string): RecaptchaVerifier {
-  return new RecaptchaVerifier(auth, containerId, { size: 'invisible' });
+  // Clear any previous verifier before creating a new one to avoid
+  // Firebase treating multiple instances as abuse (auth/too-many-requests).
+  if (_recaptchaVerifier) {
+    try { _recaptchaVerifier.clear(); } catch { /* ignore */ }
+    _recaptchaVerifier = null;
+  }
+  _recaptchaVerifier = new RecaptchaVerifier(auth, containerId, { size: 'invisible' });
+  return _recaptchaVerifier;
+}
+
+/** Clear the cached verifier (call after OTP sent or on auth error). */
+export function clearRecaptchaVerifier() {
+  if (_recaptchaVerifier) {
+    try { _recaptchaVerifier.clear(); } catch { /* ignore */ }
+    _recaptchaVerifier = null;
+  }
 }
 
 export default app;

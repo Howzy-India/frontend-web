@@ -6,7 +6,7 @@ import {
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { auth, createRecaptchaVerifier } from '../firebase';
+import { auth, createRecaptchaVerifier, clearRecaptchaVerifier } from '../firebase';
 
 export type AppRole = 'super_admin' | 'admin' | 'agent' | 'partner' | 'client' | null;
 
@@ -78,7 +78,10 @@ export function useAuth() {
       const verifier = createRecaptchaVerifier(recaptchaContainerId);
       const confirmation = await signInWithPhoneNumber(auth, phone, verifier);
       confirmationRef.current = confirmation;
+      // Verifier served its purpose — clear it so it can't be reused accidentally
+      clearRecaptchaVerifier();
     } catch (err: any) {
+      clearRecaptchaVerifier();
       const msg = err?.message ?? 'Failed to send OTP';
       setError(msg);
       throw err;
