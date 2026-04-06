@@ -162,7 +162,6 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
   const [resaleForm, setResaleForm] = useState({ title: '', description: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '' });
   const [resaleSubmitting, setResaleSubmitting] = useState(false);
   const [resaleSubmitMsg, setResaleSubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [resaleProperties, setResaleProperties] = useState<any[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('All');
@@ -254,7 +253,6 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         }
       }));
 
-      setResaleProperties(mappedResale);
       setProperties([...mappedProjects, ...mappedResale]);
     } catch (error) {
       console.error('Failed to fetch properties:', error);
@@ -291,7 +289,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
         ...resaleForm,
         bedrooms: resaleForm.bedrooms ? Number(resaleForm.bedrooms) : undefined,
         bathrooms: resaleForm.bathrooms ? Number(resaleForm.bathrooms) : undefined,
-      } as any);
+      });
       setResaleSubmitMsg({ type: 'success', text: 'Property submitted for review! You\'ll be notified once approved.' });
       setResaleForm({ title: '', description: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '' });
       fetchMyResaleListings();
@@ -1469,7 +1467,13 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {myResaleListings.length > 0 ? myResaleListings.map((r: any) => (
+                              {myResaleListings.length > 0 ? myResaleListings.map((r: any) => {
+                              const badgeCls = r.status === 'Listed'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : r.status === 'Rejected'
+                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200';
+                              return (
                               <tr key={r.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="p-4">
                                   <div className="font-medium text-slate-900">{r.title}</div>
@@ -1479,11 +1483,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                                 <td className="p-4 text-slate-600">{r.city}</td>
                                 <td className="p-4 text-slate-600">{r.price}</td>
                                 <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                    r.status === 'Listed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                    r.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                    'bg-amber-50 text-amber-700 border-amber-200'
-                                  }`}>
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${badgeCls}`}>
                                     {r.status === 'Listed' && <CheckCircle2 className="w-3.5 h-3.5" />}
                                     {r.status === 'Rejected' && <X className="w-3.5 h-3.5" />}
                                     {r.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
@@ -1491,7 +1491,8 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
                                   </span>
                                 </td>
                               </tr>
-                            )) : (
+                              );
+                            }) : (
                               <tr>
                                 <td colSpan={5} className="p-8 text-center text-slate-500">
                                   No resale submissions yet. Click "Add Resale" to get started.
@@ -1929,23 +1930,23 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Property Title *</label>
-                <input required value={resaleForm.title} onChange={e => setResaleForm(f => ({...f, title: e.target.value}))}
+                <label htmlFor="resale-title" className="block text-sm font-semibold text-slate-700 mb-1.5">Property Title *</label>
+                <input id="resale-title" required value={resaleForm.title} onChange={e => setResaleForm(f => ({...f, title: e.target.value}))}
                   placeholder="e.g. 3BHK Apartment in Kondapur"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Property Type *</label>
-                  <select required value={resaleForm.propertyType} onChange={e => setResaleForm(f => ({...f, propertyType: e.target.value}))}
+                  <label htmlFor="resale-type" className="block text-sm font-semibold text-slate-700 mb-1.5">Property Type *</label>
+                  <select id="resale-type" required value={resaleForm.propertyType} onChange={e => setResaleForm(f => ({...f, propertyType: e.target.value}))}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
                     {['Apartment','Villa','Independent House','Plot','Commercial'].map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Price *</label>
-                  <input required value={resaleForm.price} onChange={e => setResaleForm(f => ({...f, price: e.target.value}))}
+                  <label htmlFor="resale-price" className="block text-sm font-semibold text-slate-700 mb-1.5">Price *</label>
+                  <input id="resale-price" required value={resaleForm.price} onChange={e => setResaleForm(f => ({...f, price: e.target.value}))}
                     placeholder="e.g. ₹85 Lakhs"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
@@ -1953,44 +1954,44 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, footer
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">City *</label>
-                  <input required value={resaleForm.city} onChange={e => setResaleForm(f => ({...f, city: e.target.value}))}
+                  <label htmlFor="resale-city" className="block text-sm font-semibold text-slate-700 mb-1.5">City *</label>
+                  <input id="resale-city" required value={resaleForm.city} onChange={e => setResaleForm(f => ({...f, city: e.target.value}))}
                     placeholder="e.g. Hyderabad"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Area (sq ft)</label>
-                  <input value={resaleForm.area} onChange={e => setResaleForm(f => ({...f, area: e.target.value}))}
+                  <label htmlFor="resale-area" className="block text-sm font-semibold text-slate-700 mb-1.5">Area (sq ft)</label>
+                  <input id="resale-area" value={resaleForm.area} onChange={e => setResaleForm(f => ({...f, area: e.target.value}))}
                     placeholder="e.g. 1450"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Location / Address</label>
-                <input value={resaleForm.location} onChange={e => setResaleForm(f => ({...f, location: e.target.value}))}
+                <label htmlFor="resale-location" className="block text-sm font-semibold text-slate-700 mb-1.5">Location / Address</label>
+                <input id="resale-location" value={resaleForm.location} onChange={e => setResaleForm(f => ({...f, location: e.target.value}))}
                   placeholder="e.g. Kondapur, near HITEC City"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Bedrooms</label>
-                  <input type="number" min={1} max={10} value={resaleForm.bedrooms} onChange={e => setResaleForm(f => ({...f, bedrooms: e.target.value}))}
+                  <label htmlFor="resale-bedrooms" className="block text-sm font-semibold text-slate-700 mb-1.5">Bedrooms</label>
+                  <input id="resale-bedrooms" type="number" min={1} max={10} value={resaleForm.bedrooms} onChange={e => setResaleForm(f => ({...f, bedrooms: e.target.value}))}
                     placeholder="e.g. 3"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Bathrooms</label>
-                  <input type="number" min={1} max={10} value={resaleForm.bathrooms} onChange={e => setResaleForm(f => ({...f, bathrooms: e.target.value}))}
+                  <label htmlFor="resale-bathrooms" className="block text-sm font-semibold text-slate-700 mb-1.5">Bathrooms</label>
+                  <input id="resale-bathrooms" type="number" min={1} max={10} value={resaleForm.bathrooms} onChange={e => setResaleForm(f => ({...f, bathrooms: e.target.value}))}
                     placeholder="e.g. 2"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
-                <textarea rows={3} value={resaleForm.description} onChange={e => setResaleForm(f => ({...f, description: e.target.value}))}
+                <label htmlFor="resale-description" className="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                <textarea id="resale-description" rows={3} value={resaleForm.description} onChange={e => setResaleForm(f => ({...f, description: e.target.value}))}
                   placeholder="Describe the property, highlights, nearby amenities..."
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
               </div>
