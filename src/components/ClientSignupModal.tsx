@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
-import { User, Mail, Clock, CheckSquare, Square, Loader2, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { User, Mail, Clock, CheckSquare, Square, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { saveClientProfile } from '../hooks/useClientProfile';
 import type { LookingFor } from '../hooks/useClientProfile';
 
@@ -27,6 +27,15 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
   const [contactTime, setContactTime] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [savedName, setSavedName] = useState('');
+
+  // Auto-proceed to home 1.5s after showing the success screen
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => onComplete(savedName), 1500);
+    return () => clearTimeout(timer);
+  }, [success, savedName, onComplete]);
 
   const toggleOption = (option: LookingFor) => {
     setLookingFor(prev =>
@@ -43,7 +52,8 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
     setSaving(true);
     try {
       await saveClientProfile(uid, { name: name.trim(), phone, email: email.trim(), lookingFor, contactTime });
-      onComplete(name.trim());
+      setSavedName(name.trim());
+      setSuccess(true);
     } catch (err: unknown) {
       setError((err as Error)?.message ?? 'Failed to save profile. Please try again.');
     } finally {
@@ -53,11 +63,44 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
-      >
+      <AnimatePresence mode="wait">
+        {success ? (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-10 flex flex-col items-center text-center"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+              className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5"
+            >
+              <CheckCircle2 className="w-10 h-10 text-green-500" />
+            </motion.div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Welcome, {savedName}! 🎉</h2>
+            <p className="text-slate-500 text-sm">Your account has been created successfully. Logging you in…</p>
+            <div className="mt-6 flex gap-1.5">
+              {[0, 1, 2].map(i => (
+                <motion.span
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-indigo-500"
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white text-center">
           <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <User className="w-7 h-7 text-white" />
@@ -166,7 +209,9 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
             {saving ? 'Saving…' : 'Get Started'}
           </button>
         </form>
-      </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
