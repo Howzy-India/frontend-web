@@ -69,11 +69,14 @@ export default function App() {
     }
   }
 
-  const handleLogin = async (role: AppRole, email: string) => {
+  const [clientName, setClientName] = useState<string>('');
+
+  const handleLogin = async (role: AppRole, name: string) => {
     if (role === 'client') {
+      setClientName(name);
       try {
         const result = await api.trackClientLogin({
-          email,
+          email: name,
           device_type: /Mobi|Android/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
           browser: getBrowserName(navigator.userAgent),
           status: 'Success',
@@ -97,6 +100,7 @@ export default function App() {
       clientLoginIdRef.current = null;
     }
     await logout();
+    setClientName('');
     setIsLoginOverlayOpen(false);
     setView('client_portal');
     setShowLogoutBanner(true);
@@ -151,6 +155,7 @@ export default function App() {
                   onLogout={handleLogout}
                   onLoginClick={() => setIsLoginOverlayOpen(true)}
                   userEmail={user?.email ?? ''}
+                  userName={clientName || (user?.displayName ?? '')}
                   footerConfig={footerConfig}
                 />
                 <AnimatePresence>

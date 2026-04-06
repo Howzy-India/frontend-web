@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, MapPin, Home, AlertCircle, Loader2, Phone, X, ArrowRight, RotateCcw } from 'lucide-react';
 import Logo from './Logo';
 import { useOtpForm } from '../hooks/useOtpForm';
-import type { AppRole } from '../hooks/useAuth';
+import { getClientProfile } from '../hooks/useClientProfile';
+import ClientSignupModal from './ClientSignupModal';
+import type { AppRole, AuthUser } from '../hooks/useAuth';
 
 interface LoginProps {
-  onLogin: (role: AppRole, email: string) => void;
+  onLogin: (role: AppRole, name: string) => void;
   onClose?: () => void;
   variant?: 'page' | 'modal';
 }
@@ -24,6 +27,8 @@ function ErrorBanner({ message }: Readonly<{ message: string }>) {
 }
 
 export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<LoginProps>) {
+  const [signupUser, setSignupUser] = useState<AuthUser | null>(null);
+
   const {
     phone, setPhone,
     otp, setOtp,
@@ -35,9 +40,31 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
     handleVerifyOtp,
     handleBack,
   } = useOtpForm({
-    onSuccess: (emailOrUid) => onLogin('client', emailOrUid),
+    onSuccess: async (user: AuthUser) => {
+      const role = user.role ?? 'client';
+      if (role === 'client') {
+        const profile = await getClientProfile(user.uid);
+        if (profile) {
+          onLogin(role, profile.name);
+        } else {
+          setSignupUser(user);
+        }
+      } else {
+        onLogin(role, user.displayName ?? user.email ?? user.uid);
+      }
+    },
   });
   const isModal = variant === 'modal';
+
+  if (signupUser) {
+    return (
+      <ClientSignupModal
+        uid={signupUser.uid}
+        phone={phone}
+        onComplete={(name) => onLogin('client', name)}
+      />
+    );
+  }
 
   return (
     <div
