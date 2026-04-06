@@ -27,13 +27,17 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
     handleBack,
   } = useOtpForm({
     onSuccess: async (user: AuthUser) => {
-      const profile = await getClientProfile(user.uid);
-      if (profile) {
-        onLogin(profile.name);
-        onClose();
-      } else {
-        setSignupUser(user);
+      try {
+        const profile = await getClientProfile(user.uid);
+        if (profile) {
+          onLogin(profile.name);
+          onClose();
+          return;
+        }
+      } catch {
+        // Permission error or network issue — treat as new user
       }
+      setSignupUser(user);
     },
   });
 
