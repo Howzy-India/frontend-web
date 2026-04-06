@@ -90,6 +90,7 @@ import ClientListingsVerification from './ClientListingsVerification';
 import LeadAllocationManager from './LeadAllocationManager';
 import AdminEnquiriesPanel from './AdminEnquiriesPanel';
 import ClientLoginDashboard from './ClientLoginDashboard';
+import ClientRegistrationsPanel from './ClientRegistrationsPanel';
 import { getAttendanceRecords, getLocationLogs, AttendanceRecord, LocationLog } from '../utils/attendanceStore';
 
 interface SuperAdminDashboardProps {
@@ -224,6 +225,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'enquiries', label: 'Enquiries', icon: Inbox },
     { id: 'client-logins', label: 'Client Logins', icon: Monitor },
+    { id: 'client-registrations', label: 'Client Registrations', icon: UserPlus },
     { id: 'leads', label: 'Global Leads', icon: Briefcase },
     { id: 'social-leads', label: 'Social Media Leads', icon: Share2 },
     { id: 'lead-allocation', label: 'Lead Allocation', icon: Network },
@@ -261,6 +263,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'overview': return <AdminOverview />;
       case 'enquiries': return <AdminEnquiriesPanel />;
       case 'client-logins': return <ClientLoginDashboard />;
+      case 'client-registrations': return <ClientRegistrationsPanel />;
       case 'leads': return <GlobalLeadsView leads={leads} />;
       case 'social-leads': return <SocialMediaLeadsView leads={socialMediaLeads} />;
       case 'lead-allocation': return <LeadAllocationManager />;
