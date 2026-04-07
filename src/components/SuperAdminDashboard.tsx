@@ -221,31 +221,77 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     setNotifications(notifications.map(n => ({ ...n, unread: false })));
   };
 
-  const tabs = React.useMemo(() => [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'enquiries', label: 'Enquiries', icon: Inbox },
-    { id: 'client-logins', label: 'Client Logins', icon: Monitor },
-    { id: 'client-registrations', label: 'Client Registrations', icon: UserPlus },
-    { id: 'leads', label: 'Global Leads', icon: Briefcase },
-    { id: 'social-leads', label: 'Social Media Leads', icon: Share2 },
-    { id: 'lead-allocation', label: 'Lead Allocation', icon: Network },
-    { id: 'bulk-lead-upload', label: 'Bulk Lead Upload', icon: Upload },
-    { id: 'projects', label: 'All Projects', icon: Building2 },
-    { id: 'plots', label: 'All Plots', icon: Map },
-    { id: 'farmlands', label: 'All Farm Lands', icon: Trees },
-    { id: 'bulk-property-upload', label: 'Bulk Property Upload', icon: FileSpreadsheet },
-    { id: 'client-listings', label: 'Client Listings', icon: UserCheck },
-    { id: 'resale', label: 'Resale Properties', icon: RefreshCw },
-    { id: 'agents', label: 'Partner Management', icon: Users },
-    { id: 'admin-users', label: 'Admin Users', icon: ShieldCheck },
-    { id: 'attendance', label: 'Attendance & Tracking', icon: MapPin },
-    { id: 'verification', label: 'Verification Panel', icon: CheckCircle },
-    { id: 'alerts', label: 'Messages & Alerts', icon: Megaphone },
-    { id: 'properties-config', label: 'Properties Config', icon: Settings },
-    { id: 'category-cms', label: 'Category CMS', icon: Sparkles },
-    { id: 'footer-cms', label: 'Footer CMS', icon: Layout },
-    { id: 'settings', label: 'System Settings', icon: Settings },
+  const tabGroups = React.useMemo(() => [
+    {
+      label: 'Dashboard',
+      items: [
+        { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: 'Lead Management',
+      items: [
+        { id: 'enquiries', label: 'Enquiries', icon: Inbox },
+        { id: 'leads', label: 'Global Leads', icon: Briefcase },
+        { id: 'social-leads', label: 'Social Media Leads', icon: Share2 },
+        { id: 'lead-allocation', label: 'Lead Allocation', icon: Network },
+        { id: 'bulk-lead-upload', label: 'Bulk Lead Upload', icon: Upload },
+      ],
+    },
+    {
+      label: 'Client Management',
+      items: [
+        { id: 'client-logins', label: 'Client Logins', icon: Monitor },
+        { id: 'client-registrations', label: 'Client Registrations', icon: UserPlus },
+        { id: 'client-listings', label: 'Client Listings', icon: UserCheck },
+      ],
+    },
+    {
+      label: 'Property Management',
+      items: [
+        { id: 'projects', label: 'All Projects', icon: Building2 },
+        { id: 'plots', label: 'All Plots', icon: Map },
+        { id: 'farmlands', label: 'All Farm Lands', icon: Trees },
+        { id: 'bulk-property-upload', label: 'Bulk Property Upload', icon: FileSpreadsheet },
+        { id: 'resale', label: 'Resale Properties', icon: RefreshCw },
+      ],
+    },
+    {
+      label: 'Partner Ecosystem',
+      items: [
+        { id: 'agents', label: 'Partner Management', icon: Users },
+        { id: 'admin-users', label: 'Admin Users', icon: ShieldCheck },
+      ],
+    },
+    {
+      label: 'Activity Tracking',
+      items: [
+        { id: 'attendance', label: 'Attendance & Tracking', icon: MapPin },
+        { id: 'verification', label: 'Verification Panel', icon: CheckCircle },
+      ],
+    },
+    {
+      label: 'Communication',
+      items: [
+        { id: 'alerts', label: 'Messages & Alerts', icon: Megaphone },
+      ],
+    },
+    {
+      label: 'Configuration',
+      items: [
+        { id: 'properties-config', label: 'Properties Config', icon: Settings },
+        { id: 'category-cms', label: 'Category CMS', icon: Sparkles },
+        { id: 'footer-cms', label: 'Footer CMS', icon: Layout },
+        { id: 'settings', label: 'System Settings', icon: Settings },
+      ],
+    },
   ], []);
+
+  // Flat list derived from groups — used for header label lookup
+  const tabs = React.useMemo(
+    () => tabGroups.flatMap(g => g.items),
+    [tabGroups]
+  );
 
 
   const handleBroadcast = React.useCallback(async (notification: any) => {
@@ -315,33 +361,42 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
             </motion.span>
           </div>
 
-          <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <motion.button
-                  whileHover={{ x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all ${
-                    isActive 
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 font-bold' 
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-semibold'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="text-sm">{tab.label}</span>
-                  {isActive && (
-                    <motion.div 
-                      layoutId="activeTab"
-                      className="ml-auto w-1.5 h-1.5 bg-white rounded-full"
-                    />
-                  )}
-                </motion.button>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {tabGroups.map((group, gi) => (
+              <div key={group.label} className={gi > 0 ? 'mt-5' : ''}>
+                <p className="px-4 mb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <motion.button
+                        whileHover={{ x: 4 }}
+                        whileTap={{ scale: 0.98 }}
+                        key={tab.id}
+                        onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+                          isActive
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 font-bold'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-semibold'
+                        }`}
+                      >
+                        <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                        <span className="text-sm">{tab.label}</span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeTab"
+                            className="ml-auto w-1.5 h-1.5 bg-white rounded-full"
+                          />
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
 
           <div className="pt-8 mt-8 border-t border-slate-100">
