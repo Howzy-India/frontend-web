@@ -750,6 +750,10 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 {/* Trending Locations */}
                 <TrendingLocations
                   category={landingCategory}
+                  onExploreMap={() => {
+                    setActiveTab('Projects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   onLocationClick={(loc) => {
                     const catMap: Record<string, string> = {
                       All: 'All', Resale: 'Resale', Projects: 'All',
@@ -3040,7 +3044,7 @@ function ClosingCTA({ category }: any) {
   );
 }
 
-function TrendingLocations({ category, onLocationClick }: { category: string; onLocationClick?: (location: string) => void }) {
+function TrendingLocations({ category, onLocationClick, onExploreMap }: { category: string; onLocationClick?: (location: string) => void; onExploreMap?: () => void }) {
   const locations: Record<string, { name: string, desc: string, image: string }[]> = {
     All: [
       { name: 'Kokapet', desc: 'Premium Luxury Hub', image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80' },
@@ -3096,6 +3100,8 @@ function TrendingLocations({ category, onLocationClick }: { category: string; on
         <motion.button 
           whileHover={{ x: 5 }}
           className="text-indigo-600 font-black flex items-center gap-2 text-lg group"
+          onClick={onExploreMap}
+          data-testid="trending-locations-explore-map"
         >
           Explore Map <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
         </motion.button>
