@@ -829,7 +829,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
 
         {activeTab === 'Projects' && (
           <div className="space-y-8">
-            {projectCategory === 'All' ? (
+            {projectCategory === 'All' && !filters.trendingArea ? (
               <div className="space-y-16">
                 <div className="text-center max-w-3xl mx-auto mb-10">
                   <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Explore All Properties</h2>
@@ -984,14 +984,18 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
               <div className="space-y-6">
                 <div className="flex items-center gap-4 mb-6">
                   <button 
-                    onClick={() => setProjectCategory('All')}
+                    onClick={() => { setProjectCategory('All'); setFilters(prev => ({ ...prev, trendingArea: '' })); }}
                     className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900">{propertyCategories.find(c => c.id === projectCategory)?.title}</h2>
-                    <p className="text-slate-500">Filter and browse available {projectCategory.toLowerCase()}</p>
+                    <h2 className="text-2xl font-bold text-slate-900">
+                      {projectCategory === 'All' ? 'All Properties' : propertyCategories.find(c => c.id === projectCategory)?.title}
+                    </h2>
+                    <p className="text-slate-500">
+                      {filters.trendingArea ? `Showing results in ${filters.trendingArea}` : `Filter and browse available ${projectCategory === 'All' ? 'properties' : projectCategory.toLowerCase()}`}
+                    </p>
                   </div>
                 </div>
 
