@@ -6,6 +6,7 @@ import Login from './components/Login';
 import { useAuth } from './hooks/useAuth';
 import type { AppRole } from './hooks/useAuth';
 import { api } from './services/api';
+import { TEST_IDS } from './constants/testIds';
 
 const PilotDashboard = lazy(() => import('./components/PilotDashboard'));
 const PartnerDashboard = lazy(() => import('./components/PartnerDashboard'));
@@ -117,9 +118,9 @@ export default function App() {
   const pageTransition: any = { type: 'tween', ease: 'anticipate', duration: 0.4 };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30 overflow-x-hidden">
+    <div data-testid={TEST_IDS.APP.CONTAINER} className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30 overflow-x-hidden">
       {showLogoutBanner && (
-        <div className="fixed z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold
+        <div data-testid={TEST_IDS.APP.LOGOUT_BANNER} className="fixed z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold
           bottom-6 left-1/2 -translate-x-1/2
           md:bottom-auto md:top-6 md:left-1/2 md:-translate-x-1/2 md:translate-y-0">
           <CheckCircle className="w-4 h-4 shrink-0" />

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Mail, Clock, CheckSquare, Square, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { saveClientProfile } from '../hooks/useClientProfile';
 import type { LookingFor } from '../hooks/useClientProfile';
+import { TEST_IDS } from '../constants/testIds';
 
 const LOOKING_FOR_OPTIONS: LookingFor[] = [
   'New Property',
@@ -67,11 +68,12 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div data-testid={TEST_IDS.SIGNUP.MODAL} className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <AnimatePresence mode="wait">
         {success ? (
           <motion.div
             key="success"
+            data-testid={TEST_IDS.SIGNUP.SUCCESS_SCREEN}
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
@@ -81,6 +83,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
+              data-testid={TEST_IDS.SIGNUP.SUCCESS_ICON}
               className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5"
             >
               <CheckCircle2 className="w-10 h-10 text-green-500" />
@@ -116,7 +119,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
           {error && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+            <p data-testid={TEST_IDS.SIGNUP.ERROR_MSG} className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
           )}
 
           {/* Name */}
@@ -128,6 +131,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 id="signup-name"
+                data-testid={TEST_IDS.SIGNUP.NAME_INPUT}
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -147,6 +151,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 id="signup-email"
+                data-testid={TEST_IDS.SIGNUP.EMAIL_INPUT}
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -162,13 +167,14 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
             <p className="block text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
               Looking For <span className="text-red-500">*</span>
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div data-testid={TEST_IDS.SIGNUP.LOOKING_FOR_CONTAINER} className="flex flex-wrap gap-2">
               {LOOKING_FOR_OPTIONS.map(opt => {
                 const selected = lookingFor.includes(opt);
                 return (
                   <button
                     key={opt}
                     type="button"
+                    data-testid={TEST_IDS.SIGNUP.LOOKING_FOR_OPTION(opt)}
                     onClick={() => toggleOption(opt)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                       selected
@@ -193,6 +199,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <select
                 id="signup-contact-time"
+                data-testid={TEST_IDS.SIGNUP.CONTACT_TIME_SELECT}
                 value={contactTime}
                 onChange={e => setContactTime(e.target.value)}
                 required
@@ -208,6 +215,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
 
           <button
             type="submit"
+            data-testid={TEST_IDS.SIGNUP.SUBMIT_BTN}
             disabled={saving}
             className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
           >

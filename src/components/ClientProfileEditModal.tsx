@@ -4,6 +4,7 @@ import { User, Clock, X, Loader2, CheckCircle2 } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../firebase';
 import { updateClientProfile } from '../hooks/useClientProfile';
+import { TEST_IDS } from '../constants/testIds';
 
 const CONTACT_TIME_OPTIONS = ['Morning (9am–12pm)', 'Afternoon (12pm–4pm)', 'Evening (4pm–8pm)', 'Anytime'];
 
@@ -60,6 +61,7 @@ export default function ClientProfileEditModal({
   return (
     <div
       aria-hidden="true"
+      data-testid={TEST_IDS.PROFILE_EDIT.MODAL}
       className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
       onClick={onClose}
     >
@@ -83,6 +85,7 @@ export default function ClientProfileEditModal({
           <button
             type="button"
             onClick={onClose}
+            data-testid={TEST_IDS.PROFILE_EDIT.CLOSE_BTN}
             className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
             aria-label="Close"
           >
@@ -92,14 +95,14 @@ export default function ClientProfileEditModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {success ? (
-            <div className="flex flex-col items-center py-4 text-center">
+            <div data-testid={TEST_IDS.PROFILE_EDIT.SUCCESS_ICON} className="flex flex-col items-center py-4 text-center">
               <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
               <p className="font-semibold text-slate-800">Profile updated!</p>
             </div>
           ) : (
             <>
               {error && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+                <p data-testid={TEST_IDS.PROFILE_EDIT.ERROR_MSG} className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
               )}
 
               {/* Full Name */}
@@ -111,6 +114,7 @@ export default function ClientProfileEditModal({
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     id="edit-name"
+                    data-testid={TEST_IDS.PROFILE_EDIT.NAME_INPUT}
                     type="text"
                     value={name}
                     onChange={e => setName(e.target.value)}
@@ -121,7 +125,7 @@ export default function ClientProfileEditModal({
                     }`}
                   />
                 </div>
-                {error && nameError && <p className="text-xs text-red-500 mt-1">{nameError}</p>}
+                {error && nameError && <p data-testid={TEST_IDS.PROFILE_EDIT.NAME_ERROR} className="text-xs text-red-500 mt-1">{nameError}</p>}
               </div>
 
               {/* Preferred Time to Call */}
@@ -133,6 +137,7 @@ export default function ClientProfileEditModal({
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                   <select
                     id="edit-contact-time"
+                    data-testid={TEST_IDS.PROFILE_EDIT.CONTACT_TIME_SELECT}
                     value={contactTime}
                     onChange={e => setContactTime(e.target.value)}
                     required
@@ -146,19 +151,21 @@ export default function ClientProfileEditModal({
                     ))}
                   </select>
                 </div>
-                {error && contactError && <p className="text-xs text-red-500 mt-1">{contactError}</p>}
+                {error && contactError && <p data-testid={TEST_IDS.PROFILE_EDIT.CONTACT_ERROR} className="text-xs text-red-500 mt-1">{contactError}</p>}
               </div>
 
               <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={onClose}
+                  data-testid={TEST_IDS.PROFILE_EDIT.CANCEL_BTN}
                   className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  data-testid={TEST_IDS.PROFILE_EDIT.SAVE_BTN}
                   disabled={saving}
                   className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
                 >

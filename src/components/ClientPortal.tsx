@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard } from 'lucide-react';
 import Logo from './Logo';
 import { api } from '../services/api';
+import { TEST_IDS } from '../constants/testIds';
 import FarmLandOnboardingModal from './FarmLandOnboardingModal';
 import PlotsOnboardingModal from './PlotsOnboardingModal';
 import Footer from './Footer';
@@ -92,6 +93,7 @@ function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDr
         onClick={() => setOpen(o => !o)}
         className="w-full h-full rounded-full flex items-center justify-center"
         aria-label="User menu"
+        data-testid={TEST_IDS.PORTAL.AVATAR_MENU_BTN}
         title={userName || 'Profile'}
       >
         {userName ? userName.charAt(0).toUpperCase() : '?'}
@@ -103,6 +105,7 @@ function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDr
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             className="absolute right-0 top-10 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+            data-testid={TEST_IDS.PORTAL.AVATAR_MENU_PANEL}
           >
             {userName && (
               <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
@@ -112,6 +115,7 @@ function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDr
             <button
               type="button"
               onClick={() => { setOpen(false); onEditProfile(); }}
+              data-testid={TEST_IDS.PORTAL.AVATAR_EDIT_PROFILE_BTN}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
             >
               <User className="w-4 h-4" /> Edit Profile
@@ -119,6 +123,7 @@ function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDr
             <button
               type="button"
               onClick={() => { setOpen(false); onLogout(); }}
+              data-testid={TEST_IDS.PORTAL.AVATAR_LOGOUT_BTN}
               className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
             >
               <LogOut className="w-4 h-4" /> Logout
@@ -555,6 +560,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 <div ref={notifRef} className="relative">
                   <button 
                     onClick={() => setShowNotifications(!showNotifications)}
+                    data-testid={TEST_IDS.PORTAL.NOTIFICATIONS_BELL}
                     className="p-2 text-slate-500 hover:text-indigo-600 transition-colors relative"
                   >
                     <Bell className="w-5 h-5" />
@@ -570,6 +576,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                        data-testid={TEST_IDS.PORTAL.NOTIFICATIONS_PANEL}
                       >
                         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                           <h3 className="font-bold text-slate-900">Notifications</h3>
@@ -614,6 +621,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                           <div className="p-3 border-t border-slate-100 text-center bg-slate-50/50">
                             <button 
                               onClick={() => setNotifications(notifications.map(n => ({ ...n, unread: false })))}
+                              data-testid={TEST_IDS.PORTAL.NOTIFICATIONS_MARK_ALL_READ}
                               className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
                             >
                               Mark all as read
@@ -633,6 +641,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
             ) : (
               <button 
                 onClick={onLoginClick}
+                data-testid={TEST_IDS.PORTAL.LOGIN_BTN}
                 className="text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors"
               >
                 Login

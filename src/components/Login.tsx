@@ -6,6 +6,7 @@ import { useOtpForm } from '../hooks/useOtpForm';
 import { getClientProfile } from '../hooks/useClientProfile';
 import ClientSignupModal from './ClientSignupModal';
 import type { AppRole, AuthUser } from '../hooks/useAuth';
+import { TEST_IDS } from '../constants/testIds';
 
 interface LoginProps {
   onLogin: (role: AppRole, name: string) => void;
@@ -18,6 +19,7 @@ function ErrorBanner({ message }: Readonly<{ message: string }>) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
+      data-testid={TEST_IDS.LOGIN.ERROR_BANNER}
       className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl p-4"
     >
       <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
@@ -69,6 +71,7 @@ function OtpBoxes({ value, onChange }: Readonly<{ value: string; onChange: (v: s
         <input
           key={i}
           ref={el => { refs.current[i] = el; }}
+          data-testid={TEST_IDS.LOGIN.OTP_BOX(i)}
           type="text"
           inputMode="numeric"
           maxLength={1}
@@ -130,6 +133,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
 
   return (
     <div
+      data-testid={TEST_IDS.LOGIN.MODAL}
       className={
         isModal
           ? 'fixed inset-0 z-[120] bg-slate-950/45 backdrop-blur-sm flex items-center justify-center p-4'
@@ -173,6 +177,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
       >
         {isModal && onClose && (
           <button type="button" onClick={onClose}
+            data-testid={TEST_IDS.LOGIN.CLOSE_BTN}
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 hover:bg-white/90 rounded-full transition-colors"
             aria-label="Close login">
             <X className="w-5 h-5" />
@@ -199,6 +204,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
               <span className="absolute left-11 top-1/2 -translate-y-1/2 text-sm text-slate-500 font-medium select-none">+91</span>
               <input
                 id="login-phone"
+                data-testid={TEST_IDS.LOGIN.PHONE_INPUT}
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
@@ -212,6 +218,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
             <div id={recaptchaId} />
             <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
               type="submit" disabled={otpLoading || phone.length < 10}
+              data-testid={TEST_IDS.LOGIN.SEND_OTP_BTN}
               className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg">
               {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               {otpLoading ? 'Sending OTP…' : 'Send OTP'}
@@ -222,11 +229,13 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
             <OtpBoxes value={otp} onChange={setOtp} />
             <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
               type="submit" disabled={otpLoading || otp.length < 6}
+              data-testid={TEST_IDS.LOGIN.VERIFY_OTP_BTN}
               className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg">
               {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               {otpLoading ? 'Verifying…' : 'Verify OTP'}
             </motion.button>
             <button type="button" onClick={handleBack}
+              data-testid={TEST_IDS.LOGIN.BACK_RESEND_BTN}
               className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-indigo-600 text-sm font-medium py-2 transition-colors">
               <RotateCcw className="w-3.5 h-3.5" /> Change number / Resend OTP
             </button>
