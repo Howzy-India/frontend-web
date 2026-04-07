@@ -230,6 +230,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     { id: 'Farm Lands', title: 'Farm Lands', subtitle: 'Agricultural and farm lands', icon: Trees, color: 'green' }
   ];
   const [properties, setProperties] = useState<any[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [filtersLoading, setFiltersLoading] = useState(false);
   const [savedProperties, setSavedProperties] = useState<string[]>([]);
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [myListings, setMyListings] = useState<any[]>([]);
@@ -288,6 +290,14 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     }
   }, [userEmail]);
 
+  // Brief loading indicator when filters or category change in Projects tab
+  useEffect(() => {
+    if (activeTab !== 'Projects') return;
+    setFiltersLoading(true);
+    const t = setTimeout(() => setFiltersLoading(false), 400);
+    return () => clearTimeout(t);
+  }, [filters, projectCategory, activeTab]);
+
   const enquiryUpdates = useEnquiryUpdates(userEmail || null);
 
   useEffect(() => {
@@ -310,6 +320,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   }, [dashboardTab, userEmail]);
 
   const fetchProperties = async () => {
+    setPropertiesLoading(true);
     try {
       const [projectsData, resaleData] = await Promise.all([
         api.getProjects(),
@@ -353,6 +364,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
       setProperties([...mappedProjects, ...mappedResale]);
     } catch (error) {
       console.error('Failed to fetch properties:', error);
+    } finally {
+      setPropertiesLoading(false);
     }
   };
 
@@ -1371,6 +1384,24 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 </div>
 
                 {/* Listings */}
+                {(propertiesLoading || filtersLoading) ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6" data-testid="projects-loading-skeleton">
+                    {[1, 2, 3, 4, 5, 6].map(i => (
+                      <div key={i} className="bg-white rounded-2xl border border-slate-200 overflow-hidden animate-pulse">
+                        <div className="h-48 bg-slate-200" />
+                        <div className="p-5 space-y-3">
+                          <div className="h-4 bg-slate-200 rounded w-3/4" />
+                          <div className="h-3 bg-slate-100 rounded w-1/2" />
+                          <div className="h-3 bg-slate-100 rounded w-2/3" />
+                          <div className="flex gap-2 pt-2">
+                            <div className="h-6 bg-slate-100 rounded-full w-16" />
+                            <div className="h-6 bg-slate-100 rounded-full w-20" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {filteredProperties.map(property => (
                     <PropertyCard 
@@ -1390,6 +1421,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                     </div>
                   )}
                 </div>
+                )}
               </div>
             )}
           </div>
