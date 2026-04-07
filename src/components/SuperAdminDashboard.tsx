@@ -563,8 +563,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({ title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '', description: '' });
   const [addSubmitting, setAddSubmitting] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const apiService = React.useMemo(() => require('../services/api').api, []);
+  const apiService = api;
 
   const fetchList = React.useCallback(async () => {
     setLoading(true);
