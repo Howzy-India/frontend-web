@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, MapPin, Home, AlertCircle, Loader2, Phone, X, ArrowRight, RotateCcw } from 'lucide-react';
 import Logo from './Logo';
@@ -23,6 +23,64 @@ function ErrorBanner({ message }: Readonly<{ message: string }>) {
       <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
       <p className="text-sm text-red-700 font-medium">{message}</p>
     </motion.div>
+  );
+}
+
+function OtpBoxes({ value, onChange }: Readonly<{ value: string; onChange: (v: string) => void }>) {
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function handleInput(idx: number, raw: string) {
+    const digit = raw.replace(/\D/g, '').slice(-1);
+    const chars = value.split('');
+    chars[idx] = digit;
+    const next = chars.join('').slice(0, 6);
+    onChange(next);
+    if (digit && idx < 5) refs.current[idx + 1]?.focus();
+  }
+
+  function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace') {
+      if (value[idx]) {
+        const chars = value.split('');
+        chars[idx] = '';
+        onChange(chars.join(''));
+      } else if (idx > 0) {
+        refs.current[idx - 1]?.focus();
+      }
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      refs.current[idx - 1]?.focus();
+    } else if (e.key === 'ArrowRight' && idx < 5) {
+      refs.current[idx + 1]?.focus();
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const text = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (text) {
+      onChange(text);
+      refs.current[Math.min(text.length, 5)]?.focus();
+    }
+    e.preventDefault();
+  }
+
+  return (
+    <div className="flex gap-2 justify-center" onPaste={handlePaste}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <input
+          key={i}
+          ref={el => { refs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={value[i] ?? ''}
+          placeholder="·"
+          onChange={e => handleInput(i, e.target.value)}
+          onKeyDown={e => handleKeyDown(i, e)}
+          onFocus={e => e.target.select()}
+          className="w-11 h-12 text-center text-lg font-bold bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-slate-900 placeholder:text-slate-300"
+        />
+      ))}
+    </div>
   );
 }
 
@@ -161,19 +219,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <input
-                id="login-otp"
-                type="text"
-                inputMode="numeric"
-                value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="Enter 6-digit OTP"
-                required
-                maxLength={6}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none tracking-widest"
-              />
-            </div>
+            <OtpBoxes value={otp} onChange={setOtp} />
             <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
               type="submit" disabled={otpLoading || otp.length < 6}
               className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg">
