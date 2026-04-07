@@ -748,7 +748,25 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
                 {/* Trending Locations */}
-                <TrendingLocations category={landingCategory} />
+                <TrendingLocations
+                  category={landingCategory}
+                  onLocationClick={(loc) => {
+                    const catMap: Record<string, string> = {
+                      All: 'All', Resale: 'Resale', Projects: 'All',
+                      Plots: 'Plots', Commercial: 'Commercial', 'Farm Lands': 'Farm Lands'
+                    };
+                    setProjectCategory((catMap[landingCategory] || 'All') as any);
+                    setFilters(prev => ({
+                      ...prev,
+                      trendingArea: loc,
+                      location: '', bhk: '', priceRange: '', possession: '',
+                      gated: '', age: '', furnishing: '', ownership: '',
+                      size: '', approval: '', corner: '', type: '', transaction: '', area: ''
+                    }));
+                    setActiveTab('Projects');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                />
 
                 <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
@@ -3018,7 +3036,7 @@ function ClosingCTA({ category }: any) {
   );
 }
 
-function TrendingLocations({ category }: any) {
+function TrendingLocations({ category, onLocationClick }: { category: string; onLocationClick?: (location: string) => void }) {
   const locations: Record<string, { name: string, desc: string, image: string }[]> = {
     All: [
       { name: 'Kokapet', desc: 'Premium Luxury Hub', image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=400&q=80' },
@@ -3089,6 +3107,11 @@ function TrendingLocations({ category }: any) {
             transition={{ delay: i * 0.1 }}
             whileHover={{ y: -10 }}
             className="group cursor-pointer"
+            data-testid={`trending-location-${loc.name.toLowerCase().replace(/\s+/g, '-')}`}
+            onClick={() => onLocationClick?.(loc.name)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onLocationClick?.(loc.name); }}
           >
             <div className="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/20 mb-6">
               <img 
