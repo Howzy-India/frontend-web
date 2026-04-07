@@ -688,42 +688,45 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
         
         {activeTab === 'Home' && (
           <div className="space-y-12 md:space-y-16 pb-12">
-            {/* Category Selector (Airbnb Style) */}
-            <div className="sticky top-[86px] z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60 -mx-4 px-4 md:-mx-10 md:px-10 shadow-sm">
-              <div className="flex gap-8 overflow-x-auto py-4 scrollbar-hide md:justify-center">
-                {[
-                  { id: 'All', name: 'Explore All', icon: Sparkles, color: 'indigo' },
-                  { id: 'Projects', name: 'New Projects', icon: Building2, color: 'blue' },
-                  { id: 'Resale', name: 'Resale Homes', icon: RefreshCw, color: 'emerald' },
-                  { id: 'Plots', name: 'Open Plots', icon: Map, color: 'amber' },
-                  { id: 'Farm Lands', name: 'Farm Lands', icon: Trees, color: 'green' },
-                  { id: 'Commercial', name: 'Commercial', icon: Briefcase, color: 'purple' }
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setLandingCategory(cat.id as any)}
-                    className={`flex flex-col items-center gap-2 min-w-fit transition-all relative group pb-2 ${
-                      landingCategory === cat.id 
-                        ? 'text-indigo-600' 
-                        : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                  >
-                    <cat.icon className={`w-6 h-6 transition-transform duration-300 ${
-                      landingCategory === cat.id ? 'scale-110' : 'group-hover:scale-110'
-                    }`} />
-                    <span className={`text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${
-                      landingCategory === cat.id ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'
-                    }`}>
-                      {cat.name}
-                    </span>
-                    {landingCategory === cat.id && (
-                      <motion.div 
-                        layoutId="activeLandingTab"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"
-                      />
-                    )}
-                  </button>
-                ))}
+            {/* Category Selector */}
+            <div className="sticky top-[86px] z-40 -mx-4 px-4 md:-mx-10 md:px-10">
+              <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/70 shadow-sm px-4 md:px-8">
+                <div className="flex gap-2 md:gap-6 overflow-x-auto py-4 scrollbar-hide md:justify-center">
+                  {[
+                    { id: 'All', name: 'Explore All', icon: Sparkles, color: 'indigo' },
+                    { id: 'Projects', name: 'New Projects', icon: Building2, color: 'blue' },
+                    { id: 'Resale', name: 'Resale Homes', icon: RefreshCw, color: 'emerald' },
+                    { id: 'Plots', name: 'Open Plots', icon: Map, color: 'amber' },
+                    { id: 'Farm Lands', name: 'Farm Lands', icon: Trees, color: 'green' },
+                    { id: 'Commercial', name: 'Commercial', icon: Briefcase, color: 'purple' }
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setLandingCategory(cat.id as any)}
+                      data-testid={TEST_IDS.PORTAL.CATEGORY_FILTER(cat.id)}
+                      className={`flex flex-col items-center gap-2 min-w-fit transition-all relative group pb-2 pt-1 px-3 ${
+                        landingCategory === cat.id
+                          ? 'text-indigo-600'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <cat.icon className={`w-6 h-6 transition-transform duration-300 ${
+                        landingCategory === cat.id ? 'scale-110' : 'group-hover:scale-110'
+                      }`} />
+                      <span className={`text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-colors ${
+                        landingCategory === cat.id ? 'opacity-100' : 'opacity-60 group-hover:opacity-100'
+                      }`}>
+                        {cat.name}
+                      </span>
+                      {landingCategory === cat.id && (
+                        <motion.div
+                          layoutId="activeLandingTab"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full"
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
