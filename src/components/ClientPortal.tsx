@@ -534,7 +534,7 @@ export default function ClientPortal({ onLogout, onLoginClick, userEmail, userNa
                   </AnimatePresence>
                 </div>
                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm" aria-label="User Profile" title={userName || userEmail}>
-                  {(userName || userEmail || '?').charAt(0).toUpperCase()}
+                  {((userName || userEmail || '?').match(/[a-zA-Z0-9]/) ?? ['?'])[0].toUpperCase()}
                 </div>
                 <button 
                   onClick={onLogout}
