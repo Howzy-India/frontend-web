@@ -171,7 +171,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
                 placeholder="Enter 6-digit OTP"
                 required
                 maxLength={6}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 text-center text-xl font-bold tracking-[0.5em] focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none tracking-widest"
               />
             </div>
             <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
@@ -187,10 +187,6 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
           </form>
         )}
 
-        <p className="mt-8 text-center text-xs text-slate-400 leading-relaxed">
-          Your role (Admin, Agent, Partner, or Client) is determined by your account.
-          <br />Contact your administrator if you need access.
-        </p>
       </motion.div>
     </div>
   );
