@@ -64,6 +64,59 @@ function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: a
   );
 }
 
+interface AvatarDropdownProps {
+  userName?: string;
+  onEditProfile: () => void;
+  onLogout: () => void;
+}
+
+function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDropdownProps>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full h-full rounded-full flex items-center justify-center"
+        aria-label="User menu"
+        title={userName || 'Profile'}
+      >
+        {userName ? userName.charAt(0).toUpperCase() : '?'}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            className="absolute right-0 top-10 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+          >
+            {userName && (
+              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                <p className="text-xs font-bold text-slate-800 truncate">{userName}</p>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onEditProfile(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+            >
+              <User className="w-4 h-4" /> Edit Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onLogout(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
+            >
+              <LogOut className="w-4 h-4" /> Logout
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 interface ClientPortalProps {
   uid?: string;
   onLogout: () => void;
@@ -74,7 +127,7 @@ interface ClientPortalProps {
   footerConfig?: any;
 }
 
-export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpdate, userEmail, userName, footerConfig }: ClientPortalProps) {
+export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpdate, userEmail, userName, footerConfig }: Readonly<ClientPortalProps>) {
   const [activeTab, setActiveTab] = useState<'Home' | 'Projects' | 'Services' | 'About' | 'Dashboard'>('Home');
   const [landingCategory, setLandingCategory] = useState<'All' | 'Resale' | 'Projects' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
@@ -172,7 +225,6 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('All');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [profileContactTime, setProfileContactTime] = useState('');
   
@@ -546,47 +598,11 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                     )}
                   </AnimatePresence>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowAvatarMenu(m => !m)}
-                    className="w-full h-full rounded-full flex items-center justify-center"
-                    aria-label="User menu"
-                    title={userName || 'Profile'}
-                  >
-                    {userName ? userName.charAt(0).toUpperCase() : '?'}
-                  </button>
-                  <AnimatePresence>
-                    {showAvatarMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                        className="absolute right-0 top-10 w-44 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
-                      >
-                        {userName && (
-                          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
-                            <p className="text-xs font-bold text-slate-800 truncate">{userName}</p>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => { setShowAvatarMenu(false); setIsProfileEditOpen(true); }}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                        >
-                          <User className="w-4 h-4" /> Edit Profile
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setShowAvatarMenu(false); onLogout(); }}
-                          className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100"
-                        >
-                          <LogOut className="w-4 h-4" /> Logout
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <AvatarDropdown
+                    userName={userName}
+                    onEditProfile={() => setIsProfileEditOpen(true)}
+                    onLogout={onLogout}
+                  />
               </div>
             ) : (
               <button 
@@ -2034,7 +2050,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           uid={uid}
           currentName={userName ?? ''}
           currentContactTime={profileContactTime}
-          onSave={(name) => { onProfileUpdate?.(name); setProfileContactTime(profileContactTime); }}
+          onSave={(name) => { onProfileUpdate?.(name); }}
           onClose={() => setIsProfileEditOpen(false)}
         />
       )}

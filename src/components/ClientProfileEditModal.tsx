@@ -29,7 +29,7 @@ export default function ClientProfileEditModal({
   const [success, setSuccess] = useState(false);
 
   const nameError = name.trim().length === 0 ? 'Full name is required' : null;
-  const contactError = !contactTime ? 'Preferred call time is required' : null;
+  const contactError = contactTime.length === 0 ? 'Preferred call time is required' : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,8 +59,10 @@ export default function ClientProfileEditModal({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 16 }}
