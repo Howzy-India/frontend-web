@@ -3,6 +3,7 @@ import { usePagination } from '../hooks/usePagination';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../hooks/useAuth';
+import { TEST_IDS } from '../constants/testIds';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { 
@@ -334,9 +335,10 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
   }, [activeTab, handleBroadcast, leads, projects, userRole, refreshProjects]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex overflow-hidden">
+    <div data-testid={TEST_IDS.SUPER_ADMIN.CONTAINER} className="min-h-screen bg-slate-50 text-slate-900 flex overflow-hidden">
       {/* Mobile Sidebar Toggle */}
       <button 
+        data-testid={TEST_IDS.SUPER_ADMIN.SIDEBAR_TOGGLE}
         className="md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg border border-slate-200 shadow-sm"
         onClick={() => setSidebarOpen(!sidebarOpen)}
       >
@@ -344,7 +346,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       </button>
 
       {/* Sidebar */}
-      <aside className={`
+      <aside data-testid={TEST_IDS.SUPER_ADMIN.SIDEBAR} className={`
         fixed md:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-lg md:shadow-none
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
@@ -376,6 +378,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
                         whileHover={{ x: 4 }}
                         whileTap={{ scale: 0.98 }}
                         key={tab.id}
+                        data-testid={TEST_IDS.SUPER_ADMIN.NAV_TAB(tab.id)}
                         onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
                           isActive
@@ -415,6 +418,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onLogout}
+              data-testid={TEST_IDS.SUPER_ADMIN.LOGOUT_BTN}
               className="w-full flex items-center gap-3 px-4 py-3.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all font-bold text-sm"
             >
               <LogOut className="w-5 h-5" />
@@ -425,7 +429,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 h-screen overflow-y-auto bg-slate-50/50">
+      <main data-testid={TEST_IDS.SUPER_ADMIN.CONTENT_AREA} className="flex-1 h-screen overflow-y-auto bg-slate-50/50">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900 pl-12 md:pl-0">
             {tabs.find(t => t.id === activeTab)?.label}
@@ -637,7 +641,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><RefreshCw className="w-6 h-6 text-amber-600" /> Resale Properties</h2>
           <p className="text-slate-500 text-sm mt-1">Review client submissions and manage listed resale properties</p>
         </div>
-        <button onClick={() => setShowAddForm(v => !v)} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-700 transition-colors">
+        <button onClick={() => setShowAddForm(v => !v)} data-testid={TEST_IDS.SUPER_ADMIN.RESALE_ADD_TOGGLE} className="flex items-center gap-2 bg-amber-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-700 transition-colors">
           <Plus className="w-4 h-4" /> Add Directly
         </button>
       </div>
@@ -648,17 +652,17 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
           <form onSubmit={handleAddSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label htmlFor="add-resale-title" className="block text-xs font-semibold text-slate-600 mb-1">Title *</label>
-              <input id="add-resale-title" required value={addForm.title} onChange={e => setAddForm(f => ({...f, title: e.target.value}))} placeholder="3BHK Apartment in Kondapur" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              <input id="add-resale-title" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_TITLE_INPUT} required value={addForm.title} onChange={e => setAddForm(f => ({...f, title: e.target.value}))} placeholder="3BHK Apartment in Kondapur" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
             <div>
               <label htmlFor="add-resale-type" className="block text-xs font-semibold text-slate-600 mb-1">Type *</label>
-              <select id="add-resale-type" required value={addForm.propertyType} onChange={e => setAddForm(f => ({...f, propertyType: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <select id="add-resale-type" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_TYPE_SELECT} required value={addForm.propertyType} onChange={e => setAddForm(f => ({...f, propertyType: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
                 {['Apartment','Villa','Independent House','Plot','Commercial'].map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label htmlFor="add-resale-price" className="block text-xs font-semibold text-slate-600 mb-1">Price *</label>
-              <input id="add-resale-price" required value={addForm.price} onChange={e => setAddForm(f => ({...f, price: e.target.value}))} placeholder="₹85 Lakhs" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              <input id="add-resale-price" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_PRICE_INPUT} required value={addForm.price} onChange={e => setAddForm(f => ({...f, price: e.target.value}))} placeholder="₹85 Lakhs" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
             <div>
               <label htmlFor="add-resale-city" className="block text-xs font-semibold text-slate-600 mb-1">City *</label>
@@ -685,17 +689,17 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
               <textarea id="add-resale-description" rows={2} value={addForm.description} onChange={e => setAddForm(f => ({...f, description: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
             </div>
             <div className="sm:col-span-2 flex gap-3">
-              <button type="submit" disabled={addSubmitting} className="bg-amber-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors">
+              <button type="submit" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_SUBMIT_BTN} disabled={addSubmitting} className="bg-amber-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors">
                 {addSubmitting ? 'Adding…' : 'Add & List'}
               </button>
-              <button type="button" onClick={() => setShowAddForm(false)} className="px-5 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Cancel</button>
+              <button type="button" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_CANCEL_BTN} onClick={() => setShowAddForm(false)} className="px-5 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
       <div className="flex flex-wrap gap-3">
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+        <select data-testid={TEST_IDS.SUPER_ADMIN.RESALE_STATUS_FILTER} value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
           <option value="">All Statuses</option>
           <option value="Pending">Pending</option>
           <option value="Listed">Listed</option>

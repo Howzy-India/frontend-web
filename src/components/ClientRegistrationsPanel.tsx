@@ -4,6 +4,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Search, Users, Phone, Mail, Clock, Tag, RefreshCw, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { api } from '../services/api';
+import { TEST_IDS } from '../constants/testIds';
 
 interface ClientProfile {
   uid: string;
@@ -132,10 +133,11 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name, phone, or email…"
+            data-testid={TEST_IDS.REGISTRATIONS.SEARCH_INPUT}
             className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
           />
         </div>
-        <div className="text-xs text-slate-400 whitespace-nowrap">
+        <div data-testid="registrations-results-count" className="text-xs text-slate-400 whitespace-nowrap">
           {loading ? (
             <span className="flex items-center gap-1"><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Loading…</span>
           ) : (
@@ -147,7 +149,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table data-testid={TEST_IDS.REGISTRATIONS.TABLE} className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-4 py-3 text-left">
@@ -204,6 +206,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
                     <>
                       <motion.tr
                         key={p.uid}
+                        data-testid={TEST_IDS.REGISTRATIONS.ROW(p.uid)}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors"
@@ -239,6 +242,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
                           <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                             <button
                               onClick={() => setDeleteTarget(p)}
+                              data-testid={TEST_IDS.REGISTRATIONS.DELETE_BTN(p.uid)}
                               className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                               title="Delete user"
                             >
@@ -248,7 +252,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
                         )}
                       </motion.tr>
                       {expandedUid === p.uid && (
-                        <tr key={`${p.uid}-expanded`} className="bg-indigo-50/40">
+                        <tr key={`${p.uid}-expanded`} data-testid={TEST_IDS.REGISTRATIONS.ROW_EXPANDED(p.uid)} className="bg-indigo-50/40">
                           <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                               <div><p className="text-slate-400 font-medium mb-1">Phone</p><p className="font-semibold text-slate-800">{p.phone || '—'}</p></div>
@@ -281,6 +285,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            data-testid={TEST_IDS.REGISTRATIONS.DELETE_CONFIRM_MODAL}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
             onClick={() => !deleting && setDeleteTarget(null)}
           >
@@ -300,12 +305,13 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
                   <p className="text-sm text-slate-500">This action cannot be undone.</p>
                 </div>
               </div>
-              <p className="text-sm text-slate-700 mb-6">
+              <p data-testid={TEST_IDS.REGISTRATIONS.DELETE_CONFIRM_MSG} className="text-sm text-slate-700 mb-6">
                 Are you sure you want to delete <span className="font-semibold">{deleteTarget.name || deleteTarget.phone}</span>? Their account and profile data will be permanently removed.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteTarget(null)}
+                  data-testid={TEST_IDS.REGISTRATIONS.DELETE_CANCEL_BTN}
                   disabled={deleting}
                   className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
                 >
@@ -313,6 +319,7 @@ export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { rea
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
+                  data-testid={TEST_IDS.REGISTRATIONS.DELETE_CONFIRM_BTN}
                   disabled={deleting}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
