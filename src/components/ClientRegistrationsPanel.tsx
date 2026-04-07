@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Search, Users, Phone, Mail, Clock, Tag, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Users, Phone, Mail, Clock, Tag, RefreshCw, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { api } from '../services/api';
 
 interface ClientProfile {
   uid: string;
@@ -37,13 +38,15 @@ function isNewRegistration(ts?: { seconds: number } | null): boolean {
 
 type SortField = 'createdAt' | 'name';
 
-export default function ClientRegistrationsPanel() {
+export default function ClientRegistrationsPanel({ isSuperAdmin = false }: { readonly isSuperAdmin?: boolean }) {
   const [profiles, setProfiles] = useState<ClientProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortAsc, setSortAsc] = useState(false);
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ClientProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'client_profiles'), orderBy('createdAt', 'desc'));
@@ -53,6 +56,20 @@ export default function ClientRegistrationsPanel() {
     }, () => setLoading(false));
     return unsub;
   }, []);
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api.deleteClient(deleteTarget.uid);
+      setProfiles(prev => prev.filter(p => p.uid !== deleteTarget.uid));
+    } catch {
+      // silently ignore — Firestore snapshot will reconcile
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
+    }
+  }
 
   const filtered = profiles
     .filter(p => {
@@ -171,14 +188,14 @@ export default function ClientRegistrationsPanel() {
               <AnimatePresence>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
+                    <td colSpan={isSuperAdmin ? 7 : 6} className="px-4 py-12 text-center text-slate-400">
                       <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
                       Loading registrations…
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={isSuperAdmin ? 7 : 6} className="px-4 py-12 text-center text-slate-400 text-sm">
                       No client registrations found.
                     </td>
                   </tr>
@@ -218,10 +235,21 @@ export default function ClientRegistrationsPanel() {
                         </td>
                         <td className="px-4 py-3 text-slate-500 text-xs hidden lg:table-cell">{p.contactTime || '—'}</td>
                         <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(p.createdAt)}</td>
+                        {isSuperAdmin && (
+                          <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => setDeleteTarget(p)}
+                              className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              title="Delete user"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        )}
                       </motion.tr>
                       {expandedUid === p.uid && (
                         <tr key={`${p.uid}-expanded`} className="bg-indigo-50/40">
-                          <td colSpan={6} className="px-6 py-4">
+                          <td colSpan={isSuperAdmin ? 7 : 6} className="px-6 py-4">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                               <div><p className="text-slate-400 font-medium mb-1">Phone</p><p className="font-semibold text-slate-800">{p.phone || '—'}</p></div>
                               <div><p className="text-slate-400 font-medium mb-1">Email</p><p className="font-semibold text-slate-800">{p.email || '—'}</p></div>
@@ -245,6 +273,57 @@ export default function ClientRegistrationsPanel() {
           </table>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={() => !deleting && setDeleteTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Delete User</h3>
+                  <p className="text-sm text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-700 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{deleteTarget.name || deleteTarget.phone}</span>? Their account and profile data will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
