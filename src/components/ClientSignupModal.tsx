@@ -45,7 +45,9 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Please enter your name.'); return; }
+    if (!name.trim()) { setError('Please enter your full name.'); return; }
+    if (!email.trim()) { setError('Please enter your email address.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter a valid email address.'); return; }
     if (lookingFor.length === 0) { setError('Please select at least one property type.'); return; }
     if (!contactTime) { setError('Please select a preferred contact time.'); return; }
     setError(null);
@@ -136,7 +138,7 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
           {/* Email */}
           <div>
             <label htmlFor="signup-email" className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
-              Email ID
+              Email ID <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -145,7 +147,8 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="your@email.com (optional)"
+                placeholder="your@email.com"
+                required
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
               />
             </div>
