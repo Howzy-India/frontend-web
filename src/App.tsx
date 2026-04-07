@@ -155,6 +155,7 @@ export default function App() {
                   onLogout={handleLogout}
                   onLoginClick={() => setIsLoginOverlayOpen(true)}
                   userEmail={user?.email ?? user?.phoneNumber ?? ''}
+                  userName={user?.displayName ?? ''}
                   footerConfig={footerConfig}
                 />
                 <AnimatePresence>
