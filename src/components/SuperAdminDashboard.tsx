@@ -309,7 +309,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'overview': return <AdminOverview />;
       case 'enquiries': return <AdminEnquiriesPanel />;
       case 'client-logins': return <ClientLoginDashboard />;
-      case 'client-registrations': return <ClientRegistrationsPanel />;
+      case 'client-registrations': return <ClientRegistrationsPanel isSuperAdmin={userRole === 'super_admin'} />;
       case 'leads': return <GlobalLeadsView leads={leads} />;
       case 'social-leads': return <SocialMediaLeadsView leads={socialMediaLeads} />;
       case 'lead-allocation': return <LeadAllocationManager />;

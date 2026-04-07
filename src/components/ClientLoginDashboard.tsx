@@ -220,7 +220,8 @@ export default function ClientLoginDashboard() {
               {filteredLogins.map((login) => (
                 <tr key={login.id} className="hover:bg-slate-50 transition-colors">
                   <td className="p-4">
-                    <div className="font-bold text-slate-900">{login.email}</div>
+                    <div className="font-bold text-slate-900">{login.name || login.email}</div>
+                    {login.name && <div className="text-xs text-slate-500">{login.email}</div>}
                     {login.phone && <div className="text-xs text-slate-500">{login.phone}</div>}
                   </td>
                   <td className="p-4">
