@@ -154,10 +154,12 @@ export default function App() {
             {view === 'client_portal' && (
               <>
                 <ClientPortal
+                  uid={user?.uid}
                   onLogout={handleLogout}
                   onLoginClick={() => setIsLoginOverlayOpen(true)}
+                  onProfileUpdate={(name) => setClientName(name)}
                   userEmail={user?.email ?? user?.phoneNumber ?? ''}
-                  userName={user?.displayName ?? ''}
+                  userName={clientName || user?.displayName || ''}
                   footerConfig={footerConfig}
                 />
                 <AnimatePresence>

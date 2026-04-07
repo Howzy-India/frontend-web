@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export type LookingFor =
@@ -18,7 +18,16 @@ export interface ClientProfile {
   createdAt?: unknown;
 }
 
-/** Returns the stored profile for a given uid, or null if not found. */
+/** Partially updates name and/or contactTime without overwriting other fields. */
+export async function updateClientProfile(
+  uid: string,
+  data: { name?: string; contactTime?: string },
+): Promise<void> {
+  const now = serverTimestamp();
+  await updateDoc(doc(db, 'client_profiles', uid), { ...data, updatedAt: now });
+  await updateDoc(doc(db, 'users', uid), { ...data, updatedAt: now });
+}
+
 export async function getClientProfile(uid: string): Promise<ClientProfile | null> {
   const snap = await getDoc(doc(db, 'client_profiles', uid));
   if (!snap.exists()) return null;
