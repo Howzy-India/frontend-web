@@ -47,7 +47,10 @@ export default function ClientSignupModal({ uid, phone, onComplete }: ClientSign
     e.preventDefault();
     if (!name.trim()) { setError('Please enter your full name.'); return; }
     if (!email.trim()) { setError('Please enter your email address.'); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter a valid email address.'); return; }
+    const emailVal = email.trim();
+    const atIdx = emailVal.indexOf('@');
+    const dotIdx = emailVal.lastIndexOf('.');
+    if (atIdx < 1 || dotIdx <= atIdx + 1 || dotIdx >= emailVal.length - 1) { setError('Please enter a valid email address.'); return; }
     if (lookingFor.length === 0) { setError('Please select at least one property type.'); return; }
     if (!contactTime) { setError('Please select a preferred contact time.'); return; }
     setError(null);
