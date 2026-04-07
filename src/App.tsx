@@ -46,11 +46,13 @@ export default function App() {
     }
   }, [view, authLoading, user]);
 
-  // When auth state resolves after splash, route appropriately
+  // When auth state resolves after splash, route appropriately.
+  // Do NOT close isLoginOverlayOpen here — ClientAuthModal handles its own close
+  // after signup completes. Closing it here races with the async profile check
+  // and causes the signup form to never be shown for new users.
   useEffect(() => {
     if (view === 'splash' || authLoading) return;
     if (user) {
-      setIsLoginOverlayOpen(false);
       setView(roleToView(user.role));
     }
   }, [user, authLoading]);
