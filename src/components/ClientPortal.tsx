@@ -72,8 +72,21 @@ interface AvatarDropdownProps {
 
 function AvatarDropdown({ userName, onEditProfile, onLogout }: Readonly<AvatarDropdownProps>) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
   return (
-    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm relative">
+    <div ref={wrapperRef} className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm relative">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -225,11 +238,24 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('All');
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [profileContactTime, setProfileContactTime] = useState('');
   
   const [isFarmLandModalOpen, setIsFarmLandModalOpen] = useState(false);
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
+
+  // Close notifications panel on outside click
+  useEffect(() => {
+    if (!showNotifications) return;
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNotifications]);
 
   // Load contact time for profile edit modal
   useEffect(() => {
@@ -526,7 +552,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
             </button>
             {userEmail ? (
               <div className="flex items-center gap-2 md:gap-3">
-                <div className="relative">
+                <div ref={notifRef} className="relative">
                   <button 
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="p-2 text-slate-500 hover:text-indigo-600 transition-colors relative"
