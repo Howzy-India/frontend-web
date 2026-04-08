@@ -95,10 +95,10 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
 
             {step === 'phone' ? (
               <form onSubmit={handleSendOtp} className="space-y-4">
-                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300">
-                  <div className="flex items-center gap-2 px-4 py-3 border-r border-slate-200 bg-white/60 shrink-0">
-                    <Phone className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm text-slate-600 font-semibold select-none">+91</span>
+                <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                  <div className="flex items-center gap-2 pl-4 pr-3 self-stretch border-r border-slate-200 shrink-0">
+                    <Phone className="w-4 h-4 text-indigo-400" />
+                    <span className="text-sm font-semibold text-slate-700 select-none">+91</span>
                   </div>
                   <input
                     id="client-phone"
@@ -108,7 +108,7 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
                     placeholder="Mobile number"
                     required
                     maxLength={10}
-                    className="flex-1 bg-transparent py-3 px-4 text-sm font-sans text-center outline-none placeholder:text-slate-400"
+                    className="flex-1 bg-transparent py-3 px-4 text-base font-sans text-slate-800 text-center outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm"
                   />
                 </div>
                 {/* Invisible reCAPTCHA container */}
