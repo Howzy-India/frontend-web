@@ -264,12 +264,12 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     return () => document.removeEventListener('mousedown', handler);
   }, [showNotifications]);
 
-  // Load contact time for profile edit modal
+  // Load contact time eagerly so the profile edit modal has it on first open
   useEffect(() => {
-    if (uid && isProfileEditOpen && !profileContactTime) {
+    if (uid) {
       getClientProfile(uid).then(p => { if (p?.contactTime) setProfileContactTime(p.contactTime); }).catch(() => null);
     }
-  }, [uid, isProfileEditOpen]);
+  }, [uid]);
   const fetchEnquiries = async () => {
     if (!userEmail) return;
     try {
