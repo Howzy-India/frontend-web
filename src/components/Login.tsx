@@ -211,7 +211,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
                 placeholder="10-digit mobile number"
                 required
                 maxLength={10}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-20 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none tracking-widest"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-20 pr-4 text-sm font-sans focus:ring-2 focus:ring-indigo-500/20 outline-none"
               />
             </div>
             {/* Invisible reCAPTCHA container */}
@@ -223,6 +223,12 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
               {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
               {otpLoading ? 'Sending OTP…' : 'Send OTP'}
             </motion.button>
+            <p className="text-center text-[11px] text-slate-400 leading-relaxed">
+              Protected by reCAPTCHA —{' '}
+              <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Privacy</a>
+              {' & '}
+              <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Terms</a>
+            </p>
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
