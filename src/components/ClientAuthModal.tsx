@@ -106,7 +106,7 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
                     placeholder="10-digit mobile number"
                     required
                     maxLength={10}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-20 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none tracking-widest"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-20 pr-4 text-sm font-sans focus:ring-2 focus:ring-indigo-500/20 outline-none"
                   />
                 </div>
                 {/* Invisible reCAPTCHA container */}
@@ -116,6 +116,12 @@ export default function ClientAuthModal({ isOpen, onClose, onLogin }: ClientAuth
                   {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
                   {otpLoading ? 'Sending OTP…' : 'Send OTP'}
                 </button>
+                <p className="text-center text-[11px] text-slate-400 leading-relaxed">
+                  Protected by reCAPTCHA —{' '}
+                  <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Privacy</a>
+                  {' & '}
+                  <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Terms</a>
+                </p>
               </form>
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-4">

@@ -46,3 +46,8 @@ body {
     linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
 }
+
+/* Hide the reCAPTCHA badge — invisible reCAPTCHA is still active.
+   Disclosure: This site is protected by reCAPTCHA and the Google
+   Privacy Policy and Terms of Service apply. */
+.grecaptcha-badge { visibility: hidden !important; }
