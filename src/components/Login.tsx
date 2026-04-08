@@ -199,32 +199,34 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
 
         {step === 'phone' ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
-            <div className="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
-              <div className="flex items-center gap-2 pl-4 pr-3 self-stretch border-r border-slate-200 shrink-0">
-                <Phone className="w-4 h-4 text-indigo-400" />
-                <span className="text-sm font-semibold text-slate-700 select-none">+91</span>
+            <div className="max-w-xs mx-auto space-y-3">
+              <div className="flex items-center bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                <div className="flex items-center gap-2 pl-4 pr-3 self-stretch border-r border-slate-200 shrink-0">
+                  <Phone className="w-4 h-4 text-indigo-400" />
+                  <span className="text-sm font-semibold text-slate-700 select-none">+91</span>
+                </div>
+                <input
+                  id="login-phone"
+                  data-testid={TEST_IDS.LOGIN.PHONE_INPUT}
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="Mobile number"
+                  required
+                  maxLength={10}
+                  className="flex-1 bg-transparent py-3.5 px-4 text-sm font-semibold font-sans text-slate-700 text-left tracking-[0.18em] outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal"
+                />
               </div>
-              <input
-                id="login-phone"
-                data-testid={TEST_IDS.LOGIN.PHONE_INPUT}
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                placeholder="Mobile number"
-                required
-                maxLength={10}
-                className="flex-1 bg-transparent py-3.5 px-4 text-sm font-semibold font-sans text-slate-700 text-left tracking-[0.18em] outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal"
-              />
+              {/* Invisible reCAPTCHA container */}
+              <div id={recaptchaId} />
+              <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
+                type="submit" disabled={otpLoading || phone.length < 10}
+                data-testid={TEST_IDS.LOGIN.SEND_OTP_BTN}
+                className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg">
+                {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
+                {otpLoading ? 'Sending OTP…' : 'Send OTP'}
+              </motion.button>
             </div>
-            {/* Invisible reCAPTCHA container */}
-            <div id={recaptchaId} />
-            <motion.button whileHover={{ scale: otpLoading ? 1 : 1.01 }} whileTap={{ scale: otpLoading ? 1 : 0.99 }}
-              type="submit" disabled={otpLoading || phone.length < 10}
-              data-testid={TEST_IDS.LOGIN.SEND_OTP_BTN}
-              className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition-all shadow-md hover:shadow-lg">
-              {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5" />}
-              {otpLoading ? 'Sending OTP…' : 'Send OTP'}
-            </motion.button>
             <p className="text-center text-[11px] text-slate-400 leading-relaxed">
               Protected by reCAPTCHA —{' '}
               <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline hover:text-slate-600">Privacy</a>
