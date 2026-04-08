@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
-import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard } from 'lucide-react';
+import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot } from 'lucide-react';
 import Logo from './Logo';
 import { api } from '../services/api';
 import { TEST_IDS } from '../constants/testIds';
@@ -2180,8 +2180,9 @@ const CATEGORY_LANDING_CONTENT: Record<string, any> = {
     },
     process: [
       { step: "01", title: "Discover", desc: "Browse verified listings matching your exact criteria.", icon: Search },
-      { step: "02", title: "Visit & Verify", desc: "Schedule site visits and get expert legal verification.", icon: Shield },
-      { step: "03", title: "Close the Deal", desc: "Negotiate directly and handle paperwork seamlessly.", icon: Home }
+      { step: "02", title: "AI Recommendations", desc: "Shortlist with our agent", icon: Bot },
+      { step: "03", title: "Visit & Verify", desc: "Schedule site visits and get expert legal verification.", icon: Shield },
+      { step: "04", title: "Close the Deal", desc: "Negotiate directly and handle paperwork seamlessly.", icon: Home }
     ]
   },
   Resale: {
