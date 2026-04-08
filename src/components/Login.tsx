@@ -213,7 +213,7 @@ export default function Login({ onLogin, onClose, variant = 'page' }: Readonly<L
                 placeholder="Mobile number"
                 required
                 maxLength={10}
-                className="flex-1 bg-transparent py-3.5 px-4 text-sm font-semibold font-sans text-slate-700 text-center tracking-[0.18em] outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal"
+                className="flex-1 bg-transparent py-3.5 px-4 text-sm font-semibold font-sans text-slate-700 text-left tracking-[0.18em] outline-none placeholder:text-slate-400 placeholder:font-normal placeholder:tracking-normal"
               />
             </div>
             {/* Invisible reCAPTCHA container */}
