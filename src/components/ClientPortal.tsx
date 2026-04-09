@@ -9,7 +9,7 @@ import PlotsOnboardingModal from './PlotsOnboardingModal';
 import Footer from './Footer';
 import { useEnquiryUpdates } from '../hooks/useNotifications';
 import ClientProfileEditModal from './ClientProfileEditModal';
-import { getClientProfile } from '../hooks/useClientProfile';
+import ClientChatWidget from './ClientChatWidget';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -2150,6 +2150,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           onClose={() => setIsProfileEditOpen(false)}
         />
       )}
+      <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} />
   </React.Fragment>
   );
 }
