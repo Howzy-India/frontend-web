@@ -2,73 +2,100 @@
  * ClientChatWidget — Floating AI sales assistant for howzy.in
  *
  * Interaction:
- *   • Tap  → opens text-chat panel (no login required)
- *   • Hold (≥500 ms) → shows voice recording overlay → voice chat
+ *   • Tap FAB → full-screen Voice Overlay (Android Gemini-style)
+ *     ‣ Auto-greets in user's native language with a female voice
+ *     ‣ Auto-listens → processes → responds → auto-listens (loop)
+ *     ‣ "Type instead" → TextChatPanel fallback (same session shared)
  *
- * Voice greets in user's native language (detected from browser locale).
  * Conversation is a sales lead generation flow: collect demographics
  * (name, phone, location), gather property preferences, search and present
  * results, then create an enquiry.
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, Bot, Loader2, Mic, MicOff, Send, RefreshCw,
+  X, Bot, Loader2, Mic, Send, RefreshCw,
   MapPin, Tag, Volume2, VolumeX, MessageSquare,
 } from 'lucide-react';
 import { api } from '../services/api';
 
 // ─── Browser Speech helpers ───────────────────────────────────────────────────
 
-const SpeechRec: (typeof SpeechRecognition) | undefined =
+const SpeechRec: any =
   typeof window !== 'undefined'
     ? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition)
     : undefined;
 
-function speak(text: string, lang = 'en-IN'): Promise<void> {
-  return new Promise<void>((resolve) => {
+function stopSpeaking() { window.speechSynthesis?.cancel(); }
+
+/** Detect TTS language from AI reply text. */
+function detectLang(text: string): string {
+  if (/[\u0C00-\u0C7F]/.test(text)) return 'te-IN';
+  if (/[\u0900-\u097F]/.test(text)) return 'hi-IN';
+  return 'en-IN';
+}
+
+/** Load available TTS voices; resolve after voiceschanged fires if needed. */
+async function loadVoices(): Promise<SpeechSynthesisVoice[]> {
+  if (!window.speechSynthesis) return [];
+  let voices = window.speechSynthesis.getVoices();
+  if (voices.length) return voices;
+  return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+    const onChanged = () => resolve(window.speechSynthesis.getVoices());
+    window.speechSynthesis.addEventListener('voiceschanged', onChanged, { once: true });
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 700);
+  });
+}
+
+/**
+ * Prefer a female-sounding voice for the given language prefix.
+ * Falls back to any voice matching the language, then null.
+ */
+async function getFemaleVoice(lang: string): Promise<SpeechSynthesisVoice | null> {
+  const voices = await loadVoices();
+  const prefix = lang.slice(0, 2);
+  const forLang = voices.filter(v => v.lang.startsWith(prefix));
+  const femaleKeywords = ['female', 'woman', 'girl', 'zira', 'samantha', 'victoria',
+    'karen', 'moira', 'fiona', 'tessa', 'veena', 'heera'];
+  return forLang.find(v => femaleKeywords.some(k => v.name.toLowerCase().includes(k)))
+    ?? forLang[0]
+    ?? null;
+}
+
+async function speak(text: string, lang = 'en-IN'): Promise<void> {
+  return new Promise<void>(async (resolve) => {
     if (!window.speechSynthesis) { resolve(); return; }
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = lang;
-    utt.rate = 0.93;
+    utt.rate = 0.9;
+    utt.pitch = 1.1; // slightly higher pitch for a female tone
+    const voice = await getFemaleVoice(lang);
+    if (voice) utt.voice = voice;
     utt.onend = () => resolve();
     utt.onerror = () => resolve();
     window.speechSynthesis.speak(utt);
   });
 }
 
-function stopSpeaking() { window.speechSynthesis?.cancel(); }
-
-/** Detect TTS language from AI reply text. */
-function detectLang(text: string): string {
-  if (/[\u0C00-\u0C7F]/.test(text)) return 'te-IN';  // Telugu
-  if (/[\u0900-\u097F]/.test(text)) return 'hi-IN';  // Hindi
-  return 'en-IN';
-}
-
 /** Return welcome greeting based on browser locale. */
 function getNativeGreeting(): { text: string; lang: string } {
   const locale = navigator.language || 'en';
-  if (locale.startsWith('te')) {
+  if (locale.startsWith('te'))
     return { text: 'హౌజీ.ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?', lang: 'te-IN' };
-  }
-  if (locale.startsWith('hi')) {
-    return { text: 'Howzy.in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकता हूँ?', lang: 'hi-IN' };
-  }
-  if (locale.startsWith('kn')) {
+  if (locale.startsWith('hi'))
+    return { text: 'Howzy.in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?', lang: 'hi-IN' };
+  if (locale.startsWith('kn'))
     return { text: 'Howzy.in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?', lang: 'kn-IN' };
-  }
-  if (locale.startsWith('ta')) {
+  if (locale.startsWith('ta'))
     return { text: 'Howzy.in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?', lang: 'ta-IN' };
-  }
   return { text: 'Welcome to Howzy.in! How can I help you today?', lang: 'en-IN' };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type PanelMode = 'closed' | 'text' | 'voice_overlay' | 'voice_chat';
+type VoicePhase = 'init' | 'greeting' | 'listening' | 'processing' | 'speaking' | 'idle';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -87,7 +114,7 @@ interface PropertyResult {
 export interface ClientChatWidgetProps {
   uid?: string;
   userEmail?: string;
-  onLoginClick?: () => void;
+  onLoginClick?: () => void; // kept for backward compat; no longer used
 }
 
 // ─── Root Widget ──────────────────────────────────────────────────────────────
@@ -95,38 +122,20 @@ export interface ClientChatWidgetProps {
 export default function ClientChatWidget({
   uid, userEmail,
 }: Readonly<ClientChatWidgetProps>) {
-  const [mode, setMode] = useState<PanelMode>('closed');
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didHoldRef = useRef(false);
-  const [holdPct, setHoldPct] = useState(0);
+  const [mode, setMode] = useState<'closed' | 'voice' | 'text'>('closed');
+  // Shared across voice ↔ text so conversation continues seamlessly
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  function onPointerDown() {
-    didHoldRef.current = false;
-    let pct = 0;
-    const iv = setInterval(() => {
-      pct += 20;
-      setHoldPct(Math.min(pct, 100));
-    }, 100);
-    holdTimerRef.current = setTimeout(() => {
-      clearInterval(iv);
-      setHoldPct(0);
-      didHoldRef.current = true;
-      setMode('voice_overlay');
-    }, 500);
-    (holdTimerRef as any)._iv = iv;
-  }
-
-  function onPointerUp() {
-    clearInterval((holdTimerRef as any)._iv);
-    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    setHoldPct(0);
-    if (!didHoldRef.current) setMode('text');
-    didHoldRef.current = false;
+  function handleClose() {
+    setMode('closed');
+    setSessionId(null);
+    setMessages([]);
   }
 
   return (
     <>
-      {/* Floating AI chat button — icon only */}
+      {/* Floating AI button — icon only */}
       <AnimatePresence>
         {mode === 'closed' && (
           <motion.button
@@ -136,64 +145,42 @@ export default function ClientChatWidget({
             exit={{ scale: 0, opacity: 0 }}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
-            onPointerDown={onPointerDown}
-            onPointerUp={onPointerUp}
-            onPointerLeave={() => {
-              clearInterval((holdTimerRef as any)._iv);
-              if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-              setHoldPct(0);
-              didHoldRef.current = false;
-            }}
-            title="Tap to chat · Hold for voice"
-            className="fixed bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl select-none cursor-pointer flex flex-col items-center justify-center overflow-hidden transition-colors"
+            onClick={() => setMode('voice')}
+            title="Chat with Howzy AI"
+            className="fixed bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-pointer flex flex-col items-center justify-center transition-colors"
           >
-            {/* Hold-progress ring */}
-            {holdPct > 0 && (
-              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56">
-                <circle
-                  cx="28" cy="28" r="26"
-                  fill="none" stroke="white" strokeOpacity="0.5" strokeWidth="3"
-                  strokeDasharray={`${holdPct * 1.634} 163.4`}
-                  strokeLinecap="round"
-                />
-              </svg>
-            )}
-            <Bot className="w-6 h-6 relative z-10" />
-            <span className="text-[9px] font-bold tracking-wider relative z-10 leading-none mt-0.5">AI</span>
+            <Bot className="w-6 h-6" />
+            <span className="text-[9px] font-bold tracking-wider leading-none mt-0.5">AI</span>
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Voice recording overlay (hold gesture) */}
+      {/* Full-screen voice overlay — primary interaction */}
       <AnimatePresence>
-        {mode === 'voice_overlay' && (
+        {mode === 'voice' && (
           <VoiceOverlay
-            onConfirm={() => setMode('voice_chat')}
-            onCancel={() => setMode('closed')}
+            sessionId={sessionId}
+            initialMessages={messages}
+            onSessionId={setSessionId}
+            onMessages={setMessages}
+            onTextFallback={() => setMode('text')}
+            onClose={handleClose}
           />
         )}
       </AnimatePresence>
 
-      {/* Text chat panel */}
+      {/* Text chat panel — fallback when voice isn't working */}
       <AnimatePresence>
         {mode === 'text' && (
           <TextChatPanel
             uid={uid}
             userEmail={userEmail}
-            onVoice={() => setMode('voice_overlay')}
-            onClose={() => setMode('closed')}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Voice chat panel */}
-      <AnimatePresence>
-        {mode === 'voice_chat' && (
-          <VoiceChatPanel
-            uid={uid}
-            userEmail={userEmail}
-            onTextMode={() => setMode('text')}
-            onClose={() => setMode('closed')}
+            sessionId={sessionId}
+            initialMessages={messages}
+            onSessionId={setSessionId}
+            onMessages={setMessages}
+            onVoice={() => setMode('voice')}
+            onClose={handleClose}
           />
         )}
       </AnimatePresence>
@@ -201,16 +188,148 @@ export default function ClientChatWidget({
   );
 }
 
-// ─── Voice Overlay (Android Gemini–style hold-to-speak) ──────────────────────
+// ─── Voice Overlay (Android Gemini-style full-screen voice experience) ─────────
 
-function VoiceOverlay({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
-  const greeting = getNativeGreeting();
+function VoiceOverlay({
+  sessionId,
+  initialMessages,
+  onSessionId,
+  onMessages,
+  onTextFallback,
+  onClose,
+}: {
+  sessionId: string | null;
+  initialMessages: ChatMessage[];
+  onSessionId: (id: string) => void;
+  onMessages: (msgs: ChatMessage[]) => void;
+  onTextFallback: () => void;
+  onClose: () => void;
+}) {
+  const [phase, setPhase] = useState<VoicePhase>('init');
+  const [displayText, setDisplayText] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const [isMuted, setIsMuted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use refs to avoid stale closures inside async callbacks
+  const mountedRef = useRef(true);
+  const sessionRef = useRef<string | null>(sessionId);
+  const messagesRef = useRef<ChatMessage[]>(initialMessages);
+  const isMutedRef = useRef(isMuted);
+  const recRef = useRef<any>(null);
+  const transcriptRef = useRef('');
+  const hasGreetedRef = useRef(initialMessages.length > 0);
 
   useEffect(() => {
-    // Speak the greeting and then transition to voice chat
-    speak(greeting.text, greeting.lang).then(() => onConfirm());
-    return () => stopSpeaking();
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    init();
+    return () => {
+      mountedRef.current = false;
+      recRef.current?.abort();
+      stopSpeaking();
+    };
   }, []);
+
+  function addMessage(msg: ChatMessage) {
+    const next = [...messagesRef.current, msg];
+    messagesRef.current = next;
+    onMessages(next);
+  }
+
+  async function init() {
+    try {
+      let sid = sessionRef.current;
+      if (!sid) {
+        const res = await api.createChatSession();
+        if (!mountedRef.current) return;
+        sid = res.session_id;
+        sessionRef.current = sid;
+        onSessionId(sid);
+      }
+
+      if (!hasGreetedRef.current) {
+        hasGreetedRef.current = true;
+        const greeting = getNativeGreeting();
+        if (mountedRef.current) {
+          setDisplayText(greeting.text);
+          setPhase('greeting');
+        }
+        if (!isMutedRef.current) await speak(greeting.text, greeting.lang);
+      }
+
+      if (mountedRef.current) startListening(sid);
+    } catch {
+      if (mountedRef.current) {
+        setError('Could not start session.');
+        setPhase('idle');
+      }
+    }
+  }
+
+  const startListening = useCallback((sid?: string) => {
+    const session = sid ?? sessionRef.current;
+    if (!SpeechRec || !session || !mountedRef.current) {
+      setPhase('idle');
+      return;
+    }
+    recRef.current?.abort();
+    const rec = new (SpeechRec as any)();
+    rec.lang = 'en-IN';
+    rec.continuous = false;
+    rec.interimResults = true;
+    recRef.current = rec;
+    transcriptRef.current = '';
+    if (mountedRef.current) { setTranscript(''); setPhase('listening'); }
+
+    rec.onresult = (e: any) => {
+      const t = Array.from(e.results as any[]).map((r: any) => r[0].transcript).join('');
+      if (mountedRef.current) { setTranscript(t); }
+      transcriptRef.current = t;
+    };
+    rec.onerror = (e: any) => {
+      if (!mountedRef.current) return;
+      if (e.error === 'no-speech') {
+        // retry once on no-speech
+        if (mountedRef.current) startListening();
+      } else {
+        setPhase('idle');
+      }
+    };
+    rec.onend = () => {
+      if (!mountedRef.current) return;
+      const text = transcriptRef.current.trim();
+      if (text) sendVoice(text, session);
+      else setPhase('idle');
+    };
+    rec.start();
+  }, []);
+
+  async function sendVoice(text: string, sid: string) {
+    if (!mountedRef.current) return;
+    setTranscript('');
+    addMessage({ role: 'user', content: text, timestamp: new Date().toISOString() });
+    setPhase('processing');
+    setError(null);
+    try {
+      const res = await api.sendChatMessage(sid, text);
+      if (!mountedRef.current) return;
+      addMessage({ role: 'model', content: res.reply, timestamp: new Date().toISOString(), tool_results: res.tool_results });
+      setDisplayText(res.reply);
+      setPhase('speaking');
+      if (!isMutedRef.current) {
+        await speak(res.reply, detectLang(res.reply));
+      }
+      if (mountedRef.current) startListening();
+    } catch {
+      if (mountedRef.current) { setError('Failed to get a response.'); setPhase('idle'); }
+    }
+  }
+
+  const isActive = phase === 'listening' || phase === 'speaking' || phase === 'greeting';
 
   return (
     <motion.div
@@ -218,276 +337,157 @@ function VoiceOverlay({ onConfirm, onCancel }: { onConfirm: () => void; onCancel
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-indigo-950/90 backdrop-blur-md"
-      onClick={onCancel}
+      className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-indigo-950/95 backdrop-blur-md select-none"
     >
       {/* Pulsing rings */}
-      <div className="relative flex items-center justify-center mb-8">
+      <div className="relative flex items-center justify-center mb-10">
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
             className="absolute rounded-full border-2 border-indigo-400/40"
-            animate={{ scale: [1, 2.5], opacity: [0.5, 0] }}
-            transition={{ duration: 2, delay: i * 0.5, repeat: Infinity, ease: 'easeOut' }}
+            animate={
+              isActive
+                ? { scale: [1, 2.4 + i * 0.2], opacity: [0.55, 0] }
+                : { scale: 1, opacity: 0.1 }
+            }
+            transition={
+              isActive
+                ? { duration: 1.8 + i * 0.2, delay: i * 0.45, repeat: Infinity, ease: 'easeOut' }
+                : { duration: 0.4 }
+            }
             style={{ width: 80, height: 80 }}
           />
         ))}
-        <div className="w-20 h-20 rounded-full bg-indigo-500 flex items-center justify-center shadow-2xl">
-          <Mic className="w-9 h-9 text-white" />
-        </div>
+        {/* Central mic button — tap to re-speak when idle */}
+        <motion.div
+          className={`w-20 h-20 rounded-full flex items-center justify-center shadow-2xl cursor-pointer ${
+            phase === 'idle' ? 'bg-indigo-400' : 'bg-indigo-500'
+          }`}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => phase === 'idle' && startListening()}
+          title={phase === 'idle' ? 'Tap to speak' : undefined}
+        >
+          {phase === 'processing'
+            ? <Loader2 className="w-9 h-9 text-white animate-spin" />
+            : <Mic className="w-9 h-9 text-white" />
+          }
+        </motion.div>
       </div>
 
-      <p className="text-white text-lg font-semibold text-center px-8 leading-snug">
-        {greeting.text}
+      {/* Last AI text */}
+      {displayText ? (
+        <p className="text-white text-lg font-semibold text-center px-10 leading-snug max-w-sm">
+          {displayText}
+        </p>
+      ) : phase === 'init' && (
+        <p className="text-indigo-300 text-base">Starting…</p>
+      )}
+
+      {/* Phase label */}
+      <p className="text-indigo-300 text-sm mt-3">
+        {phase === 'greeting' && 'Greeting you…'}
+        {phase === 'listening' && '🎙 Listening…'}
+        {phase === 'processing' && '✨ Thinking…'}
+        {phase === 'speaking' && '🔊 Speaking…'}
+        {phase === 'idle' && 'Tap the mic to speak'}
       </p>
-      <p className="text-indigo-300 text-sm mt-3">Tap anywhere to cancel</p>
+
+      {/* Live transcript */}
+      {transcript && (
+        <p className="text-indigo-200 text-sm italic mt-2 px-10 text-center max-w-sm">
+          "{transcript}"
+        </p>
+      )}
+
+      {error && <p className="text-red-400 text-sm mt-3 px-8 text-center">{error}</p>}
+
+      {!SpeechRec && (
+        <p className="text-amber-400 text-sm mt-3 px-8 text-center">
+          ⚠ Voice not supported in this browser — use "Type instead" below.
+        </p>
+      )}
+
+      {/* Bottom controls */}
+      <div className="absolute bottom-10 flex items-center gap-10">
+        <button
+          onClick={() => setIsMuted((m) => !m)}
+          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
+        >
+          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          <span className="text-xs">{isMuted ? 'Unmute' : 'Mute'}</span>
+        </button>
+
+        <button
+          onClick={onTextFallback}
+          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
+        >
+          <MessageSquare className="w-5 h-5" />
+          <span className="text-xs">Type instead</span>
+        </button>
+
+        <button
+          onClick={onClose}
+          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
+        >
+          <X className="w-5 h-5" />
+          <span className="text-xs">Close</span>
+        </button>
+      </div>
     </motion.div>
   );
 }
 
-
-// ─── Voice Chat Panel ─────────────────────────────────────────────────────────
-
-function VoiceChatPanel({
-  uid, userEmail, onTextMode, onClose,
-}: {
-  uid?: string;
-  userEmail?: string;
-  onTextMode: () => void;
-  onClose: () => void;
-}) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isListening, setIsListening] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const recRef = useRef<SpeechRecognition | null>(null);
-  const transcriptRef = useRef('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    initSession();
-    return () => {
-      recRef.current?.abort();
-      stopSpeaking();
-    };
-  }, []);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  async function initSession() {
-    try {
-      const res = await api.createChatSession();
-      setSessionId(res.session_id);
-      if (!isMuted) {
-        const greeting = getNativeGreeting();
-        await speak(greeting.text, greeting.lang);
-      }
-    } catch {
-      setError('Could not start session. Please try again.');
-    }
-  }
-
-  function startListening() {
-    if (!SpeechRec || isProcessing || !sessionId) return;
-    recRef.current?.abort();
-    const rec = new SpeechRec();
-    // Use broad lang so both EN/TE/HI are captured
-    rec.lang = 'en-IN';
-    rec.continuous = false;
-    rec.interimResults = true;
-    recRef.current = rec;
-    transcriptRef.current = '';
-    setTranscript('');
-    setIsListening(true);
-
-    rec.onresult = (e) => {
-      const t = Array.from(e.results).map((r) => r[0].transcript).join('');
-      setTranscript(t);
-      transcriptRef.current = t;
-    };
-    rec.onerror = () => setIsListening(false);
-    rec.onend = () => {
-      setIsListening(false);
-      const text = transcriptRef.current.trim();
-      if (text) sendVoice(text);
-    };
-    rec.start();
-  }
-
-  function stopListening() {
-    recRef.current?.stop();
-  }
-
-  async function sendVoice(text: string) {
-    if (!sessionId) return;
-    setError(null);
-    const userMsg: ChatMessage = { role: 'user', content: text, timestamp: new Date().toISOString() };
-    setMessages((p) => [...p, userMsg]);
-    setIsProcessing(true);
-    try {
-      const res = await api.sendChatMessage(sessionId, text);
-      const aiMsg: ChatMessage = {
-        role: 'model',
-        content: res.reply,
-        timestamp: new Date().toISOString(),
-        tool_results: res.tool_results,
-      };
-      setMessages((p) => [...p, aiMsg]);
-      if (!isMuted) {
-        const responseLang = detectLang(res.reply);
-        await speak(res.reply, responseLang);
-      }
-    } catch {
-      setError('Failed to get a response. Please try again.');
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  const hasMessages = messages.length > 0;
-
-  return (
-    <PanelShell onClose={onClose}>
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-indigo-600 text-white shrink-0">
-        <div className="flex items-center justify-center w-9 h-9 bg-white/20 rounded-full">
-          <Mic className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm">Voice Chat</p>
-          <p className="text-indigo-200 text-xs truncate">{userEmail ?? 'Howzy.in Property Search'}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsMuted((m) => !m)}
-            className="p-1.5 hover:bg-white/20 rounded-lg"
-            title={isMuted ? 'Unmute' : 'Mute AI voice'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={onTextMode}
-            className="p-1.5 hover:bg-white/20 rounded-lg"
-            title="Switch to text chat"
-          >
-            <MessageSquare className="w-4 h-4" />
-          </button>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-lg">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {!hasMessages && !sessionId && (
-          <div className="flex-1 flex flex-col items-center justify-center h-full gap-3 py-10">
-            <Loader2 className="w-7 h-7 animate-spin text-indigo-400" />
-            <p className="text-sm text-slate-500">Starting session…</p>
-          </div>
-        )}
-        {!hasMessages && sessionId && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 py-10 text-center">
-            <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center">
-              <Mic className="w-8 h-8 text-indigo-500" />
-            </div>
-            <p className="text-sm text-slate-600 leading-relaxed max-w-[220px]">
-              Hold the mic button and describe what property you're looking for.
-            </p>
-            <p className="text-xs text-slate-400">Telugu · Hindi · English supported</p>
-          </div>
-        )}
-        {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} />
-        ))}
-        {isProcessing && <TypingIndicator />}
-        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Live transcript bubble */}
-      {isListening && (
-        <div className="mx-4 mb-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2 shrink-0">
-          <p className="text-xs text-red-600 font-medium mb-0.5">🎙 Listening…</p>
-          <p className="text-sm text-slate-700 italic min-h-[1.2em]">{transcript || '…'}</p>
-        </div>
-      )}
-
-      {/* Mic button */}
-      <div className="px-4 py-4 border-t border-slate-100 flex flex-col items-center gap-2 shrink-0">
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onPointerDown={startListening}
-          onPointerUp={stopListening}
-          onPointerLeave={stopListening}
-          disabled={isProcessing || !sessionId}
-          className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-            isListening
-              ? 'bg-red-500 hover:bg-red-600'
-              : 'bg-indigo-600 hover:bg-indigo-700'
-          } text-white`}
-        >
-          {isProcessing
-            ? <Loader2 className="w-7 h-7 animate-spin" />
-            : isListening
-              ? <MicOff className="w-7 h-7" />
-              : <Mic className="w-7 h-7" />
-          }
-        </motion.button>
-        <p className="text-xs text-slate-400 font-medium">
-          {isListening ? 'Release to send' : isProcessing ? 'Processing…' : 'Hold to speak'}
-        </p>
-        {!SpeechRec && (
-          <p className="text-xs text-amber-600 font-medium">⚠ Voice not supported — use text mode</p>
-        )}
-      </div>
-    </PanelShell>
-  );
-}
-
-// ─── Text Chat Panel ──────────────────────────────────────────────────────────
+// ─── Text Chat Panel ── fallback when user can't use voice ────────────────────
 
 function TextChatPanel({
-  uid, userEmail, onVoice, onClose,
+  uid, userEmail, sessionId, initialMessages, onSessionId, onMessages, onVoice, onClose,
 }: {
   uid?: string;
   userEmail?: string;
+  sessionId: string | null;
+  initialMessages: ChatMessage[];
+  onSessionId: (id: string) => void;
+  onMessages: (msgs: ChatMessage[]) => void;
   onVoice: () => void;
   onClose: () => void;
 }) {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [localSessionId, setLocalSessionId] = useState<string | null>(sessionId);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef<ChatMessage[]>(initialMessages);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    startSession();
+    if (!localSessionId) startSession();
+    else setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
 
   useEffect(() => {
-    if (sessionId) setTimeout(() => inputRef.current?.focus(), 300);
-  }, [sessionId]);
+    if (localSessionId) setTimeout(() => inputRef.current?.focus(), 300);
+  }, [localSessionId]);
+
+  function addMessage(msg: ChatMessage) {
+    const next = [...messagesRef.current, msg];
+    messagesRef.current = next;
+    setMessages(next);
+    onMessages(next);
+  }
 
   async function startSession() {
     setSessionLoading(true);
     setError(null);
     try {
       const res = await api.createChatSession();
-      setSessionId(res.session_id);
-      setMessages([]);
+      setLocalSessionId(res.session_id);
+      onSessionId(res.session_id);
     } catch {
       setError('Could not start chat. Please try again.');
     } finally {
@@ -496,18 +496,15 @@ function TextChatPanel({
   }
 
   async function sendMessage() {
-    if (!input.trim() || !sessionId || loading) return;
-    const userMsg: ChatMessage = { role: 'user', content: input.trim(), timestamp: new Date().toISOString() };
-    setMessages((p) => [...p, userMsg]);
+    if (!input.trim() || !localSessionId || loading) return;
+    const text = input.trim();
     setInput('');
     setLoading(true);
     setError(null);
+    addMessage({ role: 'user', content: text, timestamp: new Date().toISOString() });
     try {
-      const res = await api.sendChatMessage(sessionId, userMsg.content);
-      setMessages((p) => [...p, {
-        role: 'model', content: res.reply,
-        timestamp: new Date().toISOString(), tool_results: res.tool_results,
-      }]);
+      const res = await api.sendChatMessage(localSessionId, text);
+      addMessage({ role: 'model', content: res.reply, timestamp: new Date().toISOString(), tool_results: res.tool_results });
     } catch {
       setError('Failed to send. Please try again.');
     } finally {
@@ -527,7 +524,7 @@ function TextChatPanel({
           <p className="text-indigo-200 text-xs">Telugu · Hindi · English</p>
         </div>
         <div className="flex items-center gap-1">
-          {sessionId && (
+          {localSessionId && (
             <button onClick={startSession} className="p-1.5 hover:bg-white/20 rounded-lg" title="New conversation">
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -547,7 +544,7 @@ function TextChatPanel({
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
           <p className="text-sm text-slate-500">Starting session…</p>
         </div>
-      ) : error && !sessionId ? (
+      ) : error && !localSessionId ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
           <button onClick={startSession} className="text-sm font-semibold text-indigo-600 hover:underline">Retry</button>
@@ -555,9 +552,7 @@ function TextChatPanel({
       ) : (
         <>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {messages.length === 0 && (
-              <WelcomeMessage />
-            )}
+            {messages.length === 0 && <WelcomeMessage />}
             {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
             {loading && <TypingIndicator />}
             {error && <p className="text-xs text-red-500 text-center">{error}</p>}
