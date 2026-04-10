@@ -27,7 +27,13 @@ const SpeechRec: any =
     ? ((window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition)
     : undefined;
 
-function stopSpeaking() { window.speechSynthesis?.cancel(); }
+/** Track active audio so stopSpeaking() can cancel it immediately. */
+let activeAudio: HTMLAudioElement | null = null;
+
+function stopSpeaking() {
+  if (activeAudio) { activeAudio.pause(); activeAudio = null; }
+  window.speechSynthesis?.cancel();
+}
 
 /** Detect TTS language from AI reply text. */
 function detectLang(text: string): string {
@@ -48,10 +54,6 @@ async function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
-/**
- * Prefer a female-sounding voice for the given language prefix.
- * Falls back to any voice matching the language, then null.
- */
 async function getFemaleVoice(lang: string): Promise<SpeechSynthesisVoice | null> {
   const voices = await loadVoices();
   const prefix = lang.slice(0, 2);
@@ -63,13 +65,14 @@ async function getFemaleVoice(lang: string): Promise<SpeechSynthesisVoice | null
     ?? null;
 }
 
-async function speak(text: string, lang = 'en-IN'): Promise<void> {
+/** Browser Web Speech fallback (used if backend TTS fails). */
+async function speakBrowser(text: string, lang: string): Promise<void> {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = lang;
   utt.rate = 0.9;
-  utt.pitch = 1.1; // slightly higher pitch for a female tone
+  utt.pitch = 1.1;
   const voice = await getFemaleVoice(lang);
   if (voice) utt.voice = voice;
   return new Promise<void>((resolve) => {
@@ -77,6 +80,31 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
     utt.onerror = () => resolve();
     window.speechSynthesis.speak(utt);
   });
+}
+
+/**
+ * Speak text using Google Cloud TTS Neural2 voice (human-like).
+ * Falls back to browser speechSynthesis if the backend call fails.
+ */
+async function speak(text: string, lang = 'en-IN'): Promise<void> {
+  try {
+    const { audioContent } = await api.textToSpeech(text, lang);
+    const binary = atob(audioContent);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'audio/mp3' });
+    const url = URL.createObjectURL(blob);
+    return new Promise<void>((resolve) => {
+      const audio = new Audio(url);
+      activeAudio = audio;
+      audio.onended = () => { URL.revokeObjectURL(url); activeAudio = null; resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(url); activeAudio = null; resolve(); };
+      audio.play().catch(() => { activeAudio = null; resolve(); });
+    });
+  } catch {
+    // Fallback to browser TTS if backend unavailable
+    await speakBrowser(text, lang);
+  }
 }
 
 /** Return welcome greeting based on browser locale. */
