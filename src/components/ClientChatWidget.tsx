@@ -64,15 +64,15 @@ async function getFemaleVoice(lang: string): Promise<SpeechSynthesisVoice | null
 }
 
 async function speak(text: string, lang = 'en-IN'): Promise<void> {
-  return new Promise<void>(async (resolve) => {
-    if (!window.speechSynthesis) { resolve(); return; }
-    window.speechSynthesis.cancel();
-    const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = lang;
-    utt.rate = 0.9;
-    utt.pitch = 1.1; // slightly higher pitch for a female tone
-    const voice = await getFemaleVoice(lang);
-    if (voice) utt.voice = voice;
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang;
+  utt.rate = 0.9;
+  utt.pitch = 1.1; // slightly higher pitch for a female tone
+  const voice = await getFemaleVoice(lang);
+  if (voice) utt.voice = voice;
+  return new Promise<void>((resolve) => {
     utt.onend = () => resolve();
     utt.onerror = () => resolve();
     window.speechSynthesis.speak(utt);
