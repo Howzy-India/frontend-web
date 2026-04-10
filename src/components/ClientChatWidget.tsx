@@ -324,8 +324,12 @@ function VoiceOverlay({
         await speak(res.reply, detectLang(res.reply));
       }
       if (mountedRef.current) startListening();
-    } catch {
-      if (mountedRef.current) { setError('Failed to get a response.'); setPhase('idle'); }
+    } catch (err: any) {
+      if (!mountedRef.current) return;
+      let msg = 'Failed to get a response.';
+      try { const d = JSON.parse(err?.message); msg = d.error ?? msg; } catch { /* ignore */ }
+      setError(msg);
+      setPhase('idle');
     }
   }
 
@@ -505,8 +509,10 @@ function TextChatPanel({
     try {
       const res = await api.sendChatMessage(localSessionId, text);
       addMessage({ role: 'model', content: res.reply, timestamp: new Date().toISOString(), tool_results: res.tool_results });
-    } catch {
-      setError('Failed to send. Please try again.');
+    } catch (err: any) {
+      let msg = 'Failed to send. Please try again.';
+      try { const d = JSON.parse(err?.message); msg = d.error ?? msg; } catch { /* ignore */ }
+      setError(msg);
     } finally {
       setLoading(false);
     }
