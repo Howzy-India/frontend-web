@@ -179,11 +179,11 @@ export const api = {
   deleteResaleProperty: (id: string) => del<any>(`/admin/resale/${id}`),
 
   // ── AI Chat Agent ─────────────────────────────────────────────────
-  createChatSession: () => post<{ session_id: string }>('/chat/sessions', {}),
+  createChatSession: () => post<{ session_id: string }>('/chat/sessions', {}, false),
   listChatSessions: () => get<any>('/chat/sessions'),
   getChatSession: (id: string) => get<any>(`/chat/sessions/${id}`),
   deleteChatSession: (id: string) => del<any>(`/chat/sessions/${id}`),
   sendChatMessage: (id: string, message: string) =>
-    post<{ reply: string; tool_results?: any[] }>(`/chat/sessions/${id}/message`, { message }),
+    post<{ reply: string; tool_results?: any[] }>(`/chat/sessions/${id}/message`, { message }, false),
 };
 
