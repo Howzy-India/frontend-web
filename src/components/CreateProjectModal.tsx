@@ -110,13 +110,13 @@ function FieldErrorIcon({ message }: { message: string }) {
       <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center cursor-default select-none leading-none">
         !
       </span>
-      {/* Tooltip */}
-      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex
-        flex-col items-center z-[60]">
+      {/* Tooltip — opens downward to avoid stepper overlap */}
+      <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden group-hover:flex
+        flex-col items-center z-[200]">
+        <span className="border-[5px] border-transparent border-b-slate-900 -mb-px" />
         <span className="bg-slate-900 text-white text-[11px] font-medium rounded-lg px-3 py-1.5 whitespace-nowrap shadow-xl max-w-[200px] text-center leading-snug">
           {message}
         </span>
-        <span className="border-[5px] border-transparent border-t-slate-900 -mt-px" />
       </span>
     </span>
   );
