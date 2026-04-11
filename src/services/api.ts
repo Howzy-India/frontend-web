@@ -165,11 +165,11 @@ export const api = {
   getSalesTeam: () => get<any>('/admin/sales-team'),
   getPartners: () => get<any>('/admin/partners'),
   getAdminUsers: () => get<any>('/admin/users'),
-  createAdminUser: (data: { email: string; password: string; displayName: string }) =>
+  createAdminUser: (data: { name: string; phone: string; email?: string }) =>
     post<any>('/admin/users', data),
   updateAdminUser: (
     uid: string,
-    data: { email?: string; password?: string; displayName?: string; status?: 'active' | 'disabled' }
+    data: { name?: string; email?: string; phone?: string; status?: 'active' | 'disabled' }
   ) => patch<any>(`/admin/users/${uid}`, data),
   deleteAdminUser: (uid: string) => del<any>(`/admin/users/${uid}`),
   getClientLogins: () => get<any>('/admin/client-logins'),

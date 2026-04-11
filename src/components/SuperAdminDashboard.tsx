@@ -103,10 +103,12 @@ interface SuperAdminDashboardProps {
 
 interface AdminUser {
   uid: string;
-  email: string;
+  name: string;
   displayName: string;
+  email: string;
+  phone?: string;
   role: string;
-  status: 'active' | 'disabled';
+  status: 'active' | 'disabled' | 'pending';
   createdAt?: string;
 }
 
@@ -323,7 +325,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'client-listings': return <ClientListingsVerification />;
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
       case 'agents': return <PilotManagement />;
-      case 'admin-users': return <AdminUsersManagement />;
+      case 'admin-users': return <AdminUsersManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'attendance': return <AttendanceTrackingView />;
       case 'verification': return <AdminVerificationPanel />;
       case 'alerts': return <MessagesAndAlertsView onBroadcast={handleBroadcast} />;
@@ -1505,14 +1507,12 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
   );
 });
 
-const AdminUsersManagement = React.memo(function AdminUsersManagement() {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
+const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ displayName: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '' });
 
   const loadUsers = React.useCallback(async () => {
     setLoading(true);
@@ -1532,16 +1532,21 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
   }, [loadUsers]);
 
   const handleCreate = async () => {
-    if (!form.displayName || !form.email || !form.password) return;
+    if (!form.name || !form.phone) return;
+    const digits = form.phone.replace(/\D/g, '');
+    if (digits.length !== 10) {
+      setError('Enter a valid 10-digit mobile number');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       await api.createAdminUser({
-        displayName: form.displayName.trim(),
-        email: form.email.trim(),
-        password: form.password,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim() || undefined,
       });
-      setForm({ displayName: '', email: '', password: '' });
+      setForm({ name: '', phone: '', email: '' });
       await loadUsers();
     } catch (err: any) {
       setError(err?.message ?? 'Failed to create admin user');
@@ -1550,7 +1555,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
     }
   };
 
-  const handleUpdate = async (uid: string, data: { displayName?: string; email?: string; password?: string; status?: 'active' | 'disabled' }) => {
+  const handleUpdate = async (uid: string, data: { name?: string; email?: string; phone?: string; status?: 'active' | 'disabled' }) => {
     setSaving(true);
     setError(null);
     try {
@@ -1589,31 +1594,33 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             type="text"
-            value={form.displayName}
-            onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
-            placeholder="Full Name"
+            value={form.name}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="Full Name *"
+            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          />
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+            placeholder="Mobile Number * (10 digits)"
             className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
           />
           <input
             type="email"
             value={form.email}
             onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-            placeholder="Email"
-            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
-          />
-          <input
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-            placeholder="Temporary Password"
+            placeholder="Email ID (optional)"
             className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
           />
         </div>
 
+        <p className="text-xs text-slate-400 mt-3">The admin user will log in using mobile number OTP. No password is required.</p>
+
         <div className="mt-5 flex items-center gap-3">
           <button
             onClick={handleCreate}
-            disabled={saving || !form.displayName || !form.email || !form.password}
+            disabled={saving || !form.name || form.phone.replace(/\D/g, '').length !== 10}
             className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm disabled:opacity-60"
           >
             {saving ? 'Saving...' : 'Create Admin'}
@@ -1641,6 +1648,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
             <thead>
               <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
                 <th className="px-8 py-4">Name</th>
+                <th className="px-8 py-4">Mobile</th>
                 <th className="px-8 py-4">Email</th>
                 <th className="px-8 py-4">Role</th>
                 <th className="px-8 py-4">Status</th>
@@ -1650,30 +1658,35 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>Loading admin users...</td>
+                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={6}>Loading admin users...</td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>No admin users found.</td>
+                  <td className="px-8 py-6 text-sm text-slate-500" colSpan={6}>No admin users found.</td>
                 </tr>
               ) : (
                 users.map((user) => (
                   <tr key={user.uid} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900">{user.displayName || '-'}</td>
-                    <td className="px-8 py-5 text-sm text-slate-600">{user.email}</td>
+                    <td className="px-8 py-5 font-bold text-slate-900">{user.name || user.displayName || '-'}</td>
+                    <td className="px-8 py-5 text-sm text-slate-600 font-mono">{user.phone || '-'}</td>
+                    <td className="px-8 py-5 text-sm text-slate-600">{user.email || '-'}</td>
                     <td className="px-8 py-5 text-sm text-slate-600">{user.role}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-amber-50 text-amber-600 border border-amber-200'}`}>
-                        {user.status}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                        user.status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
+                        'bg-amber-50 text-amber-600 border border-amber-200'
+                      }`}>
+                        {user.status === 'pending' ? '⏳ Awaiting Login' : user.status}
                       </span>
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => {
-                            const nextName = window.prompt('Update display name', user.displayName ?? '');
-                            if (nextName && nextName.trim() && nextName !== user.displayName) {
-                              void handleUpdate(user.uid, { displayName: nextName.trim() });
+                            const nextName = window.prompt('Update name', user.name ?? user.displayName ?? '');
+                            if (nextName && nextName.trim() && nextName !== (user.name ?? user.displayName)) {
+                              void handleUpdate(user.uid, { name: nextName.trim() });
                             }
                           }}
                           className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
@@ -1691,25 +1704,16 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement() {
                         >
                           Edit Email
                         </button>
+                        {user.status !== 'pending' && (
+                          <button
+                            onClick={() => void handleUpdate(user.uid, { status: user.status === 'active' ? 'disabled' : 'active' })}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${user.status === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
+                          >
+                            {user.status === 'active' ? 'Disable' : 'Enable'}
+                          </button>
+                        )}
                         <button
-                          onClick={() => {
-                            const nextPassword = window.prompt('Set new password (min 6 chars)');
-                            if (nextPassword && nextPassword.trim().length >= 6) {
-                              void handleUpdate(user.uid, { password: nextPassword.trim() });
-                            }
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
-                        >
-                          Reset Password
-                        </button>
-                        <button
-                          onClick={() => void handleUpdate(user.uid, { status: user.status === 'active' ? 'disabled' : 'active' })}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold ${user.status === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
-                        >
-                          {user.status === 'active' ? 'Disable' : 'Enable'}
-                        </button>
-                        <button
-                          onClick={() => void handleDelete(user.uid, user.email)}
+                          onClick={() => void handleDelete(user.uid, user.phone ?? user.email)}
                           className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold"
                         >
                           Delete
