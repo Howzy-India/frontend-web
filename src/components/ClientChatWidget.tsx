@@ -555,9 +555,10 @@ function VoiceOverlay({
             </div>
             <div className="flex flex-col gap-2">
               {VOICE_OPTIONS.map((v) => (
-                <div
+                <button
                   key={v.id}
-                  className={`flex items-center justify-between rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+                  type="button"
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 cursor-pointer transition-colors w-full text-left ${
                     activeVoiceId === v.id ? 'bg-indigo-600' : 'bg-indigo-800/60 hover:bg-indigo-700/60'
                   }`}
                   onClick={() => { setSelectedVoice(v.id); setActiveVoiceId(v.id); }}
@@ -575,7 +576,7 @@ function VoiceOverlay({
                   >
                     ▶ Sample
                   </button>
-                </div>
+                </button>
               ))}
             </div>
           </motion.div>
