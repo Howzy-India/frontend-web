@@ -164,8 +164,9 @@ function FileUploadField({
           </button>
         </div>
       ) : (
-        <div
-          className={`flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors ${fieldError ? 'border-red-300 bg-red-50/40' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+        <button
+          type="button"
+          className={`w-full flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 transition-colors text-left ${fieldError ? 'border-red-300 bg-red-50/40' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
           onClick={() => inputRef.current?.click()}
         >
           {media.uploading ? (
@@ -178,7 +179,7 @@ function FileUploadField({
           </span>
           {hint && !media.file && <span className="text-xs text-slate-400 ml-auto">{hint}</span>}
           {media.error && <span className="text-xs text-red-600 ml-auto">{media.error}</span>}
-        </div>
+        </button>
       )}
       <input
         ref={inputRef} type="file" accept={accept} className="hidden"
