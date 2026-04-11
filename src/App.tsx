@@ -7,6 +7,7 @@ import { useAuth } from './hooks/useAuth';
 import type { AppRole } from './hooks/useAuth';
 import { api } from './services/api';
 import { TEST_IDS } from './constants/testIds';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const PilotDashboard = lazy(() => import('./components/PilotDashboard'));
 const PartnerDashboard = lazy(() => import('./components/PartnerDashboard'));
@@ -153,27 +154,29 @@ export default function App() {
               />
             )}
             {view === 'client_portal' && (
-              <>
-                <ClientPortal
-                  uid={user?.uid}
-                  onLogout={handleLogout}
-                  onLoginClick={() => setIsLoginOverlayOpen(true)}
-                  onProfileUpdate={(name) => setClientName(name)}
-                  userEmail={user?.email ?? user?.phoneNumber ?? ''}
-                  userName={clientName || user?.displayName || ''}
-                  userRole={user?.role}
-                  footerConfig={footerConfig}
-                />
-                <AnimatePresence>
-                  {isLoginOverlayOpen && (
-                    <Login
-                      onLogin={handleLogin}
-                      onClose={() => setIsLoginOverlayOpen(false)}
-                      variant="modal"
-                    />
-                  )}
-                </AnimatePresence>
-              </>
+              <ErrorBoundary fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Something went wrong. Please refresh the page.</p></div>}>
+                <>
+                  <ClientPortal
+                    uid={user?.uid}
+                    onLogout={handleLogout}
+                    onLoginClick={() => setIsLoginOverlayOpen(true)}
+                    onProfileUpdate={(name) => setClientName(name)}
+                    userEmail={user?.email ?? user?.phoneNumber ?? ''}
+                    userName={clientName || user?.displayName || ''}
+                    userRole={user?.role}
+                    footerConfig={footerConfig}
+                  />
+                  <AnimatePresence>
+                    {isLoginOverlayOpen && (
+                      <Login
+                        onLogin={handleLogin}
+                        onClose={() => setIsLoginOverlayOpen(false)}
+                        variant="modal"
+                      />
+                    )}
+                  </AnimatePresence>
+                </>
+              </ErrorBoundary>
             )}
           </Suspense>
         </motion.div>
