@@ -10,6 +10,8 @@ import Footer from './Footer';
 import { useEnquiryUpdates } from '../hooks/useNotifications';
 import ClientProfileEditModal from './ClientProfileEditModal';
 import ClientChatWidget from './ClientChatWidget';
+import ErrorBoundary from './ErrorBoundary';
+import type { AppRole } from '../hooks/useAuth';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -142,10 +144,11 @@ interface ClientPortalProps {
   onProfileUpdate?: (name: string) => void;
   userEmail?: string;
   userName?: string;
+  userRole?: AppRole;
   footerConfig?: any;
 }
 
-export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpdate, userEmail, userName, footerConfig }: Readonly<ClientPortalProps>) {
+export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpdate, userEmail, userName, userRole, footerConfig }: Readonly<ClientPortalProps>) {
   const [activeTab, setActiveTab] = useState<'Home' | 'Projects' | 'Services' | 'About' | 'Dashboard'>('Home');
   const [landingCategory, setLandingCategory] = useState<'All' | 'Resale' | 'Projects' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
@@ -2150,7 +2153,11 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           onClose={() => setIsProfileEditOpen(false)}
         />
       )}
-      <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} />
+      <ErrorBoundary>
+        {(!userRole || userRole === 'client') && (
+          <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} />
+        )}
+      </ErrorBoundary>
   </React.Fragment>
   );
 }
