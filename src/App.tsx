@@ -56,6 +56,9 @@ export default function App() {
     if (view === 'splash' || authLoading) return;
     if (user) {
       setView(roleToView(user.role));
+    } else {
+      // User signed out (or token expired) — always return to client portal
+      setView('client_portal');
     }
   }, [user, authLoading]);
 
@@ -95,6 +98,11 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // Navigate away first so the current dashboard unmounts cleanly
+    // before Firebase sets user to null (avoids ErrorBoundary crash)
+    setView('client_portal');
+    setClientName('');
+    setIsLoginOverlayOpen(false);
     if (clientLoginIdRef.current) {
       try {
         await api.trackClientLogout(clientLoginIdRef.current);
@@ -104,9 +112,6 @@ export default function App() {
       clientLoginIdRef.current = null;
     }
     await logout();
-    setClientName('');
-    setIsLoginOverlayOpen(false);
-    setView('client_portal');
     setShowLogoutBanner(true);
     setTimeout(() => setShowLogoutBanner(false), 3000);
   };
