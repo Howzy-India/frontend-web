@@ -325,7 +325,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'client-listings': return <ClientListingsVerification />;
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
       case 'agents': return <PilotManagement />;
-      case 'admin-users': return <AdminUsersManagement />;
+      case 'admin-users': return <AdminUsersManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'attendance': return <AttendanceTrackingView />;
       case 'verification': return <AdminVerificationPanel />;
       case 'alerts': return <MessagesAndAlertsView onBroadcast={handleBroadcast} />;
@@ -1507,9 +1507,7 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
   );
 });
 
-const AdminUsersManagement = React.memo(function AdminUsersManagement() {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
+const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
