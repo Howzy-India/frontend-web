@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue } from 'motion/react';
 import {
   X, Bot, Loader2, Mic, Send, RefreshCw,
   MapPin, Tag, Volume2, VolumeX, MessageSquare,
@@ -111,14 +111,14 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
 function getNativeGreeting(): { text: string; lang: string } {
   const locale = navigator.language || 'en';
   if (locale.startsWith('te'))
-    return { text: 'హౌజీ.ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?', lang: 'te-IN' };
+    return { text: 'హౌజీ డాట్ ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?', lang: 'te-IN' };
   if (locale.startsWith('hi'))
-    return { text: 'Howzy.in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?', lang: 'hi-IN' };
+    return { text: 'Howzy dot in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?', lang: 'hi-IN' };
   if (locale.startsWith('kn'))
-    return { text: 'Howzy.in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?', lang: 'kn-IN' };
+    return { text: 'Howzy dot in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?', lang: 'kn-IN' };
   if (locale.startsWith('ta'))
-    return { text: 'Howzy.in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?', lang: 'ta-IN' };
-  return { text: 'Welcome to Howzy.in! How can I help you today?', lang: 'en-IN' };
+    return { text: 'Howzy dot in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?', lang: 'ta-IN' };
+  return { text: 'Welcome to Howzy dot in! How can I help you today?', lang: 'en-IN' };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -155,6 +155,10 @@ export default function ClientChatWidget({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  // Draggable FAB position — starts above the mobile bottom nav (88px from bottom)
+  const fabX = useMotionValue(0);
+  const fabY = useMotionValue(0);
+
   function handleClose() {
     setMode('closed');
     setSessionId(null);
@@ -163,19 +167,22 @@ export default function ClientChatWidget({
 
   return (
     <>
-      {/* Floating AI button — icon only */}
+      {/* Floating AI button — draggable, positioned above mobile footer nav */}
       <AnimatePresence>
         {mode === 'closed' && (
           <motion.button
             key="fab"
+            drag
+            dragMomentum={false}
+            dragElastic={0.1}
+            style={{ x: fabX, y: fabY }}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.94 }}
             onClick={() => setMode('voice')}
             title="Chat with Howzy AI"
-            className="fixed bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-pointer flex flex-col items-center justify-center transition-colors"
+            className="fixed bottom-[88px] md:bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-grab active:cursor-grabbing flex flex-col items-center justify-center transition-colors"
           >
             <Bot className="w-6 h-6" />
             <span className="text-[9px] font-bold tracking-wider leading-none mt-0.5">AI</span>
