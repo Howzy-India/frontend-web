@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Download, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { api } from '../services/api';
+import { api, PropertyType, ProjectType } from '../services/api';
 
 // CSV columns aligned with api.addProperty() payload
 const REQUIRED_COLUMNS = ['name', 'propertyType'] as const;
@@ -9,8 +9,18 @@ const OPTIONAL_COLUMNS = ['projectType', 'location', 'city', 'developerName', 'r
 const ALL_COLUMNS = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS] as const;
 type CsvColumn = (typeof ALL_COLUMNS)[number];
 
-const VALID_PROPERTY_TYPES = ['project', 'plot', 'farmland'] as const;
-const VALID_PROJECT_TYPES = ['Residential', 'Commercial', 'Mixed Use', ''] as const;
+// Accept both uppercase (canonical) and lowercase (user-friendly CSV input)
+const PROPERTY_TYPE_ALIAS: Record<string, PropertyType> = {
+  project: 'PROJECT', projects: 'PROJECT', PROJECT: 'PROJECT',
+  plot: 'PLOT', plots: 'PLOT', PLOT: 'PLOT',
+  farmland: 'FARMLAND', 'farm land': 'FARMLAND', 'farm lands': 'FARMLAND', FARMLAND: 'FARMLAND',
+};
+
+const VALID_PROJECT_TYPES = [
+  'GATED_SOCIETY', 'SEMI_GATED', 'STAND_ALONE', 'VILLA_COMMUNITY', 'ULTRA_LUXURY',
+  // Accept legacy user-friendly labels too
+  'Gated Society', 'Semi Gated', 'Stand Alone', 'Villa Community', 'Ultra Luxury', '',
+] as const;
 
 interface ParsedRow {
   rowNum: number;
@@ -84,12 +94,12 @@ function validateAndParse(csvText: string): { rows: ParsedRow[]; headerErrors: s
     }
 
     if (!data.name) errors.push(`Row ${rowNum}: "name" is required.`);
-    const pt = data.propertyType?.toLowerCase() ?? '';
-    if (!VALID_PROPERTY_TYPES.includes(pt as any)) {
-      errors.push(`Row ${rowNum}: "propertyType" must be one of: project, plot, farmland (got "${data.propertyType}").`);
+    const normalised = PROPERTY_TYPE_ALIAS[data.propertyType ?? ''];
+    if (!normalised) {
+      errors.push(`Row ${rowNum}: "propertyType" must be one of: PROJECT, PLOT, FARMLAND (got "${data.propertyType}").`);
     }
     if (data.projectType && !VALID_PROJECT_TYPES.includes(data.projectType as any)) {
-      errors.push(`Row ${rowNum}: "projectType" must be one of: Residential, Commercial, Mixed Use (got "${data.projectType}").`);
+      errors.push(`Row ${rowNum}: "projectType" must be one of: GATED_SOCIETY, SEMI_GATED, STAND_ALONE, VILLA_COMMUNITY, ULTRA_LUXURY (got "${data.projectType}").`);
     }
 
     rows.push({ rowNum, data, errors });
@@ -100,7 +110,7 @@ function validateAndParse(csvText: string): { rows: ParsedRow[]; headerErrors: s
 
 const TEMPLATE_CSV = [
   ALL_COLUMNS.join(','),
-  'Prestige Kokapet,project,Residential,Kokapet,Hyderabad,Prestige Group,RERA/PH/12345,Premium gated community with world-class amenities',
+  'Prestige Kokapet,PROJECT,GATED_SOCIETY,Kokapet,Hyderabad,Prestige Group,RERA/PH/12345,Premium gated community with world-class amenities',
   'Sunshine Plots,plot,,Shadnagar,Hyderabad,Sun Developers,RERA/PH/67890,HMDA approved plots with 24x7 security',
   'Green Valley Farms,farmland,,Chevella,Hyderabad,GreenEarth Realty,,Fertile agricultural land with water connectivity',
 ].join('\n');
@@ -147,11 +157,11 @@ export default function BulkPropertyUpload() {
       try {
         await api.addProperty({
           name: row.data.name!,
-          propertyType: row.data.propertyType as 'project' | 'plot' | 'farmland',
-          projectType: row.data.projectType || undefined,
+          propertyType: PROPERTY_TYPE_ALIAS[row.data.propertyType ?? ''] ?? 'PROJECT',
+          projectType: row.data.projectType as ProjectType | undefined || undefined,
           location: row.data.location || undefined,
-          city: row.data.city || undefined,
-          developerName: row.data.developerName || undefined,
+          city: row.data.city || 'Unknown',
+          developerName: row.data.developerName || 'Unknown',
           reraNumber: row.data.reraNumber || undefined,
           usp: row.data.usp || undefined,
         });
@@ -226,8 +236,8 @@ export default function BulkPropertyUpload() {
         <Info className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
         <div className="text-sm text-indigo-800 space-y-1">
           <p className="font-bold">CSV Column Guide</p>
-          <p><span className="font-semibold">Required:</span> <code className="bg-indigo-100 px-1 rounded">name</code>, <code className="bg-indigo-100 px-1 rounded">propertyType</code> (project / plot / farmland)</p>
-          <p><span className="font-semibold">Optional:</span> <code className="bg-indigo-100 px-1 rounded">projectType</code> (Residential / Commercial / Mixed Use), <code className="bg-indigo-100 px-1 rounded">location</code>, <code className="bg-indigo-100 px-1 rounded">city</code>, <code className="bg-indigo-100 px-1 rounded">developerName</code>, <code className="bg-indigo-100 px-1 rounded">reraNumber</code>, <code className="bg-indigo-100 px-1 rounded">usp</code></p>
+          <p><span className="font-semibold">Required:</span> <code className="bg-indigo-100 px-1 rounded">name</code>, <code className="bg-indigo-100 px-1 rounded">propertyType</code> (PROJECT / PLOT / FARMLAND)</p>
+          <p><span className="font-semibold">Optional:</span> <code className="bg-indigo-100 px-1 rounded">projectType</code> (GATED_SOCIETY / SEMI_GATED / STAND_ALONE / VILLA_COMMUNITY / ULTRA_LUXURY), <code className="bg-indigo-100 px-1 rounded">location</code>, <code className="bg-indigo-100 px-1 rounded">city</code>, <code className="bg-indigo-100 px-1 rounded">developerName</code>, <code className="bg-indigo-100 px-1 rounded">reraNumber</code>, <code className="bg-indigo-100 px-1 rounded">usp</code></p>
         </div>
       </div>
 
