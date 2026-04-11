@@ -369,31 +369,41 @@ function VoiceOverlay({
     recRef.current?.abort();
     const rec = new (SpeechRec as any)();
     rec.lang = 'en-IN';
-    rec.continuous = false;
+    rec.continuous = true;   // Keep mic open so user can speak in full sentences
     rec.interimResults = true;
     recRef.current = rec;
     transcriptRef.current = '';
     if (mountedRef.current) { setTranscript(''); setPhase('listening'); }
 
+    // Silence detection: send after 1.8s of no new speech
+    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    const SILENCE_MS = 1800;
+
     rec.onresult = (e: any) => {
       const t = Array.from(e.results as any[]).map((r: any) => r[0].transcript).join('');
       if (mountedRef.current) { setTranscript(t); }
       transcriptRef.current = t;
+      // Reset silence timer on every new speech chunk
+      if (silenceTimer) clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        rec.stop(); // triggers onend → send
+      }, SILENCE_MS);
     };
     rec.onerror = (e: any) => {
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       if (!mountedRef.current) return;
       if (e.error === 'no-speech') {
-        // retry once on no-speech
-        if (mountedRef.current) startListening();
+        startListening();
       } else {
         setPhase('idle');
       }
     };
     rec.onend = () => {
+      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       if (!mountedRef.current) return;
       const text = transcriptRef.current.trim();
       if (text) sendVoice(text, session);
-      else setPhase('idle');
+      else startListening(session); // no speech detected, listen again
     };
     rec.start();
   }, []);
