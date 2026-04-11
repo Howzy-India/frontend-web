@@ -194,8 +194,8 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     };
     fetchData();
 
-    api.getProjects({ type: 'Plot' }).then(d => setListedPlots(d.projects ?? [])).catch(() => {});
-    api.getProjects({ type: 'Farm Land' }).then(d => setListedFarmLands(d.projects ?? [])).catch(() => {});
+    api.getProjects({ type: 'PLOT' }).then(d => setListedPlots(d.projects ?? [])).catch(() => {});
+    api.getProjects({ type: 'FARMLAND' }).then(d => setListedFarmLands(d.projects ?? [])).catch(() => {});
     api.getLeads().then(d => {
       const smLeads = (d.leads ?? []).filter((l: any) => l.campaign_source || l.campaignSource);
       setSocialMediaLeads(smLeads);
@@ -206,8 +206,8 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     try {
       const [all, plots, farmlands] = await Promise.all([
         api.getProjects(),
-        api.getProjects({ type: 'Plot' }),
-        api.getProjects({ type: 'Farm Land' }),
+        api.getProjects({ type: 'PLOT' }),
+        api.getProjects({ type: 'FARMLAND' }),
       ]);
       setProjects(all.projects ?? []);
       setListedPlots(plots.projects ?? []);
@@ -316,9 +316,9 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'social-leads': return <SocialMediaLeadsView leads={socialMediaLeads} />;
       case 'lead-allocation': return <LeadAllocationManager />;
       case 'bulk-lead-upload': return <BulkLeadUpload />;
-      case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'project')} userRole={userRole} onPropertyAdded={refreshProjects} />;
-      case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'plot')} userRole={userRole} onPropertyAdded={refreshProjects} />;
-      case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'farmland')} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'PROJECT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'PLOT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'FARMLAND')} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'bulk-property-upload': return <BulkPropertyUpload />;
       case 'client-listings': return <ClientListingsVerification />;
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
