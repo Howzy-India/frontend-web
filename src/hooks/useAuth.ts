@@ -16,6 +16,8 @@ export interface AuthUser {
   email: string | null;
   phoneNumber: string | null;
   displayName: string | null;
+  /** Name from Firestore profile — prefers over Firebase Auth displayName for phone-OTP users */
+  name: string | null;
   photoURL: string | null;
   role: AppRole;
   idToken: string;
@@ -31,7 +33,7 @@ export const getIdToken = async (): Promise<string> => {
   return user.getIdToken();
 };
 
-const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
+const toAuthUser = async (firebaseUser: User, profileName?: string | null): Promise<AuthUser> => {
   // Force-refresh so we always get the latest custom claims from DB sync
   const tokenResult = await firebaseUser.getIdTokenResult(true);
   const role = (tokenResult.claims.role as AppRole) ?? 'client';
@@ -40,6 +42,8 @@ const toAuthUser = async (firebaseUser: User): Promise<AuthUser> => {
     email: firebaseUser.email,
     phoneNumber: firebaseUser.phoneNumber,
     displayName: firebaseUser.displayName,
+    // Prefer Firestore name (covers phone-OTP users where Auth displayName may be null)
+    name: profileName ?? firebaseUser.displayName,
     photoURL: firebaseUser.photoURL,
     role,
     idToken: tokenResult.token,
@@ -105,15 +109,21 @@ export function useAuth() {
       confirmationRef.current = null;
 
       // Sync role from DB — sets/confirms custom claims server-side
+      // Also returns profile with name for phone-OTP users (displayName may be null in Auth)
+      let profileName: string | null = null;
       try {
-        const syncUserRole = httpsCallable(functions, 'syncUserRole');
-        await syncUserRole({});
+        const syncUserRole = httpsCallable<unknown, { role: string; profile?: { name?: string } }>(functions, 'syncUserRole');
+        const syncResult = await syncUserRole({});
+        profileName = syncResult.data?.profile?.name ?? null;
       } catch {
         // Non-critical: role defaults to 'client' if sync fails
       }
 
+      // Reload Firebase Auth user to pick up any displayName update from sync
+      await result.user.reload();
+
       // Force-refresh token to pick up freshly-set custom claim
-      const authUser = await toAuthUser(result.user);
+      const authUser = await toAuthUser(result.user, profileName);
       setUser(authUser);
       return authUser;
     } catch (err: any) {
