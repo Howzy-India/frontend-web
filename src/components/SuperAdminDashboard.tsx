@@ -1509,6 +1509,63 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
   );
 });
 
+// ── Shared helpers used by AdminUsersManagement and EmployeesManagement ──
+
+const RefreshTableBtn = React.memo(function RefreshTableBtn({
+  onRefresh, loading,
+}: { readonly onRefresh: () => void; readonly loading: boolean }) {
+  return (
+    <button
+      onClick={onRefresh}
+      disabled={loading}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
+    >
+      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+      Refresh
+    </button>
+  );
+});
+
+const UserStatusBadge = React.memo(function UserStatusBadge({ status }: { readonly status: string }) {
+  const cls =
+    status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+    status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
+    'bg-amber-50 text-amber-600 border border-amber-200';
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-bold ${cls}`}>
+      {status === 'pending' ? '⏳ Awaiting Login' : status}
+    </span>
+  );
+});
+
+const UserNamePhoneFields = React.memo(function UserNamePhoneFields({
+  name, phone, onNameChange, onPhoneChange,
+}: {
+  readonly name: string;
+  readonly phone: string;
+  readonly onNameChange: (v: string) => void;
+  readonly onPhoneChange: (v: string) => void;
+}) {
+  return (
+    <>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        placeholder="Full Name *"
+        className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+      />
+      <input
+        type="tel"
+        value={phone}
+        onChange={(e) => onPhoneChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        placeholder="Mobile Number * (10 digits)"
+        className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+      />
+    </>
+  );
+});
+
 const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1594,19 +1651,11 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
         <p className="text-sm text-slate-500 mb-6">Only super admins can create and manage admin accounts.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Full Name *"
-            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
-          />
-          <input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-            placeholder="Mobile Number * (10 digits)"
-            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          <UserNamePhoneFields
+            name={form.name}
+            phone={form.phone}
+            onNameChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+            onPhoneChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
           />
           <input
             type="email"
@@ -1635,14 +1684,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-xl font-bold text-slate-900">Admin Users</h3>
-          <button
-            onClick={() => void loadUsers()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <RefreshTableBtn onRefresh={() => void loadUsers()} loading={loading} />
         </div>
 
         <div className="overflow-x-auto">
@@ -1674,13 +1716,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
                     <td className="px-8 py-5 text-sm text-slate-600">{user.email || '-'}</td>
                     <td className="px-8 py-5 text-sm text-slate-600">{user.role}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                        user.status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
-                        'bg-amber-50 text-amber-600 border border-amber-200'
-                      }`}>
-                        {user.status === 'pending' ? '⏳ Awaiting Login' : user.status}
-                      </span>
+                      <UserStatusBadge status={user.status} />
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex justify-end gap-2">
@@ -1818,19 +1854,11 @@ const EmployeesManagement = React.memo(function EmployeesManagement({ isSuperAdm
           <h3 className="text-xl font-bold text-slate-900 mb-2">Create Howzer Employee</h3>
           <p className="text-sm text-slate-500 mb-6">Employees log in via mobile OTP and access the partner dashboard.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Full Name *"
-              className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
-            />
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-              placeholder="Mobile Number * (10 digits)"
-              className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+            <UserNamePhoneFields
+              name={form.name}
+              phone={form.phone}
+              onNameChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+              onPhoneChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
             />
             <select
               value={form.role}
@@ -1858,14 +1886,7 @@ const EmployeesManagement = React.memo(function EmployeesManagement({ isSuperAdm
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-xl font-bold text-slate-900">Howzer Employees</h3>
-          <button
-            onClick={() => void loadEmployees()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <RefreshTableBtn onRefresh={() => void loadEmployees()} loading={loading} />
         </div>
 
         <div className="overflow-x-auto">
@@ -1895,13 +1916,7 @@ const EmployeesManagement = React.memo(function EmployeesManagement({ isSuperAdm
                       </span>
                     </td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        emp.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                        emp.status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
-                        'bg-amber-50 text-amber-600 border border-amber-200'
-                      }`}>
-                        {emp.status === 'pending' ? '⏳ Awaiting Login' : emp.status}
-                      </span>
+                      <UserStatusBadge status={emp.status} />
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex justify-end gap-2">
