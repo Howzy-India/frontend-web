@@ -12,6 +12,7 @@ import ClientProfileEditModal from './ClientProfileEditModal';
 import ClientChatWidget from './ClientChatWidget';
 import ErrorBoundary from './ErrorBoundary';
 import type { AppRole } from '../hooks/useAuth';
+import { getClientProfile } from '../hooks/useClientProfile';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
