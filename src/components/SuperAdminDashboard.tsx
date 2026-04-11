@@ -265,6 +265,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       items: [
         { id: 'agents', label: 'Partner Management', icon: Users },
         { id: 'admin-users', label: 'Admin Users', icon: ShieldCheck },
+        { id: 'employees', label: 'Howzer Employees', icon: Briefcase },
       ],
     },
     {
@@ -326,6 +327,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
       case 'agents': return <PilotManagement />;
       case 'admin-users': return <AdminUsersManagement isSuperAdmin={userRole === 'super_admin'} />;
+      case 'employees': return <EmployeesManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'attendance': return <AttendanceTrackingView />;
       case 'verification': return <AdminVerificationPanel />;
       case 'alerts': return <MessagesAndAlertsView onBroadcast={handleBroadcast} />;
@@ -1507,6 +1509,63 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
   );
 });
 
+// ── Shared helpers used by AdminUsersManagement and EmployeesManagement ──
+
+const RefreshTableBtn = React.memo(function RefreshTableBtn({
+  onRefresh, loading,
+}: { readonly onRefresh: () => void; readonly loading: boolean }) {
+  return (
+    <button
+      onClick={onRefresh}
+      disabled={loading}
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
+    >
+      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+      Refresh
+    </button>
+  );
+});
+
+const UserStatusBadge = React.memo(function UserStatusBadge({ status }: { readonly status: string }) {
+  const cls =
+    status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+    status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
+    'bg-amber-50 text-amber-600 border border-amber-200';
+  return (
+    <span className={`px-3 py-1 rounded-full text-xs font-bold ${cls}`}>
+      {status === 'pending' ? '⏳ Awaiting Login' : status}
+    </span>
+  );
+});
+
+const UserNamePhoneFields = React.memo(function UserNamePhoneFields({
+  name, phone, onNameChange, onPhoneChange,
+}: {
+  readonly name: string;
+  readonly phone: string;
+  readonly onNameChange: (v: string) => void;
+  readonly onPhoneChange: (v: string) => void;
+}) {
+  return (
+    <>
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        placeholder="Full Name *"
+        className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+      />
+      <input
+        type="tel"
+        value={phone}
+        onChange={(e) => onPhoneChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+        placeholder="Mobile Number * (10 digits)"
+        className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+      />
+    </>
+  );
+});
+
 const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1592,19 +1651,11 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
         <p className="text-sm text-slate-500 mb-6">Only super admins can create and manage admin accounts.</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Full Name *"
-            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
-          />
-          <input
-            type="tel"
-            value={form.phone}
-            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-            placeholder="Mobile Number * (10 digits)"
-            className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+          <UserNamePhoneFields
+            name={form.name}
+            phone={form.phone}
+            onNameChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+            onPhoneChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
           />
           <input
             type="email"
@@ -1633,14 +1684,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
       <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-xl font-bold text-slate-900">Admin Users</h3>
-          <button
-            onClick={() => void loadUsers()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-700"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <RefreshTableBtn onRefresh={() => void loadUsers()} loading={loading} />
         </div>
 
         <div className="overflow-x-auto">
@@ -1672,13 +1716,7 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
                     <td className="px-8 py-5 text-sm text-slate-600">{user.email || '-'}</td>
                     <td className="px-8 py-5 text-sm text-slate-600">{user.role}</td>
                     <td className="px-8 py-5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        user.status === 'active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                        user.status === 'pending' ? 'bg-sky-50 text-sky-600 border border-sky-200' :
-                        'bg-amber-50 text-amber-600 border border-amber-200'
-                      }`}>
-                        {user.status === 'pending' ? '⏳ Awaiting Login' : user.status}
-                      </span>
+                      <UserStatusBadge status={user.status} />
                     </td>
                     <td className="px-8 py-5">
                       <div className="flex justify-end gap-2">
@@ -1714,6 +1752,195 @@ const AdminUsersManagement = React.memo(function AdminUsersManagement({ isSuperA
                         )}
                         <button
                           onClick={() => void handleDelete(user.uid, user.phone ?? user.email)}
+                          className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const EmployeesManagement = React.memo(function EmployeesManagement({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
+  const [employees, setEmployees] = useState<AdminUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', phone: '', role: 'howzer_sourcing' as 'howzer_sourcing' | 'howzer_sales' });
+
+  const loadEmployees = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.getEmployees();
+      setEmployees(response.employees ?? []);
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load employees');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadEmployees(); }, [loadEmployees]);
+
+  const handleCreate = async () => {
+    if (!form.name || !form.phone) return;
+    const digits = form.phone.replace(/\D/g, '');
+    if (digits.length !== 10) { setError('Enter a valid 10-digit mobile number'); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      await api.createEmployee({ name: form.name.trim(), phone: form.phone.trim(), role: form.role });
+      setForm({ name: '', phone: '', role: 'howzer_sourcing' });
+      await loadEmployees();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to create employee');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdate = async (uid: string, data: { name?: string; role?: 'howzer_sourcing' | 'howzer_sales'; status?: 'active' | 'disabled' }) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await api.updateEmployee(uid, data);
+      await loadEmployees();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to update employee');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (uid: string, identifier: string) => {
+    if (!window.confirm(`Delete employee ${identifier}? This cannot be undone.`)) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await api.deleteEmployee(uid);
+      await loadEmployees();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to delete employee');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const roleBadge = (role: string) => {
+    if (role === 'howzer_sourcing') return 'bg-violet-50 text-violet-700 border border-violet-200';
+    if (role === 'howzer_sales') return 'bg-sky-50 text-sky-700 border border-sky-200';
+    return 'bg-slate-50 text-slate-600 border border-slate-200';
+  };
+
+  const roleLabel = (role: string) => {
+    if (role === 'howzer_sourcing') return 'Howzer Sourcing';
+    if (role === 'howzer_sales') return 'Howzer Sales';
+    return role;
+  };
+
+  return (
+    <div className="space-y-6">
+      {isSuperAdmin && (
+        <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Create Howzer Employee</h3>
+          <p className="text-sm text-slate-500 mb-6">Employees log in via mobile OTP and access the partner dashboard.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <UserNamePhoneFields
+              name={form.name}
+              phone={form.phone}
+              onNameChange={(v) => setForm((prev) => ({ ...prev, name: v }))}
+              onPhoneChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+            />
+            <select
+              value={form.role}
+              onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as 'howzer_sourcing' | 'howzer_sales' }))}
+              className="bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm"
+            >
+              <option value="howzer_sourcing">Howzer Sourcing</option>
+              <option value="howzer_sales">Howzer Sales</option>
+            </select>
+          </div>
+          <p className="text-xs text-slate-400 mt-3">The employee will log in using mobile number OTP. No password is required.</p>
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={handleCreate}
+              disabled={saving || !form.name || form.phone.replace(/\D/g, '').length !== 10}
+              className="px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold text-sm disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Create Employee'}
+            </button>
+            {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
+        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-slate-900">Howzer Employees</h3>
+          <RefreshTableBtn onRefresh={() => void loadEmployees()} loading={loading} />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                <th className="px-8 py-4">Name</th>
+                <th className="px-8 py-4">Mobile</th>
+                <th className="px-8 py-4">Role</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr><td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>Loading employees...</td></tr>
+              ) : employees.length === 0 ? (
+                <tr><td className="px-8 py-6 text-sm text-slate-500" colSpan={5}>No employees found.</td></tr>
+              ) : (
+                employees.map((emp) => (
+                  <tr key={emp.uid} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5 font-bold text-slate-900">{emp.name || emp.displayName || '-'}</td>
+                    <td className="px-8 py-5 text-sm text-slate-600 font-mono">{emp.phone || '-'}</td>
+                    <td className="px-8 py-5">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${roleBadge(emp.role)}`}>
+                        {roleLabel(emp.role)}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <UserStatusBadge status={emp.status} />
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => {
+                            const nextName = window.prompt('Update name', emp.name ?? emp.displayName ?? '');
+                            if (nextName && nextName.trim() && nextName !== (emp.name ?? emp.displayName)) {
+                              void handleUpdate(emp.uid, { name: nextName.trim() });
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold"
+                        >
+                          Edit Name
+                        </button>
+                        {emp.status !== 'pending' && (
+                          <button
+                            onClick={() => void handleUpdate(emp.uid, { status: emp.status === 'active' ? 'disabled' : 'active' })}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${emp.status === 'active' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
+                          >
+                            {emp.status === 'active' ? 'Disable' : 'Enable'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => void handleDelete(emp.uid, emp.phone || emp.name)}
                           className="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 text-xs font-bold"
                         >
                           Delete

@@ -172,6 +172,14 @@ export const api = {
     data: { name?: string; email?: string; phone?: string; status?: 'active' | 'disabled' }
   ) => patch<any>(`/admin/users/${uid}`, data),
   deleteAdminUser: (uid: string) => del<any>(`/admin/users/${uid}`),
+  getEmployees: () => get<any>('/admin/employees'),
+  createEmployee: (data: { name: string; phone: string; role: 'howzer_sourcing' | 'howzer_sales' }) =>
+    post<any>('/admin/employees', data),
+  updateEmployee: (
+    uid: string,
+    data: { name?: string; role?: 'howzer_sourcing' | 'howzer_sales'; status?: 'active' | 'disabled' }
+  ) => patch<any>(`/admin/employees/${uid}`, data),
+  deleteEmployee: (uid: string) => del<any>(`/admin/employees/${uid}`),
   getClientLogins: () => get<any>('/admin/client-logins'),
   getClientLoginStats: () => get<any>('/admin/client-login-stats'),
   deleteClient: (uid: string) => del<any>(`/admin/clients/${uid}`),

@@ -70,6 +70,9 @@ export default function App() {
       case 'sales_agent':
       case 'sourcing_agent':
         return 'pilot_dashboard';
+      case 'howzer_sourcing':
+      case 'howzer_sales':
+        return 'partner_dashboard';
       default:
         return 'client_portal';
     }
