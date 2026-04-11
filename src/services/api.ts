@@ -50,6 +50,72 @@ async function del<T>(path: string): Promise<T> {
   return res.json();
 }
 
+// ── Project types (must match backend src/types/project.ts) ─────────
+export type PropertyType = 'PROJECT' | 'PLOT' | 'FARMLAND';
+export type ProjectType = 'GATED_SOCIETY' | 'SEMI_GATED' | 'STAND_ALONE' | 'VILLA_COMMUNITY' | 'ULTRA_LUXURY';
+export type ProjectSegment = 'PREMIUM' | 'ECONOMY' | 'SUPER_LUXURY';
+export type PossessionStatus = 'RTMI' | 'UNDER_CONSTRUCTION' | 'EOI';
+export type DensityType = 'LOW_DENSITY' | 'MEDIUM_DENSITY' | 'HIGH_DENSITY';
+export type ProjectZone = 'WEST' | 'EAST' | 'SOUTH' | 'NORTH' | 'CENTRAL';
+export type ProjectStatus = 'ACTIVE' | 'INACTIVE' | 'COMING_SOON' | 'PENDING_APPROVAL';
+export type BhkType = 'BHK_1' | 'BHK_2' | 'BHK_3' | 'BHK_4' | 'BHK_5' | 'VILLA' | 'STUDIO';
+
+export interface ProjectConfiguration {
+  bhkType: BhkType;
+  minSft: number;
+  maxSft: number;
+  unitCount: number;
+}
+
+export interface CreateProjectInput {
+  name: string;
+  developerName: string;
+  reraNumber?: string;
+  propertyType: PropertyType;
+  projectType?: ProjectType;
+  projectSegment?: ProjectSegment;
+  possessionStatus?: PossessionStatus;
+  possessionDate?: string;
+  address?: string;
+  zone?: ProjectZone;
+  location?: string;
+  area?: string;
+  city: string;
+  state?: string;
+  pincode?: string;
+  landmark?: string;
+  mapLink?: string;
+  landParcel?: number;
+  numberOfTowers?: number;
+  totalUnits?: number;
+  availableUnits?: number;
+  density?: DensityType;
+  sftCostingPerSqft?: number;
+  emiStartsFrom?: string;
+  pricingTwoBhk?: number;
+  pricingThreeBhk?: number;
+  pricingFourBhk?: number;
+  videoLink3D?: string;
+  brochureLink?: string;
+  onboardingAgreementLink?: string;
+  projectManagerName?: string;
+  projectManagerContact?: string;
+  spocName?: string;
+  spocContact?: string;
+  usp?: string;
+  teaser?: string;
+  details?: string;
+  status?: ProjectStatus;
+  leadRegistrationStatus?: string;
+  configurations?: ProjectConfiguration[];
+  photos?: Array<{ url: string; displayOrder: number }>;
+  amenities?: string[];
+}
+
+export type UpdateProjectInput = Partial<Omit<CreateProjectInput, 'propertyType'>> & {
+  propertyType?: PropertyType;
+};
+
 export const api = {
   // ── Projects ──────────────────────────────────────────────────────
   getProjects: (params?: Record<string, string>) => {
@@ -57,16 +123,10 @@ export const api = {
     return get<any>(`/projects${qs}`, false);
   },
   getProject: (id: string) => get<any>(`/projects/${id}`, false),
-  addProperty: (data: {
-    name: string;
-    location?: string;
-    developerName?: string;
-    propertyType: 'project' | 'plot' | 'farmland';
-    projectType?: string;
-    city?: string;
-    reraNumber?: string;
-    status?: string;
-  }) => post<any>('/admin/properties', data),
+  addProperty: (data: CreateProjectInput) => post<any>('/admin/properties', data),
+  updateProperty: (id: string, data: UpdateProjectInput) => patch<any>(`/admin/properties/${id}`, data),
+  deleteProperty: (id: string) => del<any>(`/admin/properties/${id}`),
+  getBackupSheetUrl: () => get<{ sheetUrl: string }>('/admin/settings/backup-sheet'),
   getPublicStats: () => get<any>('/public/stats', false),
 
   // ── Leads ─────────────────────────────────────────────────────────

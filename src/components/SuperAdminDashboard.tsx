@@ -84,6 +84,7 @@ import {
 } from 'recharts';
 import Logo from './Logo';
 import { api } from '../services/api';
+import CreateProjectModal from './CreateProjectModal';
 import AdminVerificationPanel from './AdminVerificationPanel';
 import BulkPropertyUpload from './BulkPropertyUpload';
 import BulkLeadUpload from './BulkLeadUpload';
@@ -1323,10 +1324,10 @@ const PilotManagement = React.memo(function PilotManagement() {
   );
 });
 
-const PROPERTY_TYPE_MAP: Record<string, 'project' | 'plot' | 'farmland'> = {
-  Projects: 'project',
-  Plots: 'plot',
-  'Farm Lands': 'farmland',
+const PROPERTY_TYPE_MAP: Record<string, 'PROJECT' | 'PLOT' | 'FARMLAND'> = {
+  Projects: 'PROJECT',
+  Plots: 'PLOT',
+  'Farm Lands': 'FARMLAND',
 };
 
 const AllPropertiesView = React.memo(function AllPropertiesView({
@@ -1342,43 +1343,17 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
 }) {
   const { currentData: displayData, currentPage, maxPage, next, prev } = usePagination(data, 10);
   const [showModal, setShowModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    developerName: '',
-    city: '',
-    reraNumber: '',
-    usp: '',
-    projectType: '',
-  });
 
-  const propertyType = PROPERTY_TYPE_MAP[type] ?? 'project';
+  const propertyType = PROPERTY_TYPE_MAP[type] ?? 'PROJECT';
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
-    setSubmitting(true);
-    try {
-      const result = await api.addProperty({ ...formData, propertyType });
-      if (result.pending) {
-        setToastMsg('Submitted for approval. Super admin will review it.');
-      } else {
-        setToastMsg(`${type.slice(0, -1)} added successfully!`);
-        onPropertyAdded?.();
-      }
-      setShowModal(false);
-      setFormData({ name: '', location: '', developerName: '', city: '', reraNumber: '', usp: '', projectType: '' });
-    } catch {
-      setToastMsg('Failed to add property. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+  const handleSuccess = () => {
+    setToastMsg(
+      userRole === 'super_admin'
+        ? `${type.slice(0, -1)} added successfully!`
+        : 'Submitted for approval. Super admin will review it.'
+    );
+    onPropertyAdded?.();
   };
 
   return (
@@ -1409,87 +1384,12 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h4 className="text-lg font-bold text-slate-900">
-                {userRole === 'super_admin' ? `Add ${type.slice(0, -1)}` : `Submit ${type.slice(0, -1)} for Approval`}
-              </h4>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            {userRole !== 'super_admin' && (
-              <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 mb-5">
-                As admin, this property will be submitted for super admin approval before being listed.
-              </p>
-            )}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Name *</label>
-                <input name="name" value={formData.name} onChange={handleChange} required
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                  placeholder={`${type.slice(0, -1)} name`} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Location</label>
-                  <input name="location" value={formData.location} onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                    placeholder="Location" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">City</label>
-                  <input name="city" value={formData.city} onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                    placeholder="City" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Developer Name</label>
-                <input name="developerName" value={formData.developerName} onChange={handleChange}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                  placeholder="Developer / Builder" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">RERA Number</label>
-                  <input name="reraNumber" value={formData.reraNumber} onChange={handleChange}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                    placeholder="RERA/P123..." />
-                </div>
-                {propertyType === 'project' && (
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Project Type</label>
-                    <select name="projectType" value={formData.projectType} onChange={handleChange}
-                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none bg-white">
-                      <option value="">Select type</option>
-                      <option value="Residential">Residential</option>
-                      <option value="Commercial">Commercial</option>
-                      <option value="Mixed">Mixed Use</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">USP</label>
-                <input name="usp" value={formData.usp} onChange={handleChange}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none"
-                  placeholder="Unique selling point" />
-              </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)}
-                  className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all">
-                  Cancel
-                </button>
-                <button type="submit" disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-60">
-                  {submitting ? 'Submitting…' : userRole === 'super_admin' ? `Add ${type === 'Farm Lands' ? 'Farm Land' : type.slice(0, -1)}` : 'Submit for Approval'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <CreateProjectModal
+          propertyType={propertyType}
+          userRole={userRole}
+          onClose={() => setShowModal(false)}
+          onSuccess={handleSuccess}
+        />
       )}
 
       <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
