@@ -99,22 +99,55 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
 // ── Styling helpers ──────────────────────────────────────────────────
 const fc = (extra = '') =>
   `w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none ${extra}`;
-const lc = () => 'block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide';
+const fcErr = (extra = '') =>
+  `w-full border border-red-400 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-red-400/30 focus:border-red-500 outline-none bg-red-50/40 ${extra}`;
+const lc = () => 'flex items-center gap-1.5 text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide';
+
+// ── Field error tooltip icon ─────────────────────────────────────────
+function FieldErrorIcon({ message }: { message: string }) {
+  return (
+    <span className="relative group inline-flex items-center">
+      <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center cursor-default select-none leading-none">
+        !
+      </span>
+      {/* Tooltip */}
+      <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex
+        flex-col items-center z-[60]">
+        <span className="bg-slate-900 text-white text-[11px] font-medium rounded-lg px-3 py-1.5 whitespace-nowrap shadow-xl max-w-[200px] text-center leading-snug">
+          {message}
+        </span>
+        <span className="border-[5px] border-transparent border-t-slate-900 -mt-px" />
+      </span>
+    </span>
+  );
+}
 
 // ── Step components ──────────────────────────────────────────────────
-function Step1Basic({ form, set }: { form: FormState; set: (k: keyof FormState, v: unknown) => void }) {
+function Step1Basic({
+  form, set, fieldErrors,
+}: {
+  form: FormState;
+  set: (k: keyof FormState, v: unknown) => void;
+  fieldErrors: Record<string, string>;
+}) {
   return (
     <div className="space-y-4">
       <div>
-        <label className={lc()}>Project Name <span className="text-red-500">*</span></label>
-        <input value={form.name} onChange={e => set('name', e.target.value)} required
-          className={fc()} placeholder="e.g. Prestige Lakeside Habitat" />
+        <label className={lc()}>
+          Project Name <span className="text-red-500">*</span>
+          {fieldErrors.name && <FieldErrorIcon message={fieldErrors.name} />}
+        </label>
+        <input value={form.name} onChange={e => set('name', e.target.value)}
+          className={fieldErrors.name ? fcErr() : fc()} placeholder="e.g. Prestige Lakeside Habitat" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={lc()}>Developer / Builder</label>
+          <label className={lc()}>
+            Developer / Builder <span className="text-red-500">*</span>
+            {fieldErrors.developerName && <FieldErrorIcon message={fieldErrors.developerName} />}
+          </label>
           <input value={form.developerName} onChange={e => set('developerName', e.target.value)}
-            className={fc()} placeholder="Builder name" />
+            className={fieldErrors.developerName ? fcErr() : fc()} placeholder="Builder name" />
         </div>
         <div>
           <label className={lc()}>RERA Number</label>
@@ -188,7 +221,13 @@ function Step1Basic({ form, set }: { form: FormState; set: (k: keyof FormState, 
   );
 }
 
-function Step2Location({ form, set }: { form: FormState; set: (k: keyof FormState, v: unknown) => void }) {
+function Step2Location({
+  form, set, fieldErrors,
+}: {
+  form: FormState;
+  set: (k: keyof FormState, v: unknown) => void;
+  fieldErrors: Record<string, string>;
+}) {
   return (
     <div className="space-y-4">
       <div>
@@ -198,9 +237,12 @@ function Step2Location({ form, set }: { form: FormState; set: (k: keyof FormStat
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={lc()}>Zone <span className="text-red-500">*</span></label>
+          <label className={lc()}>
+            Zone <span className="text-red-500">*</span>
+            {fieldErrors.zone && <FieldErrorIcon message={fieldErrors.zone} />}
+          </label>
           <select value={form.zone} onChange={e => set('zone', e.target.value as ProjectZone | '')}
-            className={fc('bg-white')}>
+            className={fieldErrors.zone ? fcErr('bg-red-50/40') : fc('bg-white')}>
             <option value="">Select…</option>
             <option value="NORTH">North</option>
             <option value="SOUTH">South</option>
@@ -222,9 +264,12 @@ function Step2Location({ form, set }: { form: FormState; set: (k: keyof FormStat
             className={fc()} placeholder="e.g. Sarjapur Road" />
         </div>
         <div>
-          <label className={lc()}>City <span className="text-red-500">*</span></label>
+          <label className={lc()}>
+            City <span className="text-red-500">*</span>
+            {fieldErrors.city && <FieldErrorIcon message={fieldErrors.city} />}
+          </label>
           <input value={form.city} onChange={e => set('city', e.target.value)}
-            className={fc()} placeholder="Bengaluru" />
+            className={fieldErrors.city ? fcErr() : fc()} placeholder="Bengaluru" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -562,35 +607,42 @@ export default function CreateProjectModal({
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(() => emptyForm(propertyType, userRole));
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState('');
 
-  const set = (k: keyof FormState, v: unknown) =>
+  const set = (k: keyof FormState, v: unknown) => {
+    // Clear field-level error as user edits
+    if (fieldErrors[k as string]) {
+      setFieldErrors(prev => { const next = { ...prev }; delete next[k as string]; return next; });
+    }
     setForm(prev => ({ ...prev, [k]: v }));
+  };
   const setConfigs = (fn: (prev: ConfigRow[]) => ConfigRow[]) =>
     setForm(prev => ({ ...prev, configurations: fn(prev.configurations) }));
   const setPhotos = (fn: (prev: string[]) => string[]) =>
     setForm(prev => ({ ...prev, photoUrls: fn(prev.photoUrls) }));
 
-  const validateStep = (): string | null => {
+  const validateStep = (): boolean => {
+    const errs: Record<string, string> = {};
     if (step === 0) {
-      if (!form.name.trim()) return 'Project name is required.';
-      if (!form.developerName.trim()) return 'Developer name is required.';
+      if (!form.name.trim()) errs.name = 'Project name is required.';
+      if (!form.developerName.trim()) errs.developerName = 'Developer name is required.';
     }
     if (step === 1) {
-      if (!form.city.trim()) return 'City is required.';
-      if (!form.zone) return 'Zone is required.';
+      if (!form.city.trim()) errs.city = 'City is required.';
+      if (!form.zone) errs.zone = 'Zone is required.';
     }
-    return null;
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const next = () => {
-    const err = validateStep();
-    if (err) { setError(err); return; }
-    setError('');
+    if (!validateStep()) return;
+    setApiError('');
     setStep(s => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const back = () => { setError(''); setStep(s => Math.max(s - 1, 0)); };
+  const back = () => { setFieldErrors({}); setApiError(''); setStep(s => Math.max(s - 1, 0)); };
 
   const buildPayload = (): CreateProjectInput => {
     const num = (v: string) => v.trim() ? Number(v) : undefined;
@@ -657,16 +709,15 @@ export default function CreateProjectModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const err = validateStep();
-    if (err) { setError(err); return; }
-    setError('');
+    if (!validateStep()) return;
+    setApiError('');
     setSubmitting(true);
     try {
       await api.addProperty(buildPayload());
       onSuccess();
       onClose();
     } catch (ex: unknown) {
-      setError(ex instanceof Error ? ex.message : 'Failed to create project. Please try again.');
+      setApiError(ex instanceof Error ? ex.message : 'Failed to create project. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -729,22 +780,22 @@ export default function CreateProjectModal({
         {/* Body – scrollable */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto px-8 py-6">
-            {step === 0 && <Step1Basic form={form} set={set} />}
-            {step === 1 && <Step2Location form={form} set={set} />}
+            {step === 0 && <Step1Basic form={form} set={set} fieldErrors={fieldErrors} />}
+            {step === 1 && <Step2Location form={form} set={set} fieldErrors={fieldErrors} />}
             {step === 2 && <Step3Details form={form} set={set} />}
             {step === 3 && <Step4Pricing form={form} set={set} setConfigs={setConfigs} />}
             {step === 4 && <Step5Media form={form} set={set} setPhotos={setPhotos} />}
             {step === 5 && <Step6Content form={form} set={set} />}
-
-            {error && (
-              <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-                {error}
-              </div>
-            )}
           </div>
 
           {/* Footer nav */}
-          <div className="px-8 py-5 border-t border-slate-100 flex justify-between items-center">
+          <div className="px-8 py-5 border-t border-slate-100">
+            {apiError && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2 mb-3 text-center">
+                {apiError}
+              </p>
+            )}
+            <div className="flex justify-between items-center">
             <button
               type="button"
               onClick={back}
@@ -770,6 +821,7 @@ export default function CreateProjectModal({
                 {submitting ? 'Submitting…' : userRole === 'super_admin' ? `Add ${typeLabel[form.propertyType]}` : 'Submit for Approval'}
               </button>
             )}
+            </div>
           </div>
         </form>
       </div>
