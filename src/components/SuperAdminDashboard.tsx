@@ -409,11 +409,11 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
             <div className="bg-slate-50 rounded-2xl p-4 mb-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
-                  SA
+                  {(user?.displayName ?? 'A').slice(0, 2).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Super Admin</p>
-                  <p className="text-[10px] text-slate-500">admin@howzy.com</p>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate">{user?.displayName ?? 'Admin'}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{user?.phoneNumber ?? user?.email ?? ''}</p>
                 </div>
               </div>
             </div>
