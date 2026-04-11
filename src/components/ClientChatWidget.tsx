@@ -54,6 +54,35 @@ async function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   });
 }
 
+// ─── Voice selection ──────────────────────────────────────────────────────────
+
+export interface VoiceOption {
+  id: string;
+  label: string;
+  lang: string;
+  voiceName: string;
+  description: string;
+}
+
+export const VOICE_OPTIONS: VoiceOption[] = [
+  { id: 'en-female-a', label: 'Priya (English)', lang: 'en-IN', voiceName: 'en-IN-Neural2-A', description: 'Warm Indian English' },
+  { id: 'en-female-d', label: 'Ananya (English)', lang: 'en-IN', voiceName: 'en-IN-Neural2-D', description: 'Clear Indian English' },
+  { id: 'hi-female-a', label: 'Kavya (Hindi)', lang: 'hi-IN', voiceName: 'hi-IN-Neural2-A', description: 'Natural Hindi female' },
+  { id: 'ta-female-a', label: 'Meera (Tamil)', lang: 'ta-IN', voiceName: 'ta-IN-Neural2-A', description: 'Natural Tamil female' },
+];
+
+// Active voice selection — persisted in localStorage
+let selectedVoiceId = localStorage.getItem('howzy_voice') ?? 'en-female-a';
+
+export function getSelectedVoice(): VoiceOption {
+  return VOICE_OPTIONS.find(v => v.id === selectedVoiceId) ?? VOICE_OPTIONS[0];
+}
+
+export function setSelectedVoice(id: string) {
+  selectedVoiceId = id;
+  localStorage.setItem('howzy_voice', id);
+}
+
 async function getFemaleVoice(lang: string): Promise<SpeechSynthesisVoice | null> {
   const voices = await loadVoices();
   const prefix = lang.slice(0, 2);
@@ -83,12 +112,15 @@ async function speakBrowser(text: string, lang: string): Promise<void> {
 }
 
 /**
- * Speak text using Google Cloud TTS Neural2 voice (human-like).
- * Falls back to browser speechSynthesis if the backend call fails.
+ * Speak text using Google Cloud TTS Neural2 voice.
+ * Uses the user-selected voice; falls back to browser TTS if backend fails.
  */
 async function speak(text: string, lang = 'en-IN'): Promise<void> {
+  const voice = getSelectedVoice();
+  const effectiveLang = lang !== 'en-IN' ? lang : voice.lang;
+  const voiceName = lang !== 'en-IN' ? undefined : voice.voiceName;
   try {
-    const { audioContent } = await api.textToSpeech(text, lang);
+    const { audioContent } = await api.textToSpeech(text, effectiveLang, voiceName);
     const binary = atob(audioContent);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -102,23 +134,42 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
       audio.play().catch(() => { activeAudio = null; resolve(); });
     });
   } catch {
-    // Fallback to browser TTS if backend unavailable
-    await speakBrowser(text, lang);
+    await speakBrowser(text, effectiveLang);
   }
 }
 
-/** Return welcome greeting based on browser locale. */
-function getNativeGreeting(): { text: string; lang: string } {
+/** Return welcome greeting — separate display text (clean) and speak text (pronounceable). */
+function getNativeGreeting(): { display: string; speakText: string; lang: string } {
   const locale = navigator.language || 'en';
   if (locale.startsWith('te'))
-    return { text: 'హౌజీ డాట్ ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?', lang: 'te-IN' };
+    return {
+      display: 'Howzy.in కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?',
+      speakText: 'హౌజీ డాట్ ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?',
+      lang: 'te-IN',
+    };
   if (locale.startsWith('hi'))
-    return { text: 'Howzy dot in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?', lang: 'hi-IN' };
+    return {
+      display: 'Howzy.in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?',
+      speakText: 'Howzy dot in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?',
+      lang: 'hi-IN',
+    };
   if (locale.startsWith('kn'))
-    return { text: 'Howzy dot in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?', lang: 'kn-IN' };
+    return {
+      display: 'Howzy.in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+      speakText: 'Howzy dot in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
+      lang: 'kn-IN',
+    };
   if (locale.startsWith('ta'))
-    return { text: 'Howzy dot in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?', lang: 'ta-IN' };
-  return { text: 'Welcome to Howzy dot in! How can I help you today?', lang: 'en-IN' };
+    return {
+      display: 'Howzy.in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?',
+      speakText: 'Howzy dot in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?',
+      lang: 'ta-IN',
+    };
+  return {
+    display: 'Welcome to Howzy.in! How can I help you today?',
+    speakText: 'Welcome to Howzy dot in! How can I help you today?',
+    lang: 'en-IN',
+  };
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -245,6 +296,8 @@ function VoiceOverlay({
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [activeVoiceId, setActiveVoiceId] = useState(getSelectedVoice().id);
 
   // Use refs to avoid stale closures inside async callbacks
   const mountedRef = useRef(true);
@@ -290,10 +343,12 @@ function VoiceOverlay({
         hasGreetedRef.current = true;
         const greeting = getNativeGreeting();
         if (mountedRef.current) {
-          setDisplayText(greeting.text);
+          setDisplayText(greeting.display);
           setPhase('greeting');
+          // Add greeting to messages so AI knows it was already said
+          addMessage({ role: 'model', content: greeting.display, timestamp: new Date().toISOString() });
         }
-        if (!isMutedRef.current) await speak(greeting.text, greeting.lang);
+        if (!isMutedRef.current) await speak(greeting.speakText, greeting.lang);
       }
 
       if (mountedRef.current) startListening(sid);
@@ -447,13 +502,22 @@ function VoiceOverlay({
       )}
 
       {/* Bottom controls */}
-      <div className="absolute bottom-10 flex items-center gap-10">
+      <div className="absolute bottom-10 flex items-center gap-8">
         <button
           onClick={() => setIsMuted((m) => !m)}
           className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
         >
           {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           <span className="text-xs">{isMuted ? 'Unmute' : 'Mute'}</span>
+        </button>
+
+        <button
+          onClick={() => setShowVoicePicker(true)}
+          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
+          title="Change voice"
+        >
+          <span className="text-xl leading-none">🎙</span>
+          <span className="text-xs">Voice</span>
         </button>
 
         <button
@@ -472,6 +536,51 @@ function VoiceOverlay({
           <span className="text-xs">Close</span>
         </button>
       </div>
+
+      {/* Voice picker bottom sheet */}
+      <AnimatePresence>
+        {showVoicePicker && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="absolute bottom-0 left-0 right-0 bg-indigo-900 rounded-t-2xl px-6 pt-5 pb-8 z-10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-white font-semibold text-base">Choose Voice</h3>
+              <button onClick={() => setShowVoicePicker(false)} className="text-indigo-300 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {VOICE_OPTIONS.map((v) => (
+                <div
+                  key={v.id}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+                    activeVoiceId === v.id ? 'bg-indigo-600' : 'bg-indigo-800/60 hover:bg-indigo-700/60'
+                  }`}
+                  onClick={() => { setSelectedVoice(v.id); setActiveVoiceId(v.id); }}
+                >
+                  <div>
+                    <p className="text-white text-sm font-medium">{v.label}</p>
+                    <p className="text-indigo-300 text-xs">{v.description}</p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      speak('Hello! I am your Howzy dot in property advisor. How can I help you?', v.lang !== 'en-IN' ? v.lang : 'en-IN');
+                    }}
+                    className="ml-3 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-white text-xs font-medium transition-colors"
+                  >
+                    ▶ Sample
+                  </button>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

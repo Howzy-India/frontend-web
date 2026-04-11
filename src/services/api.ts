@@ -178,8 +178,8 @@ export const api = {
   updateResaleProperty: (id: string, data: any) => patch<any>(`/admin/resale/${id}`, data),
   deleteResaleProperty: (id: string) => del<any>(`/admin/resale/${id}`),
 
-  textToSpeech: (text: string, languageCode = 'en-IN') =>
-    post<{ audioContent: string }>('/chat/tts', { text, languageCode }, false),
+  textToSpeech: (text: string, languageCode = 'en-IN', voiceName?: string) =>
+    post<{ audioContent: string }>('/chat/tts', { text, languageCode, ...(voiceName ? { voiceName } : {}) }, false),
 
   // ── AI Chat Agent ─────────────────────────────────────────────────
   createChatSession: () => post<{ session_id: string }>('/chat/sessions', {}, false),
