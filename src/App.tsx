@@ -161,6 +161,7 @@ export default function App() {
                   onProfileUpdate={(name) => setClientName(name)}
                   userEmail={user?.email ?? user?.phoneNumber ?? ''}
                   userName={clientName || user?.displayName || ''}
+                  userRole={user?.role}
                   footerConfig={footerConfig}
                 />
                 <AnimatePresence>
