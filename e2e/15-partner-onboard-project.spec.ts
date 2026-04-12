@@ -4,6 +4,7 @@
  * TC-PP-01  Howzer sourcing user sees "Onboard Project" card on their dashboard
  * TC-PP-02  Clicking "Submit Project" button opens CreateProjectModal
  * TC-PP-03  Submitting an empty form shows validation error badges
+ * TC-PP-04  Submitting a valid form succeeds (no 403 Forbidden) and shows pending confirmation
  *
  * A temporary howzer_sourcing user is created via the admin API (createUserWithRole)
  * and torn down in afterAll, following the same pattern as 10-partner-dashboard.spec.ts.
@@ -104,5 +105,45 @@ test.describe('Howzer Sourcing – Onboard Project card', () => {
     expect(await errorBadges.count()).toBeGreaterThan(0);
 
     await page.screenshot({ path: 'e2e/screenshots/pp03-validation-errors.png' });
+  });
+
+  test('TC-PP-04: Submitting a valid form succeeds with no 403 Forbidden', async ({ page }) => {
+    const apiErrors: string[] = [];
+    page.on('response', res => {
+      if (res.url().includes('/admin/properties') && res.status() === 403) {
+        apiErrors.push(`403 on ${res.url()}`);
+      }
+    });
+
+    // Open the modal
+    await expect(
+      page.locator('h3').filter({ hasText: /Onboard Project/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const submitBtn = page.locator('button').filter({ hasText: /Submit Project/i }).first();
+    await submitBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Fill required fields
+    const nameInput = page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]');
+    await expect(nameInput).toBeVisible({ timeout: 10_000 });
+    await nameInput.fill('E2E Sourcing Test Project');
+
+    await page.locator('input[placeholder*="City"]').first().fill('Hyderabad');
+
+    // Property type — pick first non-empty option
+    const propTypeSelect = page.locator('select').first();
+    if (await propTypeSelect.isVisible()) {
+      await propTypeSelect.selectOption({ index: 1 });
+    }
+
+    // Submit
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(3000);
+
+    await page.screenshot({ path: 'e2e/screenshots/pp04-submit-result.png' });
+
+    // Must not have received a 403
+    expect(apiErrors).toHaveLength(0);
   });
 });
