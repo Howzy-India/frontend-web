@@ -61,6 +61,30 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
       .catch(() => {});
   };
 
+  // Merge onboarded projects (PostgreSQL) + partner submissions (Firestore) into one list
+  const allSubmissions = [
+    ...myOnboardedProjects.map((p: any) => ({
+      id: `proj-${p.id}`,
+      name: p.name,
+      subId: p.uniqueId,
+      type: 'Project',
+      date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+      status: 'Pending',
+      editAction: null as (() => void) | null,
+    })),
+    ...mySubmissions.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      subId: s.details?.partnerId,
+      type: s.type,
+      date: s.date,
+      status: s.status as string,
+      editAction: s.status === 'Pending'
+        ? (() => { s.type === 'Builder' ? setIsBuilderModalOpen(true) : setIsPartnerModalOpen(true); })
+        : null,
+    })),
+  ];
+
   useEffect(() => {
     // Always use partner-specific endpoint (authenticated)
     api.getPartnerSubmissions()
@@ -387,59 +411,32 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {/* Onboarded projects from PostgreSQL */}
-                    {myOnboardedProjects.map((proj) => (
-                      <tr key={`proj-${proj.id}`} className="hover:bg-slate-50 transition-colors">
+                    {allSubmissions.map((row) => (
+                      <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                         <td className="p-4">
-                          <div className="font-medium text-slate-900">{proj.name}</div>
-                          {proj.uniqueId && (
-                            <div className="text-xs text-indigo-600 font-medium mt-0.5">{proj.uniqueId}</div>
+                          <div className="font-medium text-slate-900">{row.name}</div>
+                          {row.subId && (
+                            <div className="text-xs text-indigo-600 font-medium mt-0.5">{row.subId}</div>
                           )}
                         </td>
-                        <td className="p-4 text-slate-600">Project</td>
-                        <td className="p-4 text-slate-600">{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString() : '—'}</td>
-                        <td className="p-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200">
-                            <Clock className="w-3.5 h-3.5" />
-                            Pending Approval
-                          </span>
-                        </td>
-                        <td className="p-4 text-right text-slate-400 text-xs">Awaiting review</td>
-                      </tr>
-                    ))}
-                    {/* Traditional submissions from Firestore */}
-                    {mySubmissions.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4">
-                          <div className="font-medium text-slate-900">{sub.name}</div>
-                          {sub.details?.partnerId && (
-                            <div className="text-xs text-indigo-600 font-medium mt-0.5">{sub.details.partnerId}</div>
-                          )}
-                        </td>
-                        <td className="p-4 text-slate-600">{sub.type}</td>
-                        <td className="p-4 text-slate-600">{sub.date}</td>
+                        <td className="p-4 text-slate-600">{row.type}</td>
+                        <td className="p-4 text-slate-600">{row.date}</td>
                         <td className="p-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                            sub.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            sub.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                            row.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            row.status === 'Rejected'  ? 'bg-red-50 text-red-700 border-red-200' :
                             'bg-amber-50 text-amber-700 border-amber-200'
                           }`}>
-                            {sub.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                            {sub.status === 'Rejected' && <XCircle className="w-3.5 h-3.5" />}
-                            {sub.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
-                            {sub.status}
+                            {row.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {row.status === 'Rejected'  && <XCircle className="w-3.5 h-3.5" />}
+                            {row.status === 'Pending'   && <Clock className="w-3.5 h-3.5" />}
+                            {row.status === 'Pending' ? 'Pending Approval' : row.status}
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          {sub.status === 'Pending' && (
-                            <button 
-                              onClick={() => {
-                                if (sub.type === 'Builder') {
-                                  setIsBuilderModalOpen(true);
-                                } else {
-                                  setIsPartnerModalOpen(true);
-                                }
-                              }}
+                          {row.editAction && (
+                            <button
+                              onClick={row.editAction}
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
                             >
                               <Edit2 className="w-4 h-4" />
@@ -449,7 +446,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                         </td>
                       </tr>
                     ))}
-                    {myOnboardedProjects.length === 0 && mySubmissions.length === 0 && (
+                    {allSubmissions.length === 0 && (
                       <tr>
                         <td colSpan={5} className="p-8 text-center text-slate-500">
                           No submissions found for your account.
