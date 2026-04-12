@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, XCircle, Clock, Eye, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Eye, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2, RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function AdminVerificationPanel() {
@@ -9,21 +9,59 @@ export default function AdminVerificationPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [remarks, setRemarks] = useState('');
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState('');
 
-  useEffect(() => {
-    fetchSubmissions();
-  }, []);
-
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async () => {
     try {
-      const data = await api.getAdminSubmissions();
-      // Filter only Farm Land, Plot, Project, Partner, and Builder submissions
-      const filtered = data.submissions.filter((s: any) => s.type === 'Farm Land' || s.type === 'Plot' || s.type === 'Project' || s.type === 'Partner' || s.type === 'Builder');
-      setSubmissions(filtered);
+      const [submissionsData, pendingData] = await Promise.allSettled([
+        api.getAdminSubmissions(),
+        api.getPendingProjects(),
+      ]);
+
+      const base: any[] =
+        submissionsData.status === 'fulfilled'
+          ? (submissionsData.value.submissions ?? []).filter(
+              (s: any) =>
+                s.type === 'Farm Land' ||
+                s.type === 'Plot' ||
+                s.type === 'Project' ||
+                s.type === 'Partner' ||
+                s.type === 'Builder'
+            )
+          : [];
+
+      // Merge pending projects from Cloud SQL as "Project" type entries
+      const pendingProjects: any[] =
+        pendingData.status === 'fulfilled'
+          ? (pendingData.value.projects ?? []).map((p: any) => ({
+              id: p.uniqueId ?? String(p.id),
+              name: p.name ?? p.projectName ?? '—',
+              type: 'Project',
+              status: 'Pending',
+              date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+              isCloudProject: true,
+              details: {
+                developerName: p.developerName,
+                submittedBy: p.submittedBy ?? p.createdBy,
+                location: p.location,
+                city: p.city,
+              },
+            }))
+          : [];
+
+      // Deduplicate: existing Firestore projects take precedence
+      const firestoreIds = new Set(base.map((s: any) => s.id));
+      const merged = [...base, ...pendingProjects.filter((p) => !firestoreIds.has(p.id))];
+      setSubmissions(merged);
     } catch (error) {
       console.error('Failed to fetch submissions:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSubmissions();
+  }, [fetchSubmissions]);
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesTab = activeTab === 'All' || sub.type === activeTab;
@@ -35,25 +73,54 @@ export default function AdminVerificationPanel() {
   });
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    const sub = submissions.find((s) => s.id === id);
+    setProcessing(id);
     try {
-      await api.updateSubmissionStatus(id, newStatus, remarks);
-      setSubmissions(prev => prev.map(sub => 
-        sub.id === id ? { ...sub, status: newStatus, details: { ...sub.details, remarks } } : sub
-      ));
+      if (sub?.isCloudProject) {
+        if (newStatus === 'Approved') {
+          await api.approveProject(id);
+        } else {
+          await api.rejectProject(id);
+        }
+      } else {
+        await api.updateSubmissionStatus(id, newStatus, remarks);
+      }
+      setToastMsg(newStatus === 'Approved' ? 'Project approved' : 'Project rejected');
+      setSubmissions(prev =>
+        prev.map(s => (s.id === id ? { ...s, status: newStatus } : s))
+      );
       setSelectedSubmission(null);
       setRemarks('');
     } catch (error) {
       console.error('Failed to update status:', error);
+      setToastMsg('Failed to update status');
+    } finally {
+      setProcessing(null);
     }
   };
 
+  const handleInlineApprove = (id: string) => handleStatusChange(id, 'Approved');
+  const handleInlineReject = (id: string) => handleStatusChange(id, 'Rejected');
+
   return (
     <div className="space-y-6">
+      {toastMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium">
+          {toastMsg}
+          <button onClick={() => setToastMsg('')} className="ml-4 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h3 className="text-2xl font-bold text-slate-900">Verification Panel</h3>
+          <h3 className="text-2xl font-bold text-slate-900">Verification List</h3>
           <p className="text-slate-500">Review and approve Farm Land, Plot, Project, Partner, and Builder onboarding submissions.</p>
         </div>
+        <button
+          onClick={() => fetchSubmissions()}
+          className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
@@ -132,16 +199,35 @@ export default function AdminVerificationPanel() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <button 
-                        onClick={() => {
-                          setSelectedSubmission(sub);
-                          setRemarks(sub.details?.remarks || '');
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Review
-                      </button>
+                      {sub.isCloudProject && sub.status === 'Pending' ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleInlineApprove(sub.id)}
+                            disabled={processing === sub.id}
+                            className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleInlineReject(sub.id)}
+                            disabled={processing === sub.id}
+                            className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => {
+                            setSelectedSubmission(sub);
+                            setRemarks(sub.details?.remarks || '');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Review
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
