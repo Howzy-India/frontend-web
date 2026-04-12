@@ -44,6 +44,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [projectToastMsg, setProjectToastMsg] = useState('');
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
+  const [myOnboardedProjects, setMyOnboardedProjects] = useState<any[]>([]);
   
   // Attendance State
   const [attendance, setAttendance] = useState<any | null>(null);
@@ -54,6 +55,12 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [activeTab, setActiveTab] = useState<'dashboard' | 'assigned-leads'>('dashboard');
   const [assignedLeads, setAssignedLeads] = useState<any[]>([]);
 
+  const reloadOnboardedProjects = () => {
+    api.getMyOnboardedProjects()
+      .then(data => setMyOnboardedProjects(data.projects || []))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     // Always use partner-specific endpoint (authenticated)
     api.getPartnerSubmissions()
@@ -62,6 +69,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
     api.getPartnerAssignedEnquiries()
       .then(data => setAssignedLeads(data.enquiries || []))
       .catch(() => {});
+    reloadOnboardedProjects();
     // Load today's attendance from API
     if (userEmail) {
       api.getTodayAttendance(userEmail)
@@ -364,7 +372,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
               <div className="p-6 border-b border-slate-200 flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">My Onboarding Submissions</h3>
-                  <p className="text-sm text-slate-500 mt-1">Track the status of your uploaded partners and builders.</p>
+                  <p className="text-sm text-slate-500 mt-1">Track the status of your uploaded partners, builders and onboarded projects.</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -379,49 +387,69 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {mySubmissions.length > 0 ? (
-                      mySubmissions.map((sub) => (
-                        <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4">
-                            <div className="font-medium text-slate-900">{sub.name}</div>
-                            {sub.details?.partnerId && (
-                              <div className="text-xs text-indigo-600 font-medium mt-0.5">{sub.details.partnerId}</div>
-                            )}
-                          </td>
-                          <td className="p-4 text-slate-600">{sub.type}</td>
-                          <td className="p-4 text-slate-600">{sub.date}</td>
-                          <td className="p-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                              sub.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                              sub.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                              'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}>
-                              {sub.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                              {sub.status === 'Rejected' && <XCircle className="w-3.5 h-3.5" />}
-                              {sub.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
-                              {sub.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-right">
-                            {sub.status === 'Pending' && (
-                              <button 
-                                onClick={() => {
-                                  if (sub.type === 'Builder') {
-                                    setIsBuilderModalOpen(true);
-                                  } else {
-                                    setIsPartnerModalOpen(true);
-                                  }
-                                }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                                Edit
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
+                    {/* Onboarded projects from PostgreSQL */}
+                    {myOnboardedProjects.map((proj) => (
+                      <tr key={`proj-${proj.id}`} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-4">
+                          <div className="font-medium text-slate-900">{proj.name}</div>
+                          {proj.uniqueId && (
+                            <div className="text-xs text-indigo-600 font-medium mt-0.5">{proj.uniqueId}</div>
+                          )}
+                        </td>
+                        <td className="p-4 text-slate-600">Project</td>
+                        <td className="p-4 text-slate-600">{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString() : '—'}</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-amber-50 text-amber-700 border-amber-200">
+                            <Clock className="w-3.5 h-3.5" />
+                            Pending Approval
+                          </span>
+                        </td>
+                        <td className="p-4 text-right text-slate-400 text-xs">Awaiting review</td>
+                      </tr>
+                    ))}
+                    {/* Traditional submissions from Firestore */}
+                    {mySubmissions.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="p-4">
+                          <div className="font-medium text-slate-900">{sub.name}</div>
+                          {sub.details?.partnerId && (
+                            <div className="text-xs text-indigo-600 font-medium mt-0.5">{sub.details.partnerId}</div>
+                          )}
+                        </td>
+                        <td className="p-4 text-slate-600">{sub.type}</td>
+                        <td className="p-4 text-slate-600">{sub.date}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                            sub.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            sub.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {sub.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                            {sub.status === 'Rejected' && <XCircle className="w-3.5 h-3.5" />}
+                            {sub.status === 'Pending' && <Clock className="w-3.5 h-3.5" />}
+                            {sub.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          {sub.status === 'Pending' && (
+                            <button 
+                              onClick={() => {
+                                if (sub.type === 'Builder') {
+                                  setIsBuilderModalOpen(true);
+                                } else {
+                                  setIsPartnerModalOpen(true);
+                                }
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {myOnboardedProjects.length === 0 && mySubmissions.length === 0 && (
                       <tr>
                         <td colSpan={5} className="p-8 text-center text-slate-500">
                           No submissions found for your account.
@@ -557,6 +585,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
             setIsProjectModalOpen(false);
             setProjectToastMsg('Project submitted for approval!');
             setTimeout(() => setProjectToastMsg(''), 4000);
+            reloadOnboardedProjects();
           }}
         />
       )}

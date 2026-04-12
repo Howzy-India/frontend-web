@@ -124,18 +124,20 @@ test.describe('Howzer Sourcing – Onboard Project card', () => {
     await submitBtn.click();
     await page.waitForTimeout(1000);
 
-    // Fill required fields
+    // Fill all required fields
     const nameInput = page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]');
     await expect(nameInput).toBeVisible({ timeout: 10_000 });
     await nameInput.fill('E2E Sourcing Test Project');
 
-    await page.locator('input[placeholder*="City"]').first().fill('Hyderabad');
+    await page.locator('input[placeholder="Builder name"]').fill('E2E Developer');
 
-    // Property type — pick first non-empty option
-    const propTypeSelect = page.locator('select').first();
-    if (await propTypeSelect.isVisible()) {
-      await propTypeSelect.selectOption({ index: 1 });
-    }
+    // Zone select
+    await page.locator('select').filter({ hasText: /North|South|East|West|Central/ }).first()
+      .selectOption('WEST');
+
+    // Cluster select
+    await page.locator('select').filter({ hasText: /Kokapet|Gachibowli|Miyapur|Neopolis/ }).first()
+      .selectOption('Kokapet');
 
     // Submit
     await page.locator('button[type="submit"]').click();
@@ -145,5 +147,60 @@ test.describe('Howzer Sourcing – Onboard Project card', () => {
 
     // Must not have received a 403
     expect(apiErrors).toHaveLength(0);
+  });
+
+  test('TC-PP-05: Submitted project appears in My Onboarding Submissions table', async ({ page }) => {
+    let submitted = false;
+    page.on('response', res => {
+      if (res.url().includes('/admin/properties') && (res.status() === 200 || res.status() === 201)) {
+        submitted = true;
+      }
+    });
+
+    // Open the modal and submit
+    await expect(
+      page.locator('h3').filter({ hasText: /Onboard Project/i }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+
+    const submitBtn = page.locator('button').filter({ hasText: /Submit Project/i }).first();
+    await submitBtn.click();
+    await page.waitForTimeout(1000);
+
+    const nameInput = page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]');
+    await expect(nameInput).toBeVisible({ timeout: 10_000 });
+    const projectName = `E2E Submission Test ${Date.now()}`;
+    await nameInput.fill(projectName);
+
+    await page.locator('input[placeholder="Builder name"]').fill('E2E Developer');
+
+    // Zone select
+    await page.locator('select').filter({ hasText: /North|South|East|West|Central/ }).first()
+      .selectOption('WEST');
+
+    // Cluster select
+    await page.locator('select').filter({ hasText: /Kokapet|Gachibowli|Miyapur|Neopolis/ }).first()
+      .selectOption('Kokapet');
+
+    await page.locator('button[type="submit"]').click();
+
+    // Wait for successful API response
+    await page.waitForTimeout(5000);
+
+    await page.screenshot({ path: 'e2e/screenshots/pp05-submit-result.png' });
+
+    // Verify project was submitted successfully
+    expect(submitted, 'POST /admin/properties should return 200/201').toBe(true);
+
+    // Verify the submissions section heading is visible (modal closed, back on dashboard)
+    await expect(
+      page.locator('h3').filter({ hasText: /My Onboarding Submissions/i })
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Verify at least one "Pending Approval" status badge is shown in the table
+    await expect(
+      page.locator('span').filter({ hasText: /Pending Approval/i }).first()
+    ).toBeVisible({ timeout: 10_000 });
+
+    await page.screenshot({ path: 'e2e/screenshots/pp05-submissions-table.png' });
   });
 });

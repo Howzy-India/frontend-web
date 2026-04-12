@@ -130,6 +130,7 @@ export const api = {
   approveProject: (id: string) => post<any>(`/admin/properties/${id}/approve`, {}),
   rejectProject: (id: string) => post<any>(`/admin/properties/${id}/reject`, {}),
   getPendingProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
+  getMyOnboardedProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
   getBackupSheetUrl: () => get<{ sheetUrl: string }>('/admin/settings/backup-sheet'),
   getPublicStats: () => get<any>('/public/stats', false),
 
