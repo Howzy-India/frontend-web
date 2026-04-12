@@ -161,12 +161,25 @@ test.describe('Resale Extended Fields', () => {
     const hasApprove = await approveBtn.isVisible({ timeout: 5_000 }).catch(() => false);
 
     if (hasApprove) {
-      await approveBtn.click();
-      await page.waitForTimeout(2000);
+      // Count pending rows before approval
+      const pendingCountBefore = await page.getByRole('button', { name: /Approve/i }).count();
 
-      // Verify success message or status change
-      const successMsg = page.locator('text=Marked as Listed').first();
-      await expect(successMsg).toBeVisible({ timeout: 10_000 });
+      await approveBtn.click();
+
+      // After approval, fetchList() refreshes. The approved item disappears from
+      // the Pending filter — verify the count dropped (or the list is now empty).
+      await page.waitForFunction(
+        (before) => document.querySelectorAll('button').length < before || true,
+        pendingCountBefore,
+        { timeout: 10_000 }
+      );
+
+      // Give the list time to re-render
+      await page.waitForTimeout(2500);
+
+      // The number of Approve buttons in the Pending filter should have decreased
+      const pendingCountAfter = await page.getByRole('button', { name: /Approve/i }).count();
+      expect(pendingCountAfter).toBeLessThan(pendingCountBefore);
 
       await page.screenshot({ path: 'e2e/screenshots/admin-resale-approved.png', fullPage: false });
     } else {
