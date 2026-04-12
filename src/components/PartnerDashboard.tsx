@@ -45,7 +45,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; data: any } | null>(null);
-  const [viewingProject, setViewingProject] = useState<any | null>(null);
+  const [viewingProject, setViewingProject] = useState<Record<string, unknown> | null>(null);
   const [projectToastMsg, setProjectToastMsg] = useState('');
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [myOnboardedProjects, setMyOnboardedProjects] = useState<any[]>([]);
@@ -89,7 +89,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
         subId: p.uniqueId,
         type: 'Project',
         date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
-        status: isPending ? 'Pending' : p.status === 'ACTIVE' ? 'Approved' : 'Rejected',
+        status: isPending ? 'Pending' : (p.status === 'ACTIVE' ? 'Approved' : 'Rejected'),
         rawProject: p,
         canEdit: isPending,
         canDelete: isPending,
@@ -461,7 +461,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                           <div className="flex items-center justify-end gap-2">
                             {row.rawProject && (
                               <button
-                                onClick={() => setViewingProject(row.rawProject)}
+                                onClick={() => setViewingProject(row.rawProject as Record<string, unknown>)}
                                 title="View project"
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                               >
@@ -491,7 +491,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                             )}
                             {row.canDelete && row.rawId && (
                               <button
-                                onClick={() => handleDeleteProject(row.rawId!)}
+                                onClick={() => handleDeleteProject(row.rawId as string)}
                                 title="Delete project"
                                 className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                               >
@@ -659,25 +659,37 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
         />
       )}
       {viewingProject && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setViewingProject(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 overflow-y-auto max-h-[80vh]" onClick={e => e.stopPropagation()}>
+        <div
+          role="presentation"
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => setViewingProject(null)}
+          onKeyDown={e => e.key === 'Escape' && setViewingProject(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Project Details"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 overflow-y-auto max-h-[80vh]"
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-slate-900">Project Details</h2>
               <button onClick={() => setViewingProject(null)} className="text-slate-400 hover:text-slate-700">✕</button>
             </div>
             <div className="space-y-3 text-sm">
-              {[
-                ['Project Name', viewingProject.name],
-                ['Developer', viewingProject.developerName],
-                ['Type', viewingProject.propertyType],
-                ['Status', viewingProject.status],
-                ['Zone', viewingProject.zone],
-                ['Cluster / Location', viewingProject.location],
-                ['City', viewingProject.city],
-                ['State', viewingProject.state],
-                ['RERA', viewingProject.reraNumber],
-                ['Submitted On', viewingProject.createdAt ? new Date(viewingProject.createdAt).toLocaleString() : '—'],
-              ].map(([label, value]) => value ? (
+              {([
+                ['Project Name', viewingProject.name as string],
+                ['Developer', viewingProject.developerName as string],
+                ['Type', viewingProject.propertyType as string],
+                ['Status', viewingProject.status as string],
+                ['Zone', viewingProject.zone as string],
+                ['Cluster / Location', viewingProject.location as string],
+                ['City', viewingProject.city as string],
+                ['State', viewingProject.state as string],
+                ['RERA', viewingProject.reraNumber as string],
+                ['Submitted On', viewingProject.createdAt ? new Date(viewingProject.createdAt as string).toLocaleString() : '—'],
+              ] as [string, string][]).map(([label, value]) => value ? (
                 <div key={label} className="flex gap-3">
                   <span className="w-40 shrink-0 font-medium text-slate-500">{label}</span>
                   <span className="text-slate-800">{value}</span>
