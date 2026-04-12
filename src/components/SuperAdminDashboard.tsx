@@ -569,7 +569,15 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
   const [cityFilter, setCityFilter] = useState('');
   const [actionMsg, setActionMsg] = useState<{ id: string; type: 'success' | 'error'; text: string } | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '', description: '' });
+  const [addForm, setAddForm] = useState({
+    title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '',
+    bedrooms: '', bathrooms: '', description: '',
+    builderName: '', projectName: '', segment: '', societyType: '',
+    landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
+    emiFrom: '', floorPlan: '',
+    ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
+    address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
+  });
   const [addSubmitting, setAddSubmitting] = useState(false);
   const apiService = api;
 
@@ -620,7 +628,15 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
         bathrooms: addForm.bathrooms ? Number(addForm.bathrooms) : undefined,
       });
       setShowAddForm(false);
-      setAddForm({ title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '', bedrooms: '', bathrooms: '', description: '' });
+      setAddForm({
+        title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '',
+        bedrooms: '', bathrooms: '', description: '',
+        builderName: '', projectName: '', segment: '', societyType: '',
+        landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
+        emiFrom: '', floorPlan: '',
+        ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
+        address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
+      });
       fetchList();
     } catch (e: any) {
       alert(e?.message ?? 'Failed to add');
@@ -694,6 +710,98 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
             <div className="sm:col-span-2">
               <label htmlFor="add-resale-description" className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
               <textarea id="add-resale-description" rows={2} value={addForm.description} onChange={e => setAddForm(f => ({...f, description: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-segment" className="block text-xs font-semibold text-slate-600 mb-1">Segment</label>
+              <select id="add-resale-segment" value={addForm.segment} onChange={e => setAddForm(f => ({...f, segment: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select</option>
+                {['Premium','Economy','Super Luxury'].map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="add-resale-society-type" className="block text-xs font-semibold text-slate-600 mb-1">Society Type</label>
+              <select id="add-resale-society-type" value={addForm.societyType} onChange={e => setAddForm(f => ({...f, societyType: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select</option>
+                {['Gated Community','Semi Gated','Stand Alone','Villa Community','Ultra-Luxury Gated Community'].map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="add-resale-builder" className="block text-xs font-semibold text-slate-600 mb-1">Builder Name</label>
+              <input id="add-resale-builder" value={addForm.builderName} onChange={e => setAddForm(f => ({...f, builderName: e.target.value}))} placeholder="e.g. Prestige Group" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-project" className="block text-xs font-semibold text-slate-600 mb-1">Project Name</label>
+              <input id="add-resale-project" value={addForm.projectName} onChange={e => setAddForm(f => ({...f, projectName: e.target.value}))} placeholder="e.g. Prestige Lakeside" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-owner-name" className="block text-xs font-semibold text-slate-600 mb-1">Owner Name</label>
+              <input id="add-resale-owner-name" value={addForm.ownerName} onChange={e => setAddForm(f => ({...f, ownerName: e.target.value}))} placeholder="Owner name" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-owner-phone" className="block text-xs font-semibold text-slate-600 mb-1">Owner Phone</label>
+              <input id="add-resale-owner-phone" value={addForm.ownerPhone} onChange={e => setAddForm(f => ({...f, ownerPhone: e.target.value}))} placeholder="Owner phone" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-agent-name" className="block text-xs font-semibold text-slate-600 mb-1">Agent Name</label>
+              <input id="add-resale-agent-name" value={addForm.agentName} onChange={e => setAddForm(f => ({...f, agentName: e.target.value}))} placeholder="Agent name" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-agent-phone" className="block text-xs font-semibold text-slate-600 mb-1">Agent Phone</label>
+              <input id="add-resale-agent-phone" value={addForm.agentPhone} onChange={e => setAddForm(f => ({...f, agentPhone: e.target.value}))} placeholder="Agent phone" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-address" className="block text-xs font-semibold text-slate-600 mb-1">Address</label>
+              <input id="add-resale-address" value={addForm.address} onChange={e => setAddForm(f => ({...f, address: e.target.value}))} placeholder="Full site address" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-state" className="block text-xs font-semibold text-slate-600 mb-1">State</label>
+              <input id="add-resale-state" value={addForm.state} onChange={e => setAddForm(f => ({...f, state: e.target.value}))} placeholder="e.g. Telangana" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-pincode" className="block text-xs font-semibold text-slate-600 mb-1">Pincode</label>
+              <input id="add-resale-pincode" value={addForm.pincode} onChange={e => setAddForm(f => ({...f, pincode: e.target.value}))} placeholder="e.g. 500032" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-zone" className="block text-xs font-semibold text-slate-600 mb-1">Zone</label>
+              <select id="add-resale-zone" value={addForm.zone} onChange={e => setAddForm(f => ({...f, zone: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select</option>
+                {['West','East','South','North','Central'].map(z => <option key={z}>{z}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="add-resale-cluster" className="block text-xs font-semibold text-slate-600 mb-1">Cluster</label>
+              <input id="add-resale-cluster" value={addForm.cluster} onChange={e => setAddForm(f => ({...f, cluster: e.target.value}))} placeholder="e.g. Kokapet" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-landmark" className="block text-xs font-semibold text-slate-600 mb-1">Landmark</label>
+              <input id="add-resale-landmark" value={addForm.landmark} onChange={e => setAddForm(f => ({...f, landmark: e.target.value}))} placeholder="e.g. Near HITEC City" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-emi" className="block text-xs font-semibold text-slate-600 mb-1">EMI From</label>
+              <input id="add-resale-emi" value={addForm.emiFrom} onChange={e => setAddForm(f => ({...f, emiFrom: e.target.value}))} placeholder="e.g. 20k/month" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-land-parcel" className="block text-xs font-semibold text-slate-600 mb-1">Land Parcel</label>
+              <input id="add-resale-land-parcel" value={addForm.landParcel} onChange={e => setAddForm(f => ({...f, landParcel: e.target.value}))} placeholder="e.g. 1.22 Acrs" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-towers" className="block text-xs font-semibold text-slate-600 mb-1">No. of Towers</label>
+              <input id="add-resale-towers" type="number" value={addForm.numberOfTowers} onChange={e => setAddForm(f => ({...f, numberOfTowers: e.target.value}))} placeholder="e.g. 4" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-units" className="block text-xs font-semibold text-slate-600 mb-1">No. of Units</label>
+              <input id="add-resale-units" type="number" value={addForm.numberOfUnits} onChange={e => setAddForm(f => ({...f, numberOfUnits: e.target.value}))} placeholder="e.g. 120" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+            </div>
+            <div>
+              <label htmlFor="add-resale-density" className="block text-xs font-semibold text-slate-600 mb-1">Density</label>
+              <select id="add-resale-density" value={addForm.density} onChange={e => setAddForm(f => ({...f, density: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select</option>
+                {['Low Density','Medium Density','High Density'].map(d => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="add-resale-floor-plan" className="block text-xs font-semibold text-slate-600 mb-1">Floor Plan URL</label>
+              <input id="add-resale-floor-plan" value={addForm.floorPlan} onChange={e => setAddForm(f => ({...f, floorPlan: e.target.value}))} placeholder="https://..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
             <div className="sm:col-span-2 flex gap-3">
               <button type="submit" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_SUBMIT_BTN} disabled={addSubmitting} className="bg-amber-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors">

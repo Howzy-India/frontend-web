@@ -228,18 +228,7 @@ export const api = {
     return get<any>(`/resale${qs}`, false);
   },
   getResaleProperty: (id: string) => get<any>(`/resale/${id}`, false),
-  submitResaleProperty: (data: {
-    title: string;
-    description?: string;
-    price: string;
-    propertyType: string;
-    city: string;
-    location?: string;
-    area?: string;
-    bedrooms?: number;
-    bathrooms?: number;
-    images?: string[];
-  }) => post<any>('/resale', data),
+  submitResaleProperty: (data: Record<string, unknown>) => post<any>('/resale', data),
   getMyResaleProperties: () => get<any>('/resale/mine'),
   getAdminResaleProperties: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -250,6 +239,9 @@ export const api = {
     patch<any>(`/admin/resale/${id}/status`, { status, ...(remarks ? { remarks } : {}) }),
   updateResaleProperty: (id: string, data: any) => patch<any>(`/admin/resale/${id}`, data),
   deleteResaleProperty: (id: string) => del<any>(`/admin/resale/${id}`),
+  updateMyResaleProperty: (id: string, data: any) => patch<any>(`/resale/${id}`, data),
+  delegateResaleProperty: (id: string, agentName: string, agentPhone: string) =>
+    patch<any>(`/resale/${id}/delegate`, { agentName, agentPhone }),
 
   textToSpeech: (text: string, languageCode = 'en-IN', voiceName?: string) =>
     post<{ audioContent: string }>('/chat/tts', { text, languageCode, ...(voiceName ? { voiceName } : {}) }, false),
