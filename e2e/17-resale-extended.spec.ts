@@ -17,12 +17,21 @@ import {
 
 const RESALE_TITLE = `E2E Resale Extended ${Date.now()}`;
 
-/** Navigate to the Resale tab and open the Add Resale modal */
+/** Navigate to My Dashboard → My Listings tab and open the Add Resale modal */
 async function openResaleModal(page: Page): Promise<void> {
-  const resaleTab = page.getByRole('button', { name: 'Resale', exact: true }).first();
-  await expect(resaleTab).toBeVisible({ timeout: 15_000 });
-  await resaleTab.click();
+  // Click top-level My Dashboard nav button
+  const dashBtn = page.getByRole('button', { name: 'My Dashboard' }).first();
+  await expect(dashBtn).toBeVisible({ timeout: 15_000 });
+  await dashBtn.click();
   await page.waitForTimeout(1000);
+
+  // Click My Listings sub-tab
+  const listingsTab = page.getByRole('button', { name: 'My Listings', exact: true }).first();
+  await expect(listingsTab).toBeVisible({ timeout: 10_000 });
+  await listingsTab.click();
+  await page.waitForTimeout(1000);
+
+  // Open Add Resale modal
   const addBtn = page.getByRole('button', { name: /Add Resale/i }).first();
   await expect(addBtn).toBeVisible({ timeout: 10_000 });
   await addBtn.click();
@@ -94,16 +103,14 @@ test.describe('Resale Extended Fields', () => {
   test('TC-RS-03: Submitted resale appears in My Resale Listings with Edit and Delegate buttons', async ({ page }) => {
     await signInAsClient(page);
 
-    // Navigate to Resale tab first to submit if needed (we rely on TC-RS-02 having submitted)
-    const resaleTab = page.getByRole('button', { name: 'Resale', exact: true }).first();
-    await expect(resaleTab).toBeVisible({ timeout: 15_000 });
-    await resaleTab.click();
-    await page.waitForTimeout(2000);
-
-    // Navigate to My Dashboard to see listings
-    const dashTab = page.getByRole('button', { name: 'My Dashboard' }).first();
-    await expect(dashTab).toBeVisible({ timeout: 10_000 });
-    await dashTab.click();
+    // Navigate to My Dashboard → My Listings
+    const dashBtn = page.getByRole('button', { name: 'My Dashboard' }).first();
+    await expect(dashBtn).toBeVisible({ timeout: 15_000 });
+    await dashBtn.click();
+    await page.waitForTimeout(1000);
+    const listingsTab = page.getByRole('button', { name: 'My Listings', exact: true }).first();
+    await expect(listingsTab).toBeVisible({ timeout: 10_000 });
+    await listingsTab.click();
     await page.waitForTimeout(3000);
 
     // Check that the table has Edit and Delegate buttons for at least one Pending resale
