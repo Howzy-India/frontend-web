@@ -10,7 +10,7 @@
  * and torn down in afterAll, following the same pattern as 10-partner-dashboard.spec.ts.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   APP_URL,
   signIn,
@@ -25,6 +25,28 @@ const SOURCING_PASSWORD = 'Howzy@E2E3';
 
 let sourcingUid = '';
 let superAdminToken = '';
+
+/** Open the Onboard Project modal and fill all required fields. */
+async function openAndFillOnboardForm(page: Page, projectName: string) {
+  await expect(
+    page.locator('h3').filter({ hasText: /Onboard Project/i }).first(),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await page.locator('button').filter({ hasText: /Submit Project/i }).first().click();
+  await page.waitForTimeout(1000);
+
+  const nameInput = page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]');
+  await expect(nameInput).toBeVisible({ timeout: 10_000 });
+  await nameInput.fill(projectName);
+
+  await page.locator('input[placeholder="Builder name"]').fill('E2E Developer');
+
+  await page.locator('select').filter({ hasText: /North|South|East|West|Central/ }).first()
+    .selectOption('WEST');
+
+  await page.locator('select').filter({ hasText: /Kokapet|Gachibowli|Miyapur|Neopolis/ }).first()
+    .selectOption('Kokapet');
+}
 
 test.describe('Howzer Sourcing – Onboard Project card', () => {
   test.beforeAll(async () => {
@@ -115,35 +137,42 @@ test.describe('Howzer Sourcing – Onboard Project card', () => {
       }
     });
 
-    // Open the modal
-    await expect(
-      page.locator('h3').filter({ hasText: /Onboard Project/i }).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    await openAndFillOnboardForm(page, 'E2E Sourcing Test Project');
 
-    const submitBtn = page.locator('button').filter({ hasText: /Submit Project/i }).first();
-    await submitBtn.click();
-    await page.waitForTimeout(1000);
-
-    // Fill required fields
-    const nameInput = page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]');
-    await expect(nameInput).toBeVisible({ timeout: 10_000 });
-    await nameInput.fill('E2E Sourcing Test Project');
-
-    await page.locator('input[placeholder*="City"]').first().fill('Hyderabad');
-
-    // Property type — pick first non-empty option
-    const propTypeSelect = page.locator('select').first();
-    if (await propTypeSelect.isVisible()) {
-      await propTypeSelect.selectOption({ index: 1 });
-    }
-
-    // Submit
     await page.locator('button[type="submit"]').click();
     await page.waitForTimeout(3000);
 
     await page.screenshot({ path: 'e2e/screenshots/pp04-submit-result.png' });
 
-    // Must not have received a 403
     expect(apiErrors).toHaveLength(0);
+  });
+
+  test('TC-PP-05: Submitted project appears in My Onboarding Submissions table', async ({ page }) => {
+    let submitted = false;
+    page.on('response', res => {
+      if (res.url().includes('/admin/properties') && (res.status() === 200 || res.status() === 201)) {
+        submitted = true;
+      }
+    });
+
+    const projectName = `E2E Submission Test ${Date.now()}`;
+    await openAndFillOnboardForm(page, projectName);
+
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(5000);
+
+    await page.screenshot({ path: 'e2e/screenshots/pp05-submit-result.png' });
+
+    expect(submitted, 'POST /admin/properties should return 200/201').toBe(true);
+
+    await expect(
+      page.locator('h3').filter({ hasText: /My Onboarding Submissions/i })
+    ).toBeVisible({ timeout: 10_000 });
+
+    await expect(
+      page.locator('span').filter({ hasText: /Pending Approval/i }).first()
+    ).toBeVisible({ timeout: 10_000 });
+
+    await page.screenshot({ path: 'e2e/screenshots/pp05-submissions-table.png' });
   });
 });
