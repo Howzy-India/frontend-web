@@ -8,7 +8,7 @@
  * TC-RS-05: Admin can approve the resale and it becomes Listed
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import {
   signInAsClient,
   signInAsSuperAdmin,
@@ -17,21 +17,22 @@ import {
 
 const RESALE_TITLE = `E2E Resale Extended ${Date.now()}`;
 
+/** Navigate to the Resale tab and open the Add Resale modal */
+async function openResaleModal(page: Page): Promise<void> {
+  const resaleTab = page.getByRole('button', { name: 'Resale', exact: true }).first();
+  await expect(resaleTab).toBeVisible({ timeout: 15_000 });
+  await resaleTab.click();
+  await page.waitForTimeout(1000);
+  const addBtn = page.getByRole('button', { name: /Add Resale/i }).first();
+  await expect(addBtn).toBeVisible({ timeout: 10_000 });
+  await addBtn.click();
+  await page.waitForTimeout(500);
+}
+
 test.describe('Resale Extended Fields', () => {
   test('TC-RS-01: Client portal Resale tab shows Add Resale button and form with new fields', async ({ page }) => {
     await signInAsClient(page);
-
-    // Navigate to Resale tab
-    const resaleTab = page.getByRole('button', { name: 'Resale', exact: true }).first();
-    await expect(resaleTab).toBeVisible({ timeout: 15_000 });
-    await resaleTab.click();
-    await page.waitForTimeout(1000);
-
-    // Open Add Resale modal
-    const addBtn = page.getByRole('button', { name: /Add Resale/i }).first();
-    await expect(addBtn).toBeVisible({ timeout: 10_000 });
-    await addBtn.click();
-    await page.waitForTimeout(500);
+    await openResaleModal(page);
 
     // Verify new fields are present in the form
     await expect(page.locator('#resale-segment')).toBeVisible({ timeout: 5_000 });
@@ -50,18 +51,7 @@ test.describe('Resale Extended Fields', () => {
 
   test('TC-RS-02: Submitting the resale form with all required fields succeeds', async ({ page }) => {
     await signInAsClient(page);
-
-    // Navigate to Resale tab
-    const resaleTab = page.getByRole('button', { name: 'Resale', exact: true }).first();
-    await expect(resaleTab).toBeVisible({ timeout: 15_000 });
-    await resaleTab.click();
-    await page.waitForTimeout(1000);
-
-    // Open Add Resale modal
-    const addBtn = page.getByRole('button', { name: /Add Resale/i }).first();
-    await expect(addBtn).toBeVisible({ timeout: 10_000 });
-    await addBtn.click();
-    await page.waitForTimeout(500);
+    await openResaleModal(page);
 
     // Fill required fields
     await page.locator('#resale-title').fill(RESALE_TITLE);
