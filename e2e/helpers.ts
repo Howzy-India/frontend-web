@@ -24,26 +24,95 @@ export const CREDENTIALS = {
   },
 };
 
-/** Opens the login form (overlay or page) if not already visible. */
-async function ensureLoginFormOpen(page: Page): Promise<void> {
-  await page.goto(APP_URL, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(2000);
-  const emailInput = page.locator('input[placeholder="Email Address"]');
-  if (!(await emailInput.isVisible().catch(() => false))) {
-    await page.locator('button').filter({ hasText: /sign in|login/i }).first()
-      .click({ timeout: 10_000 })
-      .catch(() => {});
-    await page.waitForTimeout(500);
-  }
-}
-
-/** Signs in with any email/password and waits for the app to settle. */
+/**
+ * Signs in programmatically by injecting a Firebase auth token into IndexedDB.
+ * This bypasses the phone-OTP UI, which cannot be automated without test phone numbers.
+ * Requires the user account to have email+password auth enabled in Firebase.
+ */
 export async function signIn(page: Page, email: string, password: string): Promise<void> {
-  await ensureLoginFormOpen(page);
-  await page.locator('input[placeholder="Email Address"]').fill(email);
-  await page.locator('input[placeholder="Password"]').fill(password);
-  await page.locator('button:has-text("Sign in with Email")').click();
-  await page.waitForTimeout(3000);
+  // 1. Get credentials via Firebase REST API
+  const resp = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+    },
+  );
+  if (!resp.ok) {
+    throw new Error(`Firebase REST signIn failed: ${resp.status} ${await resp.text()}`);
+  }
+  interface FirebaseSignInResponse {
+    localId: string;
+    email: string;
+    displayName?: string;
+    registered?: boolean;
+    idToken: string;
+    refreshToken: string;
+    expiresIn: string;
+  }
+  const data = await resp.json() as FirebaseSignInResponse;
+
+  // 2. Navigate to the app (establishes the origin so IndexedDB is accessible)
+  await page.goto(APP_URL, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1000);
+
+  // 3. Inject into Firebase's IndexedDB persistence store
+  await page.evaluate(
+    ({ apiKey, authUser }: { apiKey: string; authUser: unknown }) => {
+      const IDB_DB = 'firebaseLocalStorageDb';
+      const IDB_STORE = 'firebaseLocalStorage';
+      const key = `firebase:authUser:${apiKey}:[DEFAULT]`;
+      return new Promise<void>((resolve, reject) => {
+        const openReq = indexedDB.open(IDB_DB);
+        openReq.onupgradeneeded = () => {
+          openReq.result.createObjectStore(IDB_STORE, { keyPath: 'fbase_key' });
+        };
+        openReq.onsuccess = () => {
+          const db = openReq.result;
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          tx.objectStore(IDB_STORE).put({ fbase_key: key, value: authUser });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+        openReq.onerror = () => reject(openReq.error);
+      });
+    },
+    {
+      apiKey: FIREBASE_API_KEY,
+      authUser: {
+        uid: data.localId,
+        email: data.email,
+        emailVerified: data.registered ?? false,
+        displayName: data.displayName ?? null,
+        isAnonymous: false,
+        photoURL: null,
+        providerData: [
+          {
+            providerId: 'password',
+            uid: data.email,
+            displayName: data.displayName ?? null,
+            email: data.email,
+            phoneNumber: null,
+            photoURL: null,
+          },
+        ],
+        stsTokenManager: {
+          refreshToken: data.refreshToken,
+          accessToken: data.idToken,
+          expirationTime: Date.now() + Number(data.expiresIn) * 1000,
+        },
+        createdAt: String(Date.now()),
+        lastLoginAt: String(Date.now()),
+        apiKey: FIREBASE_API_KEY,
+        appName: '[DEFAULT]',
+      },
+    },
+  );
+
+  // 4. Reload so the app reads the injected auth state
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForTimeout(2000);
 }
 
 /** Signs in as super_admin and waits for the dashboard. */
