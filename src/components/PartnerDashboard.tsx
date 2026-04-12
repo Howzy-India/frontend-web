@@ -25,6 +25,8 @@ import FarmLandOnboardingModal from './FarmLandOnboardingModal';
 import PlotsOnboardingModal from './PlotsOnboardingModal';
 import AttendanceModal from './AttendanceModal';
 import { api } from '../services/api';
+import { useAuth } from '../hooks/useAuth';
+import CreateProjectModal from './CreateProjectModal';
 
 interface PartnerDashboardProps {
   onLogout: () => void;
@@ -32,10 +34,14 @@ interface PartnerDashboardProps {
 }
 
 export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDashboardProps) {
+  const { user } = useAuth();
+  const userRole = user?.role ?? 'howzer_sourcing';
   const [isBuilderModalOpen, setIsBuilderModalOpen] = useState(false);
   const [isPartnerModalOpen, setIsPartnerModalOpen] = useState(false);
   const [isFarmLandModalOpen, setIsFarmLandModalOpen] = useState(false);
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [projectToastMsg, setProjectToastMsg] = useState('');
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   
   // Attendance State
@@ -279,21 +285,21 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                   className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-lg shadow-emerald-500/20 relative overflow-hidden group cursor-pointer"
                 >
                   <div className="absolute top-0 right-0 p-8 opacity-10 transform group-hover:scale-110 transition-transform duration-500">
-                    <Construction className="w-32 h-32" />
+                    <Building2 className="w-32 h-32" />
                   </div>
                   <div className="relative z-10">
                     <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-6 backdrop-blur-sm border border-white/30">
-                      <Construction className="w-6 h-6 text-white" />
+                      <Building2 className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Onboard Builder</h3>
+                    <h3 className="text-2xl font-bold mb-2">Onboard Project</h3>
                     <p className="text-emerald-100 mb-6 max-w-xs">
-                      Register a new builder or developer to list their properties on Howzy.
+                      Submit a new real estate project for super admin approval.
                     </p>
                     <button 
-                      onClick={() => setIsBuilderModalOpen(true)}
+                      onClick={() => setIsProjectModalOpen(true)}
                       className="flex items-center gap-2 bg-white text-emerald-600 px-6 py-3 rounded-xl font-bold hover:bg-emerald-50 transition-colors shadow-sm"
                     >
-                      Start Onboarding <ArrowRight className="w-4 h-4" />
+                      Submit Project <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </motion.div>
@@ -622,6 +628,24 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
         type={attendanceType}
         onSubmit={handleAttendanceSubmit}
       />
+      {isProjectModalOpen && (
+        <CreateProjectModal
+          propertyType="PROJECT"
+          userRole={userRole}
+          onClose={() => setIsProjectModalOpen(false)}
+          onSuccess={() => {
+            setIsProjectModalOpen(false);
+            setProjectToastMsg('Project submitted for approval!');
+            setTimeout(() => setProjectToastMsg(''), 4000);
+          }}
+        />
+      )}
+      {projectToastMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium">
+          {projectToastMsg}
+          <button onClick={() => setProjectToastMsg('')} className="ml-4 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
     </div>
   );
 }

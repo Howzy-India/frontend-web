@@ -51,6 +51,7 @@ import {
   MessageCircle,
   Tag,
   ChevronDown,
+  Trash2,
   Eye,
   Key,
   Zap,
@@ -66,7 +67,8 @@ import {
   Moon,
   ShoppingBag,
   Truck,
-  BarChart3
+  BarChart3,
+  Clock,
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -85,6 +87,7 @@ import {
 import Logo from './Logo';
 import { api } from '../services/api';
 import CreateProjectModal from './CreateProjectModal';
+import ViewProjectModal from './ViewProjectModal';
 import AdminVerificationPanel from './AdminVerificationPanel';
 import BulkPropertyUpload from './BulkPropertyUpload';
 import BulkLeadUpload from './BulkLeadUpload';
@@ -254,6 +257,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       label: 'Property Management',
       items: [
         { id: 'projects', label: 'All Projects', icon: Building2 },
+        { id: 'pending', label: 'Pending Approvals', icon: Clock },
         { id: 'plots', label: 'All Plots', icon: Map },
         { id: 'farmlands', label: 'All Farm Lands', icon: Trees },
         { id: 'bulk-property-upload', label: 'Bulk Property Upload', icon: FileSpreadsheet },
@@ -320,6 +324,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'lead-allocation': return <LeadAllocationManager />;
       case 'bulk-lead-upload': return <BulkLeadUpload />;
       case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'PROJECT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'pending': return <PendingApprovalsView userRole={userRole} onRefresh={refreshProjects} />;
       case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'PLOT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'FARMLAND')} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'bulk-property-upload': return <BulkPropertyUpload />;
@@ -1348,19 +1353,46 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
   const { currentData: displayData, currentPage, maxPage, next, prev } = usePagination(data, 10);
   const [showModal, setShowModal] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [actionMenu, setActionMenu] = useState<{ id: string; x: number; y: number; project: any } | null>(null);
+  const [viewProject, setViewProject] = useState<any | null>(null);
+  const [editProject, setEditProject] = useState<any | null>(null);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   const propertyType = PROPERTY_TYPE_MAP[type] ?? 'PROJECT';
+
+  // Close menu on outside click
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActionMenu(null);
+      }
+    };
+    if (actionMenu) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [actionMenu]);
 
   const handleSuccess = () => {
     setToastMsg(
       userRole === 'super_admin'
-        ? `${type.slice(0, -1)} added successfully!`
+        ? `${type.slice(0, -1)} saved successfully!`
         : 'Submitted for approval. Super admin will review it.'
     );
     onPropertyAdded?.();
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Delete this project? This action cannot be undone.')) return;
+    try {
+      await api.deleteProject(id);
+      setToastMsg('Project deleted.');
+      onPropertyAdded?.();
+    } catch {
+      setToastMsg('Failed to delete project.');
+    }
+  };
+
   return (
+    <>
     <div className="space-y-6">
       {toastMsg && (
         <div className="fixed top-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium animate-fade-in">
@@ -1396,6 +1428,21 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
         />
       )}
 
+      {viewProject && (
+        <ViewProjectModal project={viewProject} onClose={() => setViewProject(null)} />
+      )}
+
+      {editProject && (
+        <CreateProjectModal
+          propertyType={editProject.propertyType ?? propertyType}
+          userRole={userRole}
+          initialData={editProject}
+          projectId={editProject.id}
+          onClose={() => setEditProject(null)}
+          onSuccess={() => { handleSuccess(); setEditProject(null); }}
+        />
+      )}
+
       <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -1428,8 +1475,15 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
                         {item.status ?? 'Listed'}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
+                    <td className="px-8 py-5 text-right relative">
+                      <button
+                        className="p-2 text-slate-300 hover:text-indigo-600 transition-colors"
+                        onClick={e => {
+                          e.stopPropagation();
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setActionMenu({ id: item.id, x: rect.right, y: rect.bottom, project: item });
+                        }}
+                      >
                         <MoreVertical className="w-4 h-4" />
                       </button>
                     </td>
@@ -1450,6 +1504,163 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
       )}
     </div>
   </div>
+
+  {/* Action dropdown menu */}
+  {actionMenu && (
+    <div
+      ref={menuRef}
+      className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-lg py-1 w-36"
+      style={{ top: actionMenu.y + 4, right: window.innerWidth - actionMenu.x }}
+    >
+      <button
+        className="w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 text-left font-medium flex items-center gap-2"
+        onClick={() => { setViewProject(actionMenu.project); setActionMenu(null); }}
+      >
+        <Eye className="w-4 h-4 text-slate-400" /> View
+      </button>
+      <button
+        className="w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 text-left font-medium flex items-center gap-2"
+        onClick={() => { setEditProject(actionMenu.project); setActionMenu(null); }}
+      >
+        <PenTool className="w-4 h-4 text-slate-400" /> Edit
+      </button>
+      <button
+        className="w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left font-medium flex items-center gap-2"
+        onClick={() => { const id = actionMenu.id; setActionMenu(null); handleDelete(id); }}
+      >
+        <Trash2 className="w-4 h-4 text-red-400" /> Delete
+      </button>
+    </div>
+  )}
+  </>
+  );
+});
+
+const PendingApprovalsView = React.memo(function PendingApprovalsView({
+  userRole,
+  onRefresh,
+}: {
+  userRole?: string;
+  onRefresh?: () => void;
+}) {
+  const [pendingProjects, setPendingProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toastMsg, setToastMsg] = useState('');
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  const fetchPending = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.getPendingProjects();
+      setPendingProjects(data.projects ?? []);
+    } catch {
+      setPendingProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPending(); }, [fetchPending]);
+
+  const handleApprove = async (id: string) => {
+    setProcessing(id);
+    try {
+      await api.approveProject(id);
+      setToastMsg('Project approved');
+      fetchPending();
+      onRefresh?.();
+    } catch { setToastMsg('Failed to approve'); }
+    finally { setProcessing(null); }
+  };
+
+  const handleReject = async (id: string) => {
+    setProcessing(id);
+    try {
+      await api.rejectProject(id);
+      setToastMsg('Project rejected');
+      fetchPending();
+      onRefresh?.();
+    } catch { setToastMsg('Failed to reject'); }
+    finally { setProcessing(null); }
+  };
+
+  return (
+    <div className="space-y-6">
+      {toastMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium">
+          {toastMsg}
+          <button onClick={() => setToastMsg('')} className="ml-4 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h3 className="text-2xl font-bold text-slate-900">Pending Approvals</h3>
+          <p className="text-slate-500">Projects submitted by partners awaiting review</p>
+        </div>
+        <button onClick={() => fetchPending()} className="bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all flex items-center gap-2">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        </button>
+      </div>
+      <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                <th className="px-8 py-4">Project Name</th>
+                <th className="px-8 py-4">Developer</th>
+                <th className="px-8 py-4">Submitted By</th>
+                <th className="px-8 py-4">Date</th>
+                <th className="px-8 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-12 text-center text-slate-400 text-sm">
+                    Loading…
+                  </td>
+                </tr>
+              ) : pendingProjects.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-12 text-center text-slate-400 text-sm">
+                    No pending approvals
+                  </td>
+                </tr>
+              ) : (
+                pendingProjects.map((item, i) => (
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-8 py-5 font-bold text-slate-900">{item.name}</td>
+                    <td className="px-8 py-5 text-sm text-indigo-600 font-medium">{item.developerName}</td>
+                    <td className="px-8 py-5 text-sm text-slate-500">{item.submittedBy ?? item.createdBy ?? '—'}</td>
+                    <td className="px-8 py-5 text-sm text-slate-500">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleApprove(item.id)}
+                          disabled={processing === item.id}
+                          className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleReject(item.id)}
+                          disabled={processing === item.id}
+                          className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 });
 
