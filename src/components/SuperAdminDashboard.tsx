@@ -257,7 +257,6 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       label: 'Property Management',
       items: [
         { id: 'projects', label: 'All Projects', icon: Building2 },
-        { id: 'pending', label: 'Pending Approvals', icon: Clock },
         { id: 'plots', label: 'All Plots', icon: Map },
         { id: 'farmlands', label: 'All Farm Lands', icon: Trees },
         { id: 'bulk-property-upload', label: 'Bulk Property Upload', icon: FileSpreadsheet },
@@ -324,7 +323,6 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'lead-allocation': return <LeadAllocationManager />;
       case 'bulk-lead-upload': return <BulkLeadUpload />;
       case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'PROJECT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
-      case 'pending': return <PendingApprovalsView userRole={userRole} onRefresh={refreshProjects} />;
       case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'PLOT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'FARMLAND')} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'bulk-property-upload': return <BulkPropertyUpload />;
