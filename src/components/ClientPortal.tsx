@@ -428,7 +428,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
         await api.updateMyResaleProperty(editingResaleId, payload);
         setResaleSubmitMsg({ type: 'success', text: 'Property updated successfully!' });
       } else {
-        await api.submitResaleProperty(payload as any);
+        await api.submitResaleProperty(payload);
         setResaleSubmitMsg({ type: 'success', text: 'Property submitted for review! You\'ll be notified once approved.' });
       }
       setResaleForm(INITIAL_RESALE_FORM);
@@ -1683,20 +1683,20 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                                             setResaleForm({
                                               title: r.title ?? '',
                                               description: r.description ?? '',
-                                              price: r.price != null ? String(r.price) : '',
+                                              price: r.price == null ? '' : String(r.price),
                                               propertyType: r.propertyType ?? 'Apartment',
                                               city: r.city ?? '',
                                               location: r.location ?? '',
                                               area: r.area ?? '',
-                                              bedrooms: r.bedrooms != null ? String(r.bedrooms) : '',
-                                              bathrooms: r.bathrooms != null ? String(r.bathrooms) : '',
+                                              bedrooms: r.bedrooms == null ? '' : String(r.bedrooms),
+                                              bathrooms: r.bathrooms == null ? '' : String(r.bathrooms),
                                               builderName: r.builderName ?? '',
                                               projectName: r.projectName ?? '',
                                               segment: r.segment ?? '',
                                               societyType: r.societyType ?? '',
                                               landParcel: r.landParcel ?? '',
-                                              numberOfTowers: r.numberOfTowers != null ? String(r.numberOfTowers) : '',
-                                              numberOfUnits: r.numberOfUnits != null ? String(r.numberOfUnits) : '',
+                                              numberOfTowers: r.numberOfTowers == null ? '' : String(r.numberOfTowers),
+                                              numberOfUnits: r.numberOfUnits == null ? '' : String(r.numberOfUnits),
                                               density: r.density ?? '',
                                               emiFrom: r.emiFrom ?? '',
                                               ownerName: r.ownerName ?? '',
@@ -1711,8 +1711,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                                               landmark: r.landmark ?? '',
                                               mapLink: r.mapLink ?? '',
                                               possession: r.possession ?? '',
-                                              floor: r.floor != null ? String(r.floor) : '',
-                                              totalFloors: r.totalFloors != null ? String(r.totalFloors) : '',
+                                              floor: r.floor == null ? '' : String(r.floor),
+                                              totalFloors: r.totalFloors == null ? '' : String(r.totalFloors),
                                             });
                                             setResaleSubmitMsg(null);
                                             setIsResaleModalOpen(true);

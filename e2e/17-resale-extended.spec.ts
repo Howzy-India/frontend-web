@@ -10,7 +10,6 @@
 
 import { test, expect } from '@playwright/test';
 import {
-  APP_URL,
   signInAsClient,
   signInAsSuperAdmin,
   navigateToDashboardTab,
@@ -125,12 +124,12 @@ test.describe('Resale Extended Fields', () => {
     const hasEditOrDelegate = await editBtn.isVisible().catch(() => false) ||
                                await delegateBtn.isVisible().catch(() => false);
 
-    // If no pending items yet, just verify the table structure is correct (column headers present)
-    if (!hasEditOrDelegate) {
+    // If pending items exist, verify action buttons; otherwise verify table structure
+    if (hasEditOrDelegate) {
+      await expect(editBtn.or(delegateBtn).first()).toBeVisible({ timeout: 5_000 });
+    } else {
       // The table should still exist
       await expect(page.locator('table').first()).toBeVisible({ timeout: 5_000 });
-    } else {
-      await expect(editBtn.or(delegateBtn).first()).toBeVisible({ timeout: 5_000 });
     }
 
     await page.screenshot({ path: 'e2e/screenshots/resale-listings-with-actions.png', fullPage: false });
