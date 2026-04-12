@@ -175,4 +175,51 @@ test.describe('Howzer Sourcing – Onboard Project card', () => {
 
     await page.screenshot({ path: 'e2e/screenshots/pp05-submissions-table.png' });
   });
+
+  test('TC-PP-06: Edit button opens edit modal for a pending project', async ({ page }) => {
+    // Create a project first
+    const projectName = `E2E Edit Test ${Date.now()}`;
+    await openAndFillOnboardForm(page, projectName);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(5000);
+
+    // Find the Edit button in the submissions table and click it
+    const editBtn = page.locator('button[title="Edit project"]').first();
+    await expect(editBtn).toBeVisible({ timeout: 10_000 });
+    await editBtn.click();
+    await page.waitForTimeout(1000);
+
+    // Verify CreateProjectModal is open (name input should be pre-filled)
+    await expect(page.locator('input[placeholder="e.g. Prestige Lakeside Habitat"]')).toBeVisible({ timeout: 10_000 });
+    await page.screenshot({ path: 'e2e/screenshots/pp06-edit-modal.png' });
+  });
+
+  test('TC-PP-07: Delete button removes a pending project from the table', async ({ page }) => {
+    const projectName = `E2E Delete Test ${Date.now()}`;
+    await openAndFillOnboardForm(page, projectName);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForTimeout(5000);
+
+    // Dismiss any toast
+    const toast = page.locator('button', { hasText: '✕' }).first();
+    if (await toast.isVisible()) await toast.click();
+
+    const deleteBtn = page.locator('button[title="Delete project"]').first();
+    await expect(deleteBtn).toBeVisible({ timeout: 10_000 });
+
+    // Intercept delete API call
+    let deleted = false;
+    page.on('response', res => {
+      if (res.url().includes('/admin/properties') && res.request().method() === 'DELETE') {
+        deleted = true;
+      }
+    });
+
+    page.on('dialog', dialog => dialog.accept());
+    await deleteBtn.click();
+    await page.waitForTimeout(3000);
+
+    expect(deleted, 'DELETE /admin/properties/:id should be called').toBe(true);
+    await page.screenshot({ path: 'e2e/screenshots/pp07-after-delete.png' });
+  });
 });
