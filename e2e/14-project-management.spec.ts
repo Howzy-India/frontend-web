@@ -7,8 +7,25 @@
  * TC-PM-04  Super admin navigates to "Pending Approvals" tab and sees it (even if empty)
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { signInAsSuperAdmin, navigateToDashboardTab } from './helpers';
+
+/** Navigates to All Projects and skips the test if the table is empty. Returns the first row's action button. */
+async function openAllProjectsOrSkip(page: Page) {
+  await navigateToDashboardTab(page, 'All Projects');
+  await page.waitForTimeout(3000);
+  const rows = page.locator('tbody tr');
+  const rowCount = await rows.count();
+  const firstCell = await rows.first().locator('td').first().textContent().catch(() => '');
+  if (rowCount === 0 || (firstCell ?? '').toLowerCase().includes('no ')) {
+    test.skip();
+    return null;
+  }
+  const actionBtn = rows.first().locator('button').last();
+  await actionBtn.click();
+  await page.waitForTimeout(500);
+  return actionBtn;
+}
 
 test.describe('SuperAdmin Project Management', () => {
   test.beforeEach(async ({ page }) => {
@@ -42,23 +59,7 @@ test.describe('SuperAdmin Project Management', () => {
   });
 
   test('TC-PM-02: Super admin clicks View on a project and sees ViewProjectModal', async ({ page }) => {
-    await navigateToDashboardTab(page, 'All Projects');
-    await page.waitForTimeout(3000);
-
-    const rows = page.locator('tbody tr');
-    const rowCount = await rows.count();
-
-    // Skip gracefully if no projects exist
-    const firstCell = await rows.first().locator('td').first().textContent().catch(() => '');
-    if (rowCount === 0 || (firstCell ?? '').toLowerCase().includes('no ')) {
-      test.skip();
-      return;
-    }
-
-    // Click the MoreVertical (last button in first data row)
-    const actionBtn = rows.first().locator('button').last();
-    await actionBtn.click();
-    await page.waitForTimeout(500);
+    if (!await openAllProjectsOrSkip(page)) return;
 
     // Click "View" in the dropdown (exact: true avoids matching the "Overview" nav tab)
     const viewOption = page.getByRole('button', { name: 'View', exact: true });
@@ -78,25 +79,9 @@ test.describe('SuperAdmin Project Management', () => {
   });
 
   test('TC-PM-03: Super admin clicks Edit on a project and sees pre-filled form', async ({ page }) => {
-    await navigateToDashboardTab(page, 'All Projects');
-    await page.waitForTimeout(3000);
+    if (!await openAllProjectsOrSkip(page)) return;
 
-    const rows = page.locator('tbody tr');
-    const rowCount = await rows.count();
-
-    // Skip gracefully if no projects exist
-    const firstCell = await rows.first().locator('td').first().textContent().catch(() => '');
-    if (rowCount === 0 || (firstCell ?? '').toLowerCase().includes('no ')) {
-      test.skip();
-      return;
-    }
-
-    // Click the MoreVertical action button on the first row
-    const actionBtn = rows.first().locator('button').last();
-    await actionBtn.click();
-    await page.waitForTimeout(500);
-
-    // Click "Edit" in the dropdown (uses accessible name from getByRole)
+    // Click "Edit" in the dropdown
     const editOption = page.getByRole('button', { name: 'Edit' });
     await expect(editOption).toBeVisible({ timeout: 5_000 });
     await editOption.click();
