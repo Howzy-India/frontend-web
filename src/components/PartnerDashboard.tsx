@@ -16,7 +16,9 @@ import {
   Edit2,
   MapPin,
   Camera,
-  Phone
+  Phone,
+  Trash2,
+  Eye,
 } from 'lucide-react';
 import Logo from './Logo';
 import BuilderOnboardingModal from './BuilderOnboardingModal';
@@ -42,6 +44,8 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
   const [isFarmLandModalOpen, setIsFarmLandModalOpen] = useState(false);
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<{ id: string; data: any } | null>(null);
+  const [viewingProject, setViewingProject] = useState<any | null>(null);
   const [projectToastMsg, setProjectToastMsg] = useState('');
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
   const [myOnboardedProjects, setMyOnboardedProjects] = useState<any[]>([]);
@@ -61,27 +65,47 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
       .catch(() => {});
   };
 
+  const handleDeleteProject = async (rawId: string) => {
+    if (!confirm('Delete this project submission? This cannot be undone.')) return;
+    try {
+      await api.deleteProject(rawId);
+      setProjectToastMsg('Project deleted.');
+      setTimeout(() => setProjectToastMsg(''), 3000);
+      reloadOnboardedProjects();
+    } catch {
+      setProjectToastMsg('Failed to delete project.');
+      setTimeout(() => setProjectToastMsg(''), 3000);
+    }
+  };
+
   // Merge onboarded projects (PostgreSQL) + partner submissions (Firestore) into one list
   const allSubmissions = [
-    ...myOnboardedProjects.map((p: any) => ({
-      id: `proj-${p.id}`,
-      name: p.name,
-      subId: p.uniqueId,
-      type: 'Project',
-      date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
-      status: 'Pending',
-      editAction: null as (() => void) | null,
-    })),
+    ...myOnboardedProjects.map((p: any) => {
+      const isPending = p.status === 'PENDING_APPROVAL';
+      return {
+        id: `proj-${p.id}`,
+        rawId: p.uniqueId ?? String(p.id),
+        name: p.name,
+        subId: p.uniqueId,
+        type: 'Project',
+        date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+        status: isPending ? 'Pending' : p.status === 'ACTIVE' ? 'Approved' : 'Rejected',
+        rawProject: p,
+        canEdit: isPending,
+        canDelete: isPending,
+      };
+    }),
     ...mySubmissions.map((s: any) => ({
       id: s.id,
+      rawId: null as string | null,
       name: s.name,
       subId: s.details?.partnerId,
       type: s.type,
       date: s.date,
       status: s.status as string,
-      editAction: s.status === 'Pending'
-        ? (() => { s.type === 'Builder' ? setIsBuilderModalOpen(true) : setIsPartnerModalOpen(true); })
-        : null,
+      rawProject: null as any,
+      canEdit: s.status === 'Pending',
+      canDelete: false,
     })),
   ];
 
@@ -259,9 +283,9 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
               )}
               {showBuilderOnboarding && (
                 <StatCard 
-                  title="Builders Onboarded" 
-                  value="42" 
-                  trend="+3" 
+                  title="Projects Onboard" 
+                  value={myOnboardedProjects.length.toString()} 
+                  trend={`+${myOnboardedProjects.filter((p: any) => p.status === 'PENDING_APPROVAL').length}`}
                   icon={Building2} 
                   color="indigo" 
                 />
@@ -277,7 +301,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
               )}
               <StatCard 
                 title="Pending Approvals" 
-                value={mySubmissions.filter(s => s.status === 'Pending').length.toString()} 
+                value={(mySubmissions.filter(s => s.status === 'Pending').length + myOnboardedProjects.filter((p: any) => p.status === 'PENDING_APPROVAL').length).toString()} 
                 trend="0" 
                 icon={UserPlus} 
                 color="blue" 
@@ -434,15 +458,48 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          {row.editAction && (
-                            <button
-                              onClick={row.editAction}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                              Edit
-                            </button>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {row.rawProject && (
+                              <button
+                                onClick={() => setViewingProject(row.rawProject)}
+                                title="View project"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                View
+                              </button>
+                            )}
+                            {row.canEdit && row.rawProject && (
+                              <button
+                                onClick={() => setEditingProject({ id: row.rawId!, data: row.rawProject })}
+                                title="Edit project"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                              </button>
+                            )}
+                            {row.canEdit && !row.rawProject && (
+                              <button
+                                onClick={() => row.type === 'Builder' ? setIsBuilderModalOpen(true) : setIsPartnerModalOpen(true)}
+                                title="Edit project"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                              </button>
+                            )}
+                            {row.canDelete && row.rawId && (
+                              <button
+                                onClick={() => handleDeleteProject(row.rawId!)}
+                                title="Delete project"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -585,6 +642,50 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
             reloadOnboardedProjects();
           }}
         />
+      )}
+      {editingProject && (
+        <CreateProjectModal
+          propertyType="PROJECT"
+          userRole={userRole}
+          projectId={editingProject.id}
+          initialData={editingProject.data}
+          onClose={() => setEditingProject(null)}
+          onSuccess={() => {
+            setEditingProject(null);
+            setProjectToastMsg('Project updated successfully!');
+            setTimeout(() => setProjectToastMsg(''), 4000);
+            reloadOnboardedProjects();
+          }}
+        />
+      )}
+      {viewingProject && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setViewingProject(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 overflow-y-auto max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Project Details</h2>
+              <button onClick={() => setViewingProject(null)} className="text-slate-400 hover:text-slate-700">✕</button>
+            </div>
+            <div className="space-y-3 text-sm">
+              {[
+                ['Project Name', viewingProject.name],
+                ['Developer', viewingProject.developerName],
+                ['Type', viewingProject.propertyType],
+                ['Status', viewingProject.status],
+                ['Zone', viewingProject.zone],
+                ['Cluster / Location', viewingProject.location],
+                ['City', viewingProject.city],
+                ['State', viewingProject.state],
+                ['RERA', viewingProject.reraNumber],
+                ['Submitted On', viewingProject.createdAt ? new Date(viewingProject.createdAt).toLocaleString() : '—'],
+              ].map(([label, value]) => value ? (
+                <div key={label} className="flex gap-3">
+                  <span className="w-40 shrink-0 font-medium text-slate-500">{label}</span>
+                  <span className="text-slate-800">{value}</span>
+                </div>
+              ) : null)}
+            </div>
+          </div>
+        </div>
       )}
       {projectToastMsg && (
         <div className="fixed top-6 right-6 z-50 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium">
