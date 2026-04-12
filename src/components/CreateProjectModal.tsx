@@ -129,13 +129,71 @@ interface CreateProjectModalProps {
   userRole?: string;
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: any;
+  projectId?: string;
 }
 
-export default function CreateProjectModal({ propertyType, userRole, onClose, onSuccess }: CreateProjectModalProps) {
+export default function CreateProjectModal({ propertyType, userRole, onClose, onSuccess, initialData, projectId }: CreateProjectModalProps) {
   const [form, setForm] = useState<FormState>(() => emptyForm(propertyType, userRole));
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [apiError, setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Pre-fill form when editing
+  React.useEffect(() => {
+    if (!initialData || !projectId) return;
+    const toMedia = (url?: string): MediaFile =>
+      url ? { file: null, uploadedUrl: url, uploading: false, error: '' } : emptyMedia();
+    setForm(prev => ({
+      ...prev,
+      name: initialData.name ?? '',
+      developerName: initialData.developerName ?? '',
+      reraNumber: initialData.reraNumber ?? '',
+      projectType: initialData.projectType ?? '',
+      projectSegment: initialData.projectSegment ?? '',
+      possessionStatus: initialData.possessionStatus ?? '',
+      possessionDate: initialData.possessionDate ?? '',
+      status: initialData.status ?? prev.status,
+      address: initialData.address ?? '',
+      zone: initialData.zone ?? '',
+      cluster: initialData.location ?? '',
+      area: initialData.area ?? '',
+      city: initialData.city ?? 'Hyderabad',
+      state: initialData.state ?? 'Telangana',
+      pincode: initialData.pincode ?? '',
+      landmark: initialData.landmark ?? '',
+      mapLink: initialData.mapLink ?? '',
+      landParcel: initialData.landParcel != null ? String(initialData.landParcel) : '',
+      numberOfTowers: initialData.numberOfTowers != null ? String(initialData.numberOfTowers) : '',
+      totalUnits: initialData.totalUnits != null ? String(initialData.totalUnits) : '',
+      availableUnits: initialData.availableUnits != null ? String(initialData.availableUnits) : '',
+      density: initialData.density ?? '',
+      sftCostingPerSqft: initialData.sftCostingPerSqft != null ? String(initialData.sftCostingPerSqft) : '',
+      emiStartsFrom: initialData.emiStartsFrom ?? '',
+      configurations: (initialData.configurations ?? []).length > 0
+        ? (initialData.configurations as any[]).map((c: any) => ({
+            bhkCount: String(c.bhkCount ?? c.bhk_count ?? ''),
+            minSft: String(c.minSft ?? c.min_sft ?? ''),
+            maxSft: String(c.maxSft ?? c.max_sft ?? ''),
+            unitCount: String(c.unitCount ?? c.unit_count ?? ''),
+          }))
+        : [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
+      photoFiles: (initialData.photos ?? []).length > 0
+        ? (initialData.photos as string[]).map(url => ({ file: null, uploadedUrl: url, uploading: false, error: '' }))
+        : [emptyMedia()],
+      videoFile: toMedia(initialData.videoLink3D),
+      brochureFile: toMedia(initialData.brochureLink),
+      agreementFile: toMedia(initialData.onboardingAgreementLink),
+      projectManagerName: initialData.projectManagerName ?? '',
+      projectManagerContact: initialData.projectManagerContact ?? '',
+      spocName: initialData.spocName ?? '',
+      spocContact: initialData.spocContact ?? '',
+      usp: initialData.usp ?? '',
+      details: initialData.details ?? '',
+      amenities: initialData.amenities ?? [],
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const set = (k: keyof FormState, v: unknown) => {
     if (errors[k as string]) setErrors(prev => { const n = { ...prev }; delete n[k as string]; return n; });
@@ -224,6 +282,17 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     };
   };
 
+  const handleApprove = async () => {
+    if (!projectId) return;
+    setSubmitting(true);
+    try {
+      await api.approveProject(projectId);
+      onSuccess(); onClose();
+    } catch (ex: unknown) {
+      setApiError(ex instanceof Error ? ex.message : 'Failed to approve project.');
+    } finally { setSubmitting(false); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) { setApiError('Please fix the highlighted fields.'); return; }
@@ -232,10 +301,14 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     if (anyUploading) { setApiError('Please wait for all uploads to finish.'); return; }
     setApiError(''); setSubmitting(true);
     try {
-      await api.addProperty(buildPayload());
+      if (projectId) {
+        await api.updateProject(projectId, buildPayload());
+      } else {
+        await api.addProperty(buildPayload());
+      }
       onSuccess(); onClose();
     } catch (ex: unknown) {
-      setApiError(ex instanceof Error ? ex.message : 'Failed to create project. Please try again.');
+      setApiError(ex instanceof Error ? ex.message : 'Failed to save project. Please try again.');
     } finally { setSubmitting(false); }
   };
 
@@ -249,7 +322,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
         {/* Header */}
         <div className="flex items-center justify-between px-8 pt-7 pb-4 border-b border-slate-100 flex-shrink-0">
           <div>
-            <h4 className="text-lg font-bold text-slate-900">{userRole === 'super_admin' ? 'Add' : 'Submit'} {typeLabel[pt]}</h4>
+            <h4 className="text-lg font-bold text-slate-900">{projectId ? 'Edit' : (userRole === 'super_admin' ? 'Add' : 'Submit')} {typeLabel[pt]}</h4>
             {userRole !== 'super_admin' && <p className="text-xs text-amber-600 mt-0.5">Will be submitted for super admin approval</p>}
           </div>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-100">
@@ -581,9 +654,15 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                 className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all">
                 Cancel
               </button>
+              {projectId && initialData?.status === 'PENDING_APPROVAL' && userRole === 'super_admin' && (
+                <button type="button" onClick={handleApprove} disabled={submitting}
+                  className="px-7 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all disabled:opacity-60">
+                  {submitting ? 'Processing…' : 'Approve Project'}
+                </button>
+              )}
               <button type="submit" disabled={submitting}
                 className="px-7 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all disabled:opacity-60">
-                {submitting ? 'Submitting…' : userRole === 'super_admin' ? `Add ${typeLabel[pt]}` : 'Submit for Approval'}
+                {submitting ? 'Submitting…' : projectId ? 'Save Changes' : (userRole === 'super_admin' ? `Add ${typeLabel[pt]}` : 'Submit for Approval')}
               </button>
             </div>
           </div>
