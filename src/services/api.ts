@@ -58,10 +58,9 @@ export type PossessionStatus = 'RTMI' | 'UNDER_CONSTRUCTION' | 'EOI';
 export type DensityType = 'LOW_DENSITY' | 'MEDIUM_DENSITY' | 'HIGH_DENSITY';
 export type ProjectZone = 'WEST' | 'EAST' | 'SOUTH' | 'NORTH' | 'CENTRAL';
 export type ProjectStatus = 'ACTIVE' | 'INACTIVE' | 'COMING_SOON' | 'PENDING_APPROVAL';
-export type BhkType = 'BHK_1' | 'BHK_2' | 'BHK_3' | 'BHK_4' | 'BHK_5' | 'VILLA' | 'STUDIO';
 
 export interface ProjectConfiguration {
-  bhkType: BhkType;
+  bhkCount: number;
   minSft: number;
   maxSft: number;
   unitCount: number;
@@ -108,7 +107,7 @@ export interface CreateProjectInput {
   status?: ProjectStatus;
   leadRegistrationStatus?: string;
   configurations?: ProjectConfiguration[];
-  photos?: Array<{ url: string; displayOrder: number }>;
+  photos?: string[];
   amenities?: string[];
 }
 

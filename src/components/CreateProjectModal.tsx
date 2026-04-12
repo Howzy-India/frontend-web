@@ -4,7 +4,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { storage } from '../firebase';
 import {
   api, CreateProjectInput, PropertyType, ProjectType, ProjectSegment,
-  PossessionStatus, DensityType, ProjectZone, ProjectStatus, BhkType,
+  PossessionStatus, DensityType, ProjectZone, ProjectStatus,
 } from '../services/api';
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ const AMENITY_OPTIONS = [
 ];
 
 // ── Types ────────────────────────────────────────────────────────────
-interface ConfigRow { bhkType: BhkType | ''; minSft: string; maxSft: string; unitCount: string; }
+interface ConfigRow { bhkCount: string; minSft: string; maxSft: string; unitCount: string; }
 interface MediaFile  { file: File | null; uploadedUrl: string; uploading: boolean; error: string; }
 const emptyMedia = (): MediaFile => ({ file: null, uploadedUrl: '', uploading: false, error: '' });
 
@@ -50,7 +50,7 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
     state: 'Telangana', pincode: '', landmark: '', mapLink: '',
     landParcel: '', numberOfTowers: '', totalUnits: '', availableUnits: '',
     density: '', sftCostingPerSqft: '', emiStartsFrom: '',
-    configurations: [{ bhkType: '', minSft: '', maxSft: '', unitCount: '' }],
+    configurations: [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
     photoFiles: [emptyMedia()], videoFile: emptyMedia(), brochureFile: emptyMedia(), agreementFile: emptyMedia(),
     projectManagerName: '', projectManagerContact: '', spocName: '', spocContact: '',
     usp: '', details: '', amenities: [],
@@ -190,11 +190,11 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     const num = (v: string) => v.trim() ? Number(v) : undefined;
     const str = (v: string) => v.trim() || undefined;
     const configs = form.configurations
-      .filter(c => c.bhkType && c.minSft && c.maxSft && c.unitCount)
-      .map(c => ({ bhkType: c.bhkType as BhkType, minSft: Number(c.minSft), maxSft: Number(c.maxSft), unitCount: Number(c.unitCount) }));
+      .filter(c => c.bhkCount && c.minSft && c.maxSft && c.unitCount)
+      .map(c => ({ bhkCount: Number(c.bhkCount), minSft: Number(c.minSft), maxSft: Number(c.maxSft), unitCount: Number(c.unitCount) }));
     const photos = form.photoFiles
       .filter(m => m.uploadedUrl)
-      .map((m, i) => ({ url: m.uploadedUrl, displayOrder: i }));
+      .map(m => m.uploadedUrl);
     return {
       name: form.name.trim(), developerName: form.developerName.trim(),
       reraNumber: str(form.reraNumber),
@@ -435,7 +435,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
             <div className={sec()}>
               <div className="flex items-center justify-between">
                 <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">4</span> BHK Configurations</p>
-                <button type="button" onClick={() => setConfigs(prev => [...prev, { bhkType: '', minSft: '', maxSft: '', unitCount: '' }])}
+                <button type="button" onClick={() => setConfigs(prev => [...prev, { bhkCount: '', minSft: '', maxSft: '', unitCount: '' }])}
                   className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Add Row
                 </button>
@@ -444,13 +444,12 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                 {form.configurations.map((row, i) => (
                   <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-start">
                     <div>
-                      {i === 0 && <label className={lc()}>BHK Type</label>}
-                      <select value={row.bhkType} onChange={e => updateConfig(i, 'bhkType', e.target.value)} className={fc('bg-white')}>
-                        <option value="">Type…</option>
-                        <option value="BHK_1">1 BHK</option><option value="BHK_2">2 BHK</option>
-                        <option value="BHK_3">3 BHK</option><option value="BHK_4">4 BHK</option>
-                        <option value="BHK_5">5 BHK</option><option value="VILLA">Villa</option>
-                        <option value="STUDIO">Studio</option>
+                      {i === 0 && <label className={lc()}>BHK Count</label>}
+                      <select value={row.bhkCount} onChange={e => updateConfig(i, 'bhkCount', e.target.value)} className={fc('bg-white')}>
+                        <option value="">Count…</option>
+                        <option value="1">1 BHK</option><option value="2">2 BHK</option>
+                        <option value="3">3 BHK</option><option value="4">4 BHK</option>
+                        <option value="5">5 BHK</option>
                       </select>
                     </div>
                     <div>
