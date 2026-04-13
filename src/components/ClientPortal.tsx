@@ -1610,18 +1610,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                       >
                         <RefreshCw className="w-4 h-4" /> Add Resale
                       </button>
-                      <button 
-                        onClick={() => setIsFarmLandModalOpen(true)}
-                        className="flex items-center gap-2 bg-amber-50 text-amber-600 px-4 py-2 rounded-xl font-bold hover:bg-amber-100 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Add Farm Land
-                      </button>
-                      <button 
-                        onClick={() => setIsPlotsModalOpen(true)}
-                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Add Plot
-                      </button>
+
                     </div>
                   </div>
 
