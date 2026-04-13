@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePagination } from '../hooks/usePagination';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNotifications } from '../hooks/useNotifications';
@@ -6,6 +6,8 @@ import { useAuth } from '../hooks/useAuth';
 import { TEST_IDS } from '../constants/testIds';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 import { 
   LayoutDashboard, 
   Users, 
@@ -579,7 +581,26 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
     address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
   });
   const [addSubmitting, setAddSubmitting] = useState(false);
+  const [floorPlanUploading, setFloorPlanUploading] = useState(false);
+  const [floorPlanFileName, setFloorPlanFileName] = useState('');
+  const floorPlanInputRef = useRef<HTMLInputElement>(null);
   const apiService = api;
+
+  const handleFloorPlanUpload = async (file: File) => {
+    setFloorPlanUploading(true);
+    setFloorPlanFileName(file.name);
+    try {
+      const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      setAddForm(f => ({ ...f, floorPlan: url }));
+    } catch {
+      setFloorPlanFileName('');
+      setAddForm(f => ({ ...f, floorPlan: '' }));
+    } finally {
+      setFloorPlanUploading(false);
+    }
+  };
 
   const fetchList = React.useCallback(async () => {
     setLoading(true);
@@ -637,6 +658,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
         ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
         address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
       });
+      setFloorPlanFileName('');
       fetchList();
     } catch (e: any) {
       alert(e?.message ?? 'Failed to add');
@@ -800,8 +822,24 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="add-resale-floor-plan" className="block text-xs font-semibold text-slate-600 mb-1">Floor Plan URL</label>
-              <input id="add-resale-floor-plan" value={addForm.floorPlan} onChange={e => setAddForm(f => ({...f, floorPlan: e.target.value}))} placeholder="https://..." className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Floor Plan (image/PDF)</label>
+              {addForm.floorPlan ? (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm">
+                  <a href={addForm.floorPlan} target="_blank" rel="noopener noreferrer" className="text-emerald-700 font-medium truncate flex-1 hover:underline">
+                    {floorPlanFileName || 'Floor Plan uploaded'}
+                  </a>
+                  <button type="button" onClick={() => { setAddForm(f => ({ ...f, floorPlan: '' })); setFloorPlanFileName(''); }}
+                    className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0 text-xs">✕</button>
+                </div>
+              ) : (
+                <button type="button" disabled={floorPlanUploading}
+                  onClick={() => floorPlanInputRef.current?.click()}
+                  className="w-full flex items-center gap-2 border-2 border-dashed border-slate-200 hover:border-amber-400 rounded-lg px-3 py-2 text-sm text-slate-500 transition-colors disabled:opacity-60">
+                  {floorPlanUploading ? 'Uploading…' : 'Choose image or PDF…'}
+                </button>
+              )}
+              <input ref={floorPlanInputRef} type="file" accept="image/*,application/pdf" className="hidden" disabled={floorPlanUploading}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleFloorPlanUpload(f); e.target.value = ''; }} />
             </div>
             <div className="sm:col-span-2 flex gap-3">
               <button type="submit" data-testid={TEST_IDS.SUPER_ADMIN.RESALE_SUBMIT_BTN} disabled={addSubmitting} className="bg-amber-600 text-white px-5 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors">
