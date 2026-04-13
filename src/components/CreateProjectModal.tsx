@@ -33,6 +33,9 @@ const AMENITY_OPTIONS = [
   'Security', 'Sewage Treatment Plant', 'Swimming Pool', 'Table Tennis',
   'Tennis Court', "Visitor's Parking", 'Yoga Area', 'Parking',
 ];
+const PHONE_REGEX = /^(\+91|91|0)?[6-9]\d{9}$/;
+const MIN_PHOTOS = 4;
+const MAX_PHOTOS = 100;
 
 // ── Types ────────────────────────────────────────────────────────────
 interface ConfigRow { bhkCount: string; minSft: string; maxSft: string; unitCount: string; }
@@ -247,11 +250,79 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
   // ── Validation ────────────────────────────────────────────────────
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim())            e.name           = 'Project name is required.';
-    if (!form.developerName.trim())   e.developerName  = 'Developer name is required.';
-    if (!form.city.trim())            e.city           = 'City is required.';
-    if (!form.zone)                   e.zone           = 'Zone is required.';
-    if (!form.cluster)                e.cluster        = 'Cluster is required.';
+
+    // Section 1 – Basic Information
+    if (!form.name.trim())             e.name            = 'Project name is required.';
+    if (!form.developerName.trim())    e.developerName   = 'Developer name is required.';
+    if (!form.reraNumber.trim())       e.reraNumber      = 'RERA number is required.';
+    if (!form.projectType)             e.projectType     = 'Project type is required.';
+    if (!form.projectSegment)          e.projectSegment  = 'Segment is required.';
+    if (!form.possessionStatus)        e.possessionStatus = 'Possession status is required.';
+    if (!form.possessionDate.trim())   e.possessionDate  = 'Possession date is required.';
+
+    // Section 2 – Location
+    if (!form.address.trim())          e.address         = 'Full address is required.';
+    if (!form.zone)                    e.zone            = 'Zone is required.';
+    if (!form.cluster)                 e.cluster         = 'Cluster is required.';
+    if (!form.area.trim())             e.area            = 'Area / suburb is required.';
+    if (!form.city.trim())             e.city            = 'City is required.';
+    if (!form.pincode.trim())          e.pincode         = 'Pincode is required.';
+    if (!form.landmark.trim())         e.landmark        = 'Landmark is required.';
+    if (!form.mapLink.trim())          e.mapLink         = 'Google Maps link is required.';
+
+    // Section 3 – Project Details
+    if (!form.landParcel.trim())       e.landParcel      = 'Land parcel is required.';
+    if (!form.numberOfTowers.trim())   e.numberOfTowers  = 'Number of towers is required.';
+    if (!form.density)                 e.density         = 'Density is required.';
+    if (!form.totalUnits.trim())       e.totalUnits      = 'Total units is required.';
+    if (!form.availableUnits.trim())   e.availableUnits  = 'Available units is required.';
+    if (!form.sftCostingPerSqft.trim()) e.sftCostingPerSqft = 'SFT costing is required.';
+    if (!form.emiStartsFrom.trim())    e.emiStartsFrom   = 'EMI starts from is required.';
+
+    // Section 4 – BHK Configurations
+    const hasValidConfig = form.configurations.some(c => c.bhkCount && c.minSft && c.maxSft && c.unitCount);
+    if (!hasValidConfig)               e.configurations  = 'At least one complete BHK configuration is required.';
+
+    // Section 5 – Media & Files
+    const uploadedPhotoCount = form.photoFiles.filter(m => m.uploadedUrl).length;
+    if (uploadedPhotoCount < MIN_PHOTOS)
+      e.photoFiles = `At least ${MIN_PHOTOS} photos are required (${uploadedPhotoCount} uploaded).`;
+    if (!form.videoFile.uploadedUrl)   e.videoFile       = '3D / walkthrough video is required.';
+    if (!form.brochureFile.uploadedUrl) e.brochureFile   = 'Brochure is required.';
+    if (!form.agreementFile.uploadedUrl) e.agreementFile = 'Onboarding agreement is required.';
+
+    // Section 6 – Team & Contacts
+    if (!form.projectManagerName.trim()) e.projectManagerName = 'Project Manager name is required.';
+    if (!form.projectManagerContact.trim()) {
+      e.projectManagerContact = 'Project Manager contact is required.';
+    } else if (!PHONE_REGEX.test(form.projectManagerContact.replace(/\s/g, ''))) {
+      e.projectManagerContact = 'Enter a valid 10-digit Indian mobile number.';
+    }
+    if (!form.spocName.trim())         e.spocName        = 'SPOC name is required.';
+    if (!form.spocContact.trim()) {
+      e.spocContact = 'SPOC contact is required.';
+    } else if (!PHONE_REGEX.test(form.spocContact.replace(/\s/g, ''))) {
+      e.spocContact = 'Enter a valid 10-digit Indian mobile number.';
+    }
+    // Cross-field: PM ≠ SPOC
+    if (
+      form.projectManagerName.trim() && form.spocName.trim() &&
+      form.projectManagerName.trim().toLowerCase() === form.spocName.trim().toLowerCase()
+    ) {
+      e.spocName = 'SPOC Name must differ from Project Manager Name.';
+    }
+    if (
+      form.projectManagerContact.trim() && form.spocContact.trim() &&
+      form.projectManagerContact.replace(/\s/g, '') === form.spocContact.replace(/\s/g, '')
+    ) {
+      e.spocContact = 'SPOC Contact must differ from Project Manager Contact.';
+    }
+
+    // Section 7 – Description & Amenities
+    if (!form.usp.trim())              e.usp             = 'USP is required.';
+    if (!form.details.trim())          e.details         = 'Full description is required.';
+    if (form.amenities.length === 0)   e.amenities       = 'Select at least one amenity.';
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -360,14 +431,14 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <input value={form.developerName} onChange={e => set('developerName', e.target.value)} className={errors.developerName ? fcE() : fc()} placeholder="Builder name" />
                 </div>
                 <div>
-                  <label className={lc()}>RERA Number</label>
-                  <input value={form.reraNumber} onChange={e => set('reraNumber', e.target.value)} className={fc()} placeholder="RERA/P123456…" />
+                  <label className={lc()}>RERA Number <span className="text-red-500">*</span>{errors.reraNumber && <ErrTip msg={errors.reraNumber} />}</label>
+                  <input value={form.reraNumber} onChange={e => set('reraNumber', e.target.value)} className={errors.reraNumber ? fcE() : fc()} placeholder="RERA/P123456…" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Project Type</label>
-                  <select value={form.projectType} onChange={e => set('projectType', e.target.value as ProjectType | '')} className={fc('bg-white')}>
+                  <label className={lc()}>Project Type <span className="text-red-500">*</span>{errors.projectType && <ErrTip msg={errors.projectType} />}</label>
+                  <select value={form.projectType} onChange={e => set('projectType', e.target.value as ProjectType | '')} className={errors.projectType ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
                     <option value="GATED_SOCIETY">Gated Society</option>
                     <option value="SEMI_GATED">Semi Gated</option>
@@ -377,8 +448,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   </select>
                 </div>
                 <div>
-                  <label className={lc()}>Segment</label>
-                  <select value={form.projectSegment} onChange={e => set('projectSegment', e.target.value as ProjectSegment | '')} className={fc('bg-white')}>
+                  <label className={lc()}>Segment <span className="text-red-500">*</span>{errors.projectSegment && <ErrTip msg={errors.projectSegment} />}</label>
+                  <select value={form.projectSegment} onChange={e => set('projectSegment', e.target.value as ProjectSegment | '')} className={errors.projectSegment ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
                     <option value="PREMIUM">Premium</option>
                     <option value="ECONOMY">Economy</option>
@@ -388,8 +459,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Possession Status</label>
-                  <select value={form.possessionStatus} onChange={e => set('possessionStatus', e.target.value as PossessionStatus | '')} className={fc('bg-white')}>
+                  <label className={lc()}>Possession Status <span className="text-red-500">*</span>{errors.possessionStatus && <ErrTip msg={errors.possessionStatus} />}</label>
+                  <select value={form.possessionStatus} onChange={e => set('possessionStatus', e.target.value as PossessionStatus | '')} className={errors.possessionStatus ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
                     <option value="RTMI">RTMI – Ready to Move In</option>
                     <option value="UNDER_CONSTRUCTION">Under Construction</option>
@@ -397,8 +468,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   </select>
                 </div>
                 <div>
-                  <label className={lc()}>Possession Date</label>
-                  <input value={form.possessionDate} onChange={e => set('possessionDate', e.target.value)} className={fc()} placeholder="e.g. Jun-29" />
+                  <label className={lc()}>Possession Date <span className="text-red-500">*</span>{errors.possessionDate && <ErrTip msg={errors.possessionDate} />}</label>
+                  <input value={form.possessionDate} onChange={e => set('possessionDate', e.target.value)} className={errors.possessionDate ? fcE() : fc()} placeholder="e.g. Jun-29" />
                 </div>
               </div>
             </div>
@@ -407,8 +478,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
             <div className={sec()}>
               <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">2</span> Location</p>
               <div>
-                <label className={lc()}>Full Address</label>
-                <textarea value={form.address} onChange={e => set('address', e.target.value)} rows={2} className={fc()} placeholder="Street address, landmark…" />
+                <label className={lc()}>Full Address <span className="text-red-500">*</span>{errors.address && <ErrTip msg={errors.address} />}</label>
+                <textarea value={form.address} onChange={e => set('address', e.target.value)} rows={2} className={errors.address ? fcE() : fc()} placeholder="Street address, landmark…" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -430,8 +501,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Area / Suburb</label>
-                  <input value={form.area} onChange={e => set('area', e.target.value)} className={fc()} placeholder="e.g. Nanakramguda" />
+                  <label className={lc()}>Area / Suburb <span className="text-red-500">*</span>{errors.area && <ErrTip msg={errors.area} />}</label>
+                  <input value={form.area} onChange={e => set('area', e.target.value)} className={errors.area ? fcE() : fc()} placeholder="e.g. Nanakramguda" />
                 </div>
                 <div>
                   <label className={lc()}>City <span className="text-red-500">*</span>{errors.city && <ErrTip msg={errors.city} />}</label>
@@ -448,18 +519,18 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   </select>
                 </div>
                 <div>
-                  <label className={lc()}>Pincode</label>
-                  <input value={form.pincode} onChange={e => set('pincode', e.target.value)} className={fc()} placeholder="500032" maxLength={6} />
+                  <label className={lc()}>Pincode <span className="text-red-500">*</span>{errors.pincode && <ErrTip msg={errors.pincode} />}</label>
+                  <input value={form.pincode} onChange={e => set('pincode', e.target.value)} className={errors.pincode ? fcE() : fc()} placeholder="500032" maxLength={6} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Landmark</label>
-                  <input value={form.landmark} onChange={e => set('landmark', e.target.value)} className={fc()} placeholder="Near HITEC City" />
+                  <label className={lc()}>Landmark <span className="text-red-500">*</span>{errors.landmark && <ErrTip msg={errors.landmark} />}</label>
+                  <input value={form.landmark} onChange={e => set('landmark', e.target.value)} className={errors.landmark ? fcE() : fc()} placeholder="Near HITEC City" />
                 </div>
                 <div>
-                  <label className={lc()}>Google Maps Pin URL</label>
-                  <input value={form.mapLink} onChange={e => set('mapLink', e.target.value)} className={fc()} placeholder="https://maps.google.com/…" type="url" />
+                  <label className={lc()}>Google Maps Pin URL <span className="text-red-500">*</span>{errors.mapLink && <ErrTip msg={errors.mapLink} />}</label>
+                  <input value={form.mapLink} onChange={e => set('mapLink', e.target.value)} className={errors.mapLink ? fcE() : fc()} placeholder="https://maps.google.com/…" type="url" />
                 </div>
               </div>
             </div>
@@ -469,16 +540,16 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">3</span> Project Details</p>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className={lc()}>Land Parcel (Acres)</label>
-                  <input type="number" min="0" step="0.01" value={form.landParcel} onChange={e => set('landParcel', e.target.value)} className={fc()} placeholder="5.0" />
+                  <label className={lc()}>Land Parcel (Acres) <span className="text-red-500">*</span>{errors.landParcel && <ErrTip msg={errors.landParcel} />}</label>
+                  <input type="number" min="0" step="0.01" value={form.landParcel} onChange={e => set('landParcel', e.target.value)} className={errors.landParcel ? fcE() : fc()} placeholder="5.0" />
                 </div>
                 <div>
-                  <label className={lc()}>No. of Towers</label>
-                  <input type="number" min="1" value={form.numberOfTowers} onChange={e => set('numberOfTowers', e.target.value)} className={fc()} placeholder="8" />
+                  <label className={lc()}>No. of Towers <span className="text-red-500">*</span>{errors.numberOfTowers && <ErrTip msg={errors.numberOfTowers} />}</label>
+                  <input type="number" min="1" value={form.numberOfTowers} onChange={e => set('numberOfTowers', e.target.value)} className={errors.numberOfTowers ? fcE() : fc()} placeholder="8" />
                 </div>
                 <div>
-                  <label className={lc()}>Density</label>
-                  <select value={form.density} onChange={e => set('density', e.target.value as DensityType | '')} className={fc('bg-white')}>
+                  <label className={lc()}>Density <span className="text-red-500">*</span>{errors.density && <ErrTip msg={errors.density} />}</label>
+                  <select value={form.density} onChange={e => set('density', e.target.value as DensityType | '')} className={errors.density ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
                     <option value="LOW_DENSITY">Low Density</option>
                     <option value="MEDIUM_DENSITY">Medium Density</option>
@@ -488,22 +559,22 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Total Units</label>
-                  <input type="number" min="1" value={form.totalUnits} onChange={e => set('totalUnits', e.target.value)} className={fc()} placeholder="500" />
+                  <label className={lc()}>Total Units <span className="text-red-500">*</span>{errors.totalUnits && <ErrTip msg={errors.totalUnits} />}</label>
+                  <input type="number" min="1" value={form.totalUnits} onChange={e => set('totalUnits', e.target.value)} className={errors.totalUnits ? fcE() : fc()} placeholder="500" />
                 </div>
                 <div>
-                  <label className={lc()}>Available Units</label>
-                  <input type="number" min="0" value={form.availableUnits} onChange={e => set('availableUnits', e.target.value)} className={fc()} placeholder="200" />
+                  <label className={lc()}>Available Units <span className="text-red-500">*</span>{errors.availableUnits && <ErrTip msg={errors.availableUnits} />}</label>
+                  <input type="number" min="0" value={form.availableUnits} onChange={e => set('availableUnits', e.target.value)} className={errors.availableUnits ? fcE() : fc()} placeholder="200" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>SFT Costing (₹/sqft)</label>
-                  <input type="number" min="0" value={form.sftCostingPerSqft} onChange={e => set('sftCostingPerSqft', e.target.value)} className={fc()} placeholder="7500" />
+                  <label className={lc()}>SFT Costing (₹/sqft) <span className="text-red-500">*</span>{errors.sftCostingPerSqft && <ErrTip msg={errors.sftCostingPerSqft} />}</label>
+                  <input type="number" min="0" value={form.sftCostingPerSqft} onChange={e => set('sftCostingPerSqft', e.target.value)} className={errors.sftCostingPerSqft ? fcE() : fc()} placeholder="7500" />
                 </div>
                 <div>
-                  <label className={lc()}>EMI Starts From</label>
-                  <input value={form.emiStartsFrom} onChange={e => set('emiStartsFrom', e.target.value)} className={fc()} placeholder="e.g. ₹20k/month" />
+                  <label className={lc()}>EMI Starts From <span className="text-red-500">*</span>{errors.emiStartsFrom && <ErrTip msg={errors.emiStartsFrom} />}</label>
+                  <input value={form.emiStartsFrom} onChange={e => set('emiStartsFrom', e.target.value)} className={errors.emiStartsFrom ? fcE() : fc()} placeholder="e.g. ₹20k/month" />
                 </div>
               </div>
             </div>
@@ -511,7 +582,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
             {/* ── Section: BHK Configurations ── */}
             <div className={sec()}>
               <div className="flex items-center justify-between">
-                <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">4</span> BHK Configurations</p>
+                <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">4</span> BHK Configurations {errors.configurations && <ErrTip msg={errors.configurations} />}</p>
                 <button type="button" onClick={() => setConfigs(prev => [...prev, { bhkCount: '', minSft: '', maxSft: '', unitCount: '' }])}
                   className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
                   <Plus className="w-3.5 h-3.5" /> Add Row
@@ -559,9 +630,15 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               {/* Photos */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className={lc()}>Project Photos</span>
-                  <button type="button" onClick={() => setPhotos(prev => [...prev, emptyMedia()])}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                  <span className={lc()}>
+                    Project Photos <span className="text-red-500">*</span>
+                    <span className="ml-1 text-slate-400 font-normal normal-case tracking-normal">({form.photoFiles.filter(m => m.uploadedUrl).length}/{MAX_PHOTOS} — min {MIN_PHOTOS})</span>
+                    {errors.photoFiles && <ErrTip msg={errors.photoFiles} />}
+                  </span>
+                  <button type="button"
+                    onClick={() => setPhotos(prev => prev.length < MAX_PHOTOS ? [...prev, emptyMedia()] : prev)}
+                    disabled={form.photoFiles.length >= MAX_PHOTOS}
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     <Plus className="w-3.5 h-3.5" /> Add Photo
                   </button>
                 </div>
@@ -583,14 +660,17 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               </div>
 
               <FileUploadField label="3D / Walkthrough Video" media={form.videoFile} accept="video/mp4,video/x-ms-wmv,.wmv" hint="MP4, WMV"
+                required fieldError={errors.videoFile}
                 onFileChange={f => handleUploadSingle('videoFile', f)}
                 onClear={() => updateSingle('videoFile', { file: null, uploadedUrl: '', error: '' })} />
 
               <FileUploadField label="Brochure" media={form.brochureFile} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hint="PDF, DOC, DOCX"
+                required fieldError={errors.brochureFile}
                 onFileChange={f => handleUploadSingle('brochureFile', f)}
                 onClear={() => updateSingle('brochureFile', { file: null, uploadedUrl: '', error: '' })} />
 
               <FileUploadField label="Onboarding Agreement" media={form.agreementFile} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hint="PDF, DOC, DOCX"
+                required fieldError={errors.agreementFile}
                 onFileChange={f => handleUploadSingle('agreementFile', f)}
                 onClear={() => updateSingle('agreementFile', { file: null, uploadedUrl: '', error: '' })} />
             </div>
@@ -600,22 +680,22 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
               <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">6</span> Team &amp; Contacts</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Project Manager Name</label>
-                  <input value={form.projectManagerName} onChange={e => set('projectManagerName', e.target.value)} className={fc()} placeholder="Full name" />
+                  <label className={lc()}>Project Manager Name <span className="text-red-500">*</span>{errors.projectManagerName && <ErrTip msg={errors.projectManagerName} />}</label>
+                  <input value={form.projectManagerName} onChange={e => set('projectManagerName', e.target.value)} className={errors.projectManagerName ? fcE() : fc()} placeholder="Full name" />
                 </div>
                 <div>
-                  <label className={lc()}>Project Manager Contact</label>
-                  <input value={form.projectManagerContact} onChange={e => set('projectManagerContact', e.target.value)} className={fc()} placeholder="+91 9876543210" />
+                  <label className={lc()}>Project Manager Contact <span className="text-red-500">*</span>{errors.projectManagerContact && <ErrTip msg={errors.projectManagerContact} />}</label>
+                  <input value={form.projectManagerContact} onChange={e => set('projectManagerContact', e.target.value)} className={errors.projectManagerContact ? fcE() : fc()} placeholder="9876543210" maxLength={13} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>SPOC Name</label>
-                  <input value={form.spocName} onChange={e => set('spocName', e.target.value)} className={fc()} placeholder="Site SPOC name" />
+                  <label className={lc()}>SPOC Name <span className="text-red-500">*</span>{errors.spocName && <ErrTip msg={errors.spocName} />}</label>
+                  <input value={form.spocName} onChange={e => set('spocName', e.target.value)} className={errors.spocName ? fcE() : fc()} placeholder="Site SPOC name" />
                 </div>
                 <div>
-                  <label className={lc()}>SPOC Contact</label>
-                  <input value={form.spocContact} onChange={e => set('spocContact', e.target.value)} className={fc()} placeholder="+91 9876543210" />
+                  <label className={lc()}>SPOC Contact <span className="text-red-500">*</span>{errors.spocContact && <ErrTip msg={errors.spocContact} />}</label>
+                  <input value={form.spocContact} onChange={e => set('spocContact', e.target.value)} className={errors.spocContact ? fcE() : fc()} placeholder="9876543210" maxLength={13} />
                 </div>
               </div>
             </div>
@@ -624,15 +704,17 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
             <div className={sec()}>
               <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">7</span> Description &amp; Amenities</p>
               <div>
-                <label className={lc()}>USP (Unique Selling Point)</label>
-                <input value={form.usp} onChange={e => set('usp', e.target.value)} className={fc()} placeholder="e.g. Only gated community with lake view" />
+                <label className={lc()}>USP (Unique Selling Point) <span className="text-red-500">*</span>{errors.usp && <ErrTip msg={errors.usp} />}</label>
+                <input value={form.usp} onChange={e => set('usp', e.target.value)} className={errors.usp ? fcE() : fc()} placeholder="e.g. Only gated community with lake view" />
               </div>
               <div>
-                <label className={lc()}>Full Description</label>
-                <textarea value={form.details} onChange={e => set('details', e.target.value)} rows={4} className={fc()} placeholder="Detailed project description…" />
+                <label className={lc()}>Full Description <span className="text-red-500">*</span>{errors.details && <ErrTip msg={errors.details} />}</label>
+                <textarea value={form.details} onChange={e => set('details', e.target.value)} rows={4} className={errors.details ? fcE() : fc()} placeholder="Detailed project description…" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">Amenities</p>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+                  Amenities <span className="text-red-500">*</span>{errors.amenities && <ErrTip msg={errors.amenities} />}
+                </p>
                 <div className="grid grid-cols-3 gap-2">
                   {AMENITY_OPTIONS.map(a => (
                     <label key={a} className="flex items-center gap-2 cursor-pointer group">
