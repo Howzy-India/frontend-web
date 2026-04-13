@@ -446,16 +446,23 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
                         <td className="p-4 text-slate-600">{row.type}</td>
                         <td className="p-4 text-slate-600">{row.date}</td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                            row.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            row.status === 'Rejected'  ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}>
-                            {row.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                            {row.status === 'Rejected'  && <XCircle className="w-3.5 h-3.5" />}
-                            {row.status === 'Pending'   && <Clock className="w-3.5 h-3.5" />}
-                            {row.status === 'Pending' ? 'Pending Approval' : row.status}
-                          </span>
+                          <div>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                              row.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              row.status === 'Rejected'  ? 'bg-red-50 text-red-700 border-red-200' :
+                              'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {row.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                              {row.status === 'Rejected'  && <XCircle className="w-3.5 h-3.5" />}
+                              {row.status === 'Pending'   && <Clock className="w-3.5 h-3.5" />}
+                              {row.status === 'Pending' ? 'Pending Approval' : row.status}
+                            </span>
+                            {row.status === 'Rejected' && row.rawProject?.rejectionReason && (
+                              <p className="text-xs text-red-600 mt-1 max-w-xs" title={row.rawProject.rejectionReason}>
+                                Reason: {row.rawProject.rejectionReason}
+                              </p>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-2">

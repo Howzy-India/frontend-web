@@ -9,6 +9,7 @@ export default function AdminVerificationPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
   const [remarks, setRemarks] = useState('');
+  const [remarksError, setRemarksError] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState('');
 
@@ -41,6 +42,7 @@ export default function AdminVerificationPanel() {
               status: 'Pending',
               date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
               isCloudProject: true,
+              rawProject: p,
               details: {
                 developerName: p.developerName,
                 submittedBy: p.submittedBy ?? p.createdBy,
@@ -73,6 +75,11 @@ export default function AdminVerificationPanel() {
   });
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    if (newStatus === 'Rejected' && !remarks.trim()) {
+      setRemarksError('Rejection reason is required.');
+      return;
+    }
+    setRemarksError('');
     const sub = submissions.find((s) => s.id === id);
     setProcessing(id);
     try {
@@ -80,7 +87,7 @@ export default function AdminVerificationPanel() {
         if (newStatus === 'Approved') {
           await api.approveProject(id);
         } else {
-          await api.rejectProject(id);
+          await api.rejectProject(id, remarks.trim());
         }
       } else {
         await api.updateSubmissionStatus(id, newStatus, remarks);
@@ -99,8 +106,11 @@ export default function AdminVerificationPanel() {
     }
   };
 
-  const handleInlineApprove = (id: string) => handleStatusChange(id, 'Approved');
-  const handleInlineReject = (id: string) => handleStatusChange(id, 'Rejected');
+  const openReview = (sub: any) => {
+    setSelectedSubmission(sub);
+    setRemarks(sub.details?.remarks || '');
+    setRemarksError('');
+  };
 
   return (
     <div className="space-y-6">
@@ -184,7 +194,7 @@ export default function AdminVerificationPanel() {
                         <span className="text-slate-600">{sub.type}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-slate-600">{sub.details?.ownerName || sub.details?.builderName || sub.details?.partnerName || sub.email}</td>
+                    <td className="p-4 text-slate-600">{sub.details?.ownerName || sub.details?.builderName || sub.details?.partnerName || sub.details?.submittedBy || sub.email}</td>
                     <td className="p-4 text-slate-600">{sub.date}</td>
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -199,35 +209,13 @@ export default function AdminVerificationPanel() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      {sub.isCloudProject && sub.status === 'Pending' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleInlineApprove(sub.id)}
-                            disabled={processing === sub.id}
-                            className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleInlineReject(sub.id)}
-                            disabled={processing === sub.id}
-                            className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => {
-                            setSelectedSubmission(sub);
-                            setRemarks(sub.details?.remarks || '');
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Review
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => openReview(sub)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                      >
+                        <Eye className="w-4 h-4" />
+                        Review
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -280,92 +268,266 @@ export default function AdminVerificationPanel() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Details Section */}
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Basic Information</h3>
-                      <div className="space-y-3">
-                        {Object.entries(selectedSubmission.details || {})
-                          .filter(([key]) => !['documents', 'media', 'remarks'].includes(key))
-                          .map(([key, value]) => (
-                          <div key={key} className="flex flex-col">
-                            <span className="text-xs font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                            <span className="text-sm font-bold text-slate-900">
-                              {Array.isArray(value) ? value.join(', ') : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Documents & Media Section */}
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Uploaded Documents</h3>
-                      <div className="space-y-2">
-                        {selectedSubmission.details?.documents?.map((doc: string, i: number) => (
-                          <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <FileText className="w-5 h-5 text-indigo-500" />
-                            <span className="text-sm font-medium text-slate-700">{doc}</span>
-                            <button className="ml-auto text-xs font-bold text-indigo-600 hover:underline">View</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Media</h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        {selectedSubmission.details?.media?.map((media: string, i: number) => (
-                          <div key={i} className="relative aspect-video bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden group">
-                            {media.endsWith('.mp4') ? <Video className="w-6 h-6 text-slate-400" /> : <ImageIcon className="w-6 h-6 text-slate-400" />}
-                            <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <button className="text-xs font-bold text-white bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">View</button>
+                {selectedSubmission.isCloudProject ? (
+                  <CloudProjectDetail
+                    project={selectedSubmission.rawProject}
+                    remarks={remarks}
+                    setRemarks={setRemarks}
+                    remarksError={remarksError}
+                    setRemarksError={setRemarksError}
+                    processing={processing === selectedSubmission.id}
+                    status={selectedSubmission.status}
+                    onApprove={() => handleStatusChange(selectedSubmission.id, 'Approved')}
+                    onReject={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Details Section */}
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Basic Information</h3>
+                        <div className="space-y-3">
+                          {Object.entries(selectedSubmission.details || {})
+                            .filter(([key]) => !['documents', 'media', 'remarks'].includes(key))
+                            .map(([key, value]) => (
+                            <div key={key} className="flex flex-col">
+                              <span className="text-xs font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                              <span className="text-sm font-bold text-slate-900">
+                                {Array.isArray(value) ? value.join(', ') : String(value)}
+                              </span>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Verification Actions */}
-                    <div className="pt-6 border-t border-slate-100">
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Verification Actions</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Verification Remarks</label>
-                          <textarea 
-                            rows={3}
-                            value={remarks}
-                            onChange={(e) => setRemarks(e.target.value)}
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
-                            placeholder="Add notes about the verification..."
-                          />
-                        </div>
-                        <div className="flex gap-3">
-                          <button 
-                            onClick={() => handleStatusChange(selectedSubmission.id, 'Approved')}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors"
-                          >
-                            <CheckCircle2 className="w-4 h-4" /> Approve
-                          </button>
-                          <button 
-                            onClick={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition-colors"
-                          >
-                            <XCircle className="w-4 h-4" /> Reject
-                          </button>
+                    {/* Documents & Media + Actions */}
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Uploaded Documents</h3>
+                        <div className="space-y-2">
+                          {selectedSubmission.details?.documents?.map((doc: string, i: number) => (
+                            <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                              <FileText className="w-5 h-5 text-indigo-500" />
+                              <span className="text-sm font-medium text-slate-700">{doc}</span>
+                              <button className="ml-auto text-xs font-bold text-indigo-600 hover:underline">View</button>
+                            </div>
+                          ))}
                         </div>
                       </div>
+
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Media</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          {selectedSubmission.details?.media?.map((media: string, i: number) => (
+                            <div key={i} className="relative aspect-video bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center overflow-hidden group">
+                              {media.endsWith('.mp4') ? <Video className="w-6 h-6 text-slate-400" /> : <ImageIcon className="w-6 h-6 text-slate-400" />}
+                              <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button className="text-xs font-bold text-white bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm">View</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <VerificationActions
+                        remarks={remarks}
+                        setRemarks={setRemarks}
+                        remarksError={remarksError}
+                        setRemarksError={setRemarksError}
+                        processing={processing === selectedSubmission.id}
+                        status={selectedSubmission.status}
+                        onApprove={() => handleStatusChange(selectedSubmission.id, 'Approved')}
+                        onReject={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
+                      />
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+interface VerificationActionsProps {
+  remarks: string;
+  setRemarks: (v: string) => void;
+  remarksError: string;
+  setRemarksError: (v: string) => void;
+  processing: boolean;
+  status: string;
+  onApprove: () => void;
+  onReject: () => void;
+}
+
+function VerificationActions({ remarks, setRemarks, remarksError, setRemarksError, processing, status, onApprove, onReject }: VerificationActionsProps) {
+  return (
+    <div className="pt-6 border-t border-slate-100">
+      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Verification Actions</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Rejection Reason <span className="text-red-500 text-xs">(required when rejecting)</span>
+          </label>
+          <textarea 
+            rows={3}
+            value={remarks}
+            onChange={(e) => { setRemarks(e.target.value); if (e.target.value.trim()) setRemarksError(''); }}
+            className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none ${remarksError ? 'border-red-400' : 'border-slate-200'}`}
+            placeholder="Add notes or rejection reason..."
+          />
+          {remarksError && <p className="text-xs text-red-500 mt-1">{remarksError}</p>}
+        </div>
+        {status === 'Pending' && (
+          <div className="flex gap-3">
+            <button 
+              onClick={onApprove}
+              disabled={processing}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              <CheckCircle2 className="w-4 h-4" /> Approve
+            </button>
+            <button 
+              onClick={onReject}
+              disabled={processing}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              <XCircle className="w-4 h-4" /> Reject
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface CloudProjectDetailProps extends VerificationActionsProps {
+  project: Record<string, any> | null;
+}
+
+function CloudProjectDetail({ project, ...actionsProps }: CloudProjectDetailProps) {
+  if (!project) return <p className="text-slate-500 text-sm">No project data available.</p>;
+
+  const infoFields = [
+    ['Project Name', project.name],
+    ['Developer', project.developerName],
+    ['RERA Number', project.reraNumber],
+    ['Property Type', project.propertyType],
+    ['Project Type', project.projectType],
+    ['Segment', project.projectSegment],
+    ['Possession Status', project.possessionStatus],
+    ['Possession Date', project.possessionDate],
+  ];
+  const locationFields = [
+    ['Address', project.address],
+    ['Zone', project.zone],
+    ['Cluster / Location', project.location],
+    ['Area', project.area],
+    ['City', project.city],
+    ['State', project.state],
+    ['Pincode', project.pincode],
+    ['Landmark', project.landmark],
+  ];
+  const detailFields = [
+    ['Land Parcel (Acres)', project.landParcel],
+    ['No. of Towers', project.numberOfTowers],
+    ['Total Units', project.totalUnits],
+    ['Available Units', project.availableUnits],
+    ['Density', project.density],
+    ['SFT Costing (₹/sqft)', project.sftCostingPerSqft],
+    ['EMI Starts From', project.emiStartsFrom],
+  ];
+  const pricingFields = [
+    ['2 BHK Price (₹)', project.pricing?.twoBhk],
+    ['3 BHK Price (₹)', project.pricing?.threeBhk],
+    ['4 BHK Price (₹)', project.pricing?.fourBhk],
+  ];
+  const contactFields = [
+    ['Project Manager', project.projectManager?.name],
+    ['PM Contact', project.projectManager?.contact],
+    ['SPOC', project.spoc?.name],
+    ['SPOC Contact', project.spoc?.contact],
+    ['Submitted By', project.createdBy],
+  ];
+
+  const renderSection = (title: string, fields: [string, any][]) => {
+    const visible = fields.filter(([, v]) => v !== null && v !== undefined && v !== '');
+    if (!visible.length) return null;
+    return (
+      <div className="mb-6">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">{title}</h3>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {visible.map(([label, value]) => (
+            <div key={label} className="flex flex-col">
+              <span className="text-xs font-medium text-slate-500">{label}</span>
+              <span className="text-sm font-semibold text-slate-900">{String(value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        {renderSection('Basic Information', infoFields)}
+        {renderSection('Location', locationFields)}
+        {renderSection('Site Details', detailFields)}
+        {renderSection('Pricing', pricingFields)}
+        {renderSection('Team Contacts', contactFields)}
+        {(project.usp || project.teaser || project.details) && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Marketing</h3>
+            {project.usp && <div className="mb-2"><span className="text-xs font-medium text-slate-500 block">USP</span><span className="text-sm text-slate-900">{project.usp}</span></div>}
+            {project.teaser && <div className="mb-2"><span className="text-xs font-medium text-slate-500 block">Teaser</span><span className="text-sm text-slate-900">{project.teaser}</span></div>}
+            {project.details && <div><span className="text-xs font-medium text-slate-500 block">Description</span><span className="text-sm text-slate-900">{project.details}</span></div>}
+          </div>
+        )}
+        {project.configurations?.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Configurations</h3>
+            <div className="space-y-2">
+              {project.configurations.map((c: any, i: number) => (
+                <div key={i} className="text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+                  {c.bhkCount} BHK — {c.minSft}–{c.maxSft} sqft ({c.unitCount} units)
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {project.amenities?.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Amenities</h3>
+            <div className="flex flex-wrap gap-2">
+              {project.amenities.map((a: string, i: number) => (
+                <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">{a}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {project.photos?.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Photos</h3>
+            <div className="flex flex-wrap gap-2">
+              {project.photos.map((url: string, i: number) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline">Photo {i + 1}</a>
+              ))}
+            </div>
+          </div>
+        )}
+        {project.mapLink && (
+          <div className="mb-6">
+            <a href={project.mapLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline font-medium">View on Google Maps</a>
+          </div>
+        )}
+      </div>
+      <div>
+        <VerificationActions {...actionsProps} />
+      </div>
     </div>
   );
 }
