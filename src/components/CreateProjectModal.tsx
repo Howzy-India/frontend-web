@@ -11,8 +11,21 @@ import {
 const CITY_OPTIONS   = ['Hyderabad'] as const;
 const STATE_OPTIONS  = ['Telangana'] as const;
 const CLUSTER_OPTIONS = [
-  'Neopolis', 'Kokapet', 'Gachibowli', 'Miyapur',
-  'Bachupally', 'LB Nagar', 'Kothapet', 'Uppal',
+  // West
+  'Financial District', 'Gachibowli', 'Hitech City', 'Kondapur', 'Kokapet',
+  'Madhapur', 'Manikonda', 'Nanakramguda', 'Neopolis', 'Puppalaguda',
+  // North
+  'Bachupally', 'Dundigal', 'Hafeezpet', 'KPHB', 'Kompally',
+  'Kukatpally', 'Medchal', 'Miyapur', 'Nizampet', 'Shamirpet',
+  // East
+  'Boduppal', 'Dilsukhnagar', 'Ghatkesar', 'Hayathnagar', 'Kothapet',
+  'LB Nagar', 'Nagole', 'Pocharam', 'Uppal',
+  // South
+  'Attapur', 'Gandipet', 'Narsingi', 'Rajendra Nagar', 'Shamshabad',
+  'Tukkuguda',
+  // Central
+  'Ameerpet', 'Banjara Hills', 'Begumpet', 'Himayatnagar', 'Jubilee Hills',
+  'Punjagutta', 'Somajiguda',
 ] as const;
 const AMENITY_OPTIONS = [
   "Children's Play Area", 'Club House', 'Cycling Track', 'Fire Safety',
@@ -388,15 +401,6 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <input value={form.possessionDate} onChange={e => set('possessionDate', e.target.value)} className={fc()} placeholder="e.g. Jun-29" />
                 </div>
               </div>
-              <div>
-                <label className={lc()}>Listing Status</label>
-                <select value={form.status} onChange={e => set('status', e.target.value as ProjectStatus)} className={fc('bg-white')}>
-                  <option value="ACTIVE">Active</option>
-                  <option value="INACTIVE">Inactive</option>
-                  <option value="COMING_SOON">Coming Soon</option>
-                  <option value="PENDING_APPROVAL">Pending Approval</option>
-                </select>
-              </div>
             </div>
 
             {/* ── Section: Location ── */}
@@ -411,8 +415,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <label className={lc()}>Zone <span className="text-red-500">*</span>{errors.zone && <ErrTip msg={errors.zone} />}</label>
                   <select value={form.zone} onChange={e => set('zone', e.target.value as ProjectZone | '')} className={errors.zone ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
-                    <option value="NORTH">North</option><option value="SOUTH">South</option>
                     <option value="EAST">East</option><option value="WEST">West</option>
+                    <option value="NORTH">North</option><option value="SOUTH">South</option>
                     <option value="CENTRAL">Central</option>
                   </select>
                 </div>
