@@ -53,6 +53,7 @@ interface FormState {
   density: DensityType | ''; sftCostingPerSqft: string; emiStartsFrom: string;
   configurations: ConfigRow[];
   photoFiles: MediaFile[]; videoFile: MediaFile; brochureFile: MediaFile; agreementFile: MediaFile;
+  agreementPercentage: string;
   projectManagerName: string; projectManagerContact: string; spocName: string; spocContact: string;
   usp: string; details: string; amenities: string[];
 }
@@ -68,6 +69,7 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
     density: '', sftCostingPerSqft: '', emiStartsFrom: '',
     configurations: [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
     photoFiles: [emptyMedia()], videoFile: emptyMedia(), brochureFile: emptyMedia(), agreementFile: emptyMedia(),
+    agreementPercentage: '',
     projectManagerName: '', projectManagerContact: '', spocName: '', spocContact: '',
     usp: '', details: '', amenities: [],
     _propertyType: propertyType,
@@ -200,6 +202,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       videoFile: toMedia(initialData.videoLink3D),
       brochureFile: toMedia(initialData.brochureLink),
       agreementFile: toMedia(initialData.onboardingAgreementLink),
+      agreementPercentage: initialData.agreementPercentage != null ? String(initialData.agreementPercentage) : '',
       projectManagerName: initialData.projectManagerName ?? '',
       projectManagerContact: initialData.projectManagerContact ?? '',
       spocName: initialData.spocName ?? '',
@@ -290,6 +293,12 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     if (!form.videoFile.uploadedUrl)   e.videoFile       = '3D / walkthrough video is required.';
     if (!form.brochureFile.uploadedUrl) e.brochureFile   = 'Brochure is required.';
     if (!form.agreementFile.uploadedUrl) e.agreementFile = 'Onboarding agreement is required.';
+    if (!form.agreementPercentage.trim()) {
+      e.agreementPercentage = 'Agreement percentage is required.';
+    } else {
+      const pct = Number(form.agreementPercentage);
+      if (isNaN(pct) || pct < 0 || pct > 100) e.agreementPercentage = 'Enter a valid percentage between 0 and 100.';
+    }
 
     // Section 6 – Team & Contacts
     if (!form.projectManagerName.trim()) e.projectManagerName = 'Project Manager name is required.';
@@ -356,6 +365,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       videoLink3D: form.videoFile.uploadedUrl || undefined,
       brochureLink: form.brochureFile.uploadedUrl || undefined,
       onboardingAgreementLink: form.agreementFile.uploadedUrl || undefined,
+      agreementPercentage: form.agreementPercentage.trim() ? Number(form.agreementPercentage) : undefined,
       projectManagerName: str(form.projectManagerName), projectManagerContact: str(form.projectManagerContact),
       spocName: str(form.spocName), spocContact: str(form.spocContact),
       usp: str(form.usp), details: str(form.details),
@@ -673,6 +683,20 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                 required fieldError={errors.agreementFile}
                 onFileChange={f => handleUploadSingle('agreementFile', f)}
                 onClear={() => updateSingle('agreementFile', { file: null, uploadedUrl: '', error: '' })} />
+
+              <div>
+                <label className={lc()}>
+                  Percentage Mentioned in Agreement (%) <span className="text-red-500">*</span>
+                  {errors.agreementPercentage && <ErrTip msg={errors.agreementPercentage} />}
+                </label>
+                <input
+                  type="number" min="0" max="100" step="0.01"
+                  value={form.agreementPercentage}
+                  onChange={e => set('agreementPercentage', e.target.value)}
+                  className={errors.agreementPercentage ? fcE() : fc()}
+                  placeholder="e.g. 2.5"
+                />
+              </div>
             </div>
 
             {/* ── Section: Team ── */}

@@ -97,6 +97,7 @@ export interface CreateProjectInput {
   videoLink3D?: string;
   brochureLink?: string;
   onboardingAgreementLink?: string;
+  agreementPercentage?: number;
   projectManagerName?: string;
   projectManagerContact?: string;
   spocName?: string;
