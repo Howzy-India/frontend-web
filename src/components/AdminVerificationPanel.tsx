@@ -75,10 +75,6 @@ export default function AdminVerificationPanel() {
   });
 
   const handleStatusChange = async (id: string, newStatus: string) => {
-    if (newStatus === 'Rejected' && !remarks.trim()) {
-      setRemarksError('Rejection reason is required.');
-      return;
-    }
     setRemarksError('');
     const sub = submissions.find((s) => s.id === id);
     setProcessing(id);
@@ -364,42 +360,84 @@ interface VerificationActionsProps {
 }
 
 function VerificationActions({ remarks, setRemarks, remarksError, setRemarksError, processing, status, onApprove, onReject }: VerificationActionsProps) {
+  const [rejectMode, setRejectMode] = React.useState(false);
+
+  const handleRejectClick = () => {
+    setRejectMode(true);
+    setRemarks('');
+    setRemarksError('');
+  };
+
+  const handleCancelReject = () => {
+    setRejectMode(false);
+    setRemarks('');
+    setRemarksError('');
+  };
+
+  const handleConfirmReject = () => {
+    if (!remarks.trim()) {
+      setRemarksError('Please provide a rejection reason.');
+      return;
+    }
+    onReject();
+  };
+
+  if (status !== 'Pending') return null;
+
   return (
     <div className="pt-6 border-t border-slate-100">
       <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Verification Actions</h3>
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Rejection Reason <span className="text-red-500 text-xs">(required when rejecting)</span>
-          </label>
-          <textarea 
-            rows={3}
-            value={remarks}
-            onChange={(e) => { setRemarks(e.target.value); if (e.target.value.trim()) setRemarksError(''); }}
-            className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none ${remarksError ? 'border-red-400' : 'border-slate-200'}`}
-            placeholder="Add notes or rejection reason..."
-          />
-          {remarksError && <p className="text-xs text-red-500 mt-1">{remarksError}</p>}
+      {!rejectMode ? (
+        <div className="flex gap-3">
+          <button
+            onClick={onApprove}
+            disabled={processing}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          >
+            <CheckCircle2 className="w-4 h-4" /> Approve
+          </button>
+          <button
+            onClick={handleRejectClick}
+            disabled={processing}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            <XCircle className="w-4 h-4" /> Reject
+          </button>
         </div>
-        {status === 'Pending' && (
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Rejection Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              autoFocus
+              value={remarks}
+              onChange={(e) => { setRemarks(e.target.value); if (e.target.value.trim()) setRemarksError(''); }}
+              className={`w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-400 outline-none transition-all resize-none ${remarksError ? 'border-red-400' : 'border-slate-200'}`}
+              placeholder="Enter reason for rejection..."
+            />
+            {remarksError && <p className="text-xs text-red-500 mt-1">{remarksError}</p>}
+          </div>
           <div className="flex gap-3">
-            <button 
-              onClick={onApprove}
-              disabled={processing}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-            >
-              <CheckCircle2 className="w-4 h-4" /> Approve
-            </button>
-            <button 
-              onClick={onReject}
+            <button
+              onClick={handleConfirmReject}
               disabled={processing}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
-              <XCircle className="w-4 h-4" /> Reject
+              <XCircle className="w-4 h-4" /> Confirm Reject
+            </button>
+            <button
+              onClick={handleCancelReject}
+              disabled={processing}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 disabled:opacity-50 transition-colors"
+            >
+              Cancel
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
