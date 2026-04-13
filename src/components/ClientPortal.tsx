@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
-import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot } from 'lucide-react';
+import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot, Upload } from 'lucide-react';
 import Logo from './Logo';
 import { api } from '../services/api';
 import { TEST_IDS } from '../constants/testIds';
@@ -13,6 +13,8 @@ import ClientChatWidget from './ClientChatWidget';
 import ErrorBoundary from './ErrorBoundary';
 import type { AppRole } from '../hooks/useAuth';
 import { getClientProfile } from '../hooks/useClientProfile';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -248,12 +250,14 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
     emiFrom: '', ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
     address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
-    mapLink: '', possession: '', floor: '', totalFloors: '',
+    mapLink: '', possession: '', floor: '', totalFloors: '', floorPlan: '',
   };
   const [resaleForm, setResaleForm] = useState(INITIAL_RESALE_FORM);
   const [resaleSubmitting, setResaleSubmitting] = useState(false);
   const [resaleSubmitMsg, setResaleSubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingResaleId, setEditingResaleId] = useState<string | null>(null);
+  const [floorPlanUploading, setFloorPlanUploading] = useState(false);
+  const [floorPlanFileName, setFloorPlanFileName] = useState('');
   const [isDelegateModalOpen, setIsDelegateModalOpen] = useState(false);
   const [delegatingResaleId, setDelegatingResaleId] = useState<string | null>(null);
   const [delegateForm, setDelegateForm] = useState({ agentName: '', agentPhone: '' });
@@ -409,6 +413,22 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     }
   };
 
+  const handleFloorPlanUpload = useCallback(async (file: File) => {
+    setFloorPlanUploading(true);
+    setFloorPlanFileName(file.name);
+    try {
+      const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
+      await uploadBytes(r, file);
+      const url = await getDownloadURL(r);
+      setResaleForm(f => ({ ...f, floorPlan: url }));
+    } catch {
+      setFloorPlanFileName('');
+      setResaleForm(f => ({ ...f, floorPlan: '' }));
+    } finally {
+      setFloorPlanUploading(false);
+    }
+  }, []);
+
   const handleResaleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setResaleSubmitting(true);
@@ -433,6 +453,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
       }
       setResaleForm(INITIAL_RESALE_FORM);
       setEditingResaleId(null);
+      setFloorPlanFileName('');
       fetchMyResaleListings();
     } catch (err: any) {
       setResaleSubmitMsg({ type: 'error', text: err?.message ?? 'Submission failed. Please try again.' });
@@ -1713,7 +1734,9 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                                               possession: r.possession ?? '',
                                               floor: r.floor == null ? '' : String(r.floor),
                                               totalFloors: r.totalFloors == null ? '' : String(r.totalFloors),
+                                              floorPlan: r.floorPlan ?? '',
                                             });
+                                            setFloorPlanFileName(r.floorPlan ? 'Existing floor plan' : '');
                                             setResaleSubmitMsg(null);
                                             setIsResaleModalOpen(true);
                                           }}
@@ -2165,7 +2188,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                   <p className="text-sm text-slate-500">{editingResaleId ? 'Update your pending property details' : 'Our team will review and list it within 24–48 hrs'}</p>
                 </div>
               </div>
-              <button onClick={() => { setIsResaleModalOpen(false); setEditingResaleId(null); setResaleForm(INITIAL_RESALE_FORM); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button onClick={() => { setIsResaleModalOpen(false); setEditingResaleId(null); setResaleForm(INITIAL_RESALE_FORM); setFloorPlanFileName(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -2387,6 +2410,30 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                     <input id="resale-possession" value={resaleForm.possession} onChange={e => setResaleForm(f => ({...f, possession: e.target.value}))}
                       placeholder="e.g. Ready to Move"
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                  </div>
+                  {/* Floor Plan upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Floor Plan (image/PDF)</label>
+                    {resaleForm.floorPlan ? (
+                      <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-sm">
+                        <a href={resaleForm.floorPlan} target="_blank" rel="noopener noreferrer" className="text-emerald-700 font-medium truncate flex-1 hover:underline">
+                          {floorPlanFileName || 'Floor Plan uploaded'}
+                        </a>
+                        <button type="button" onClick={() => { setResaleForm(f => ({ ...f, floorPlan: '' })); setFloorPlanFileName(''); }}
+                          className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className={`w-full flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors ${floorPlanUploading ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 hover:border-amber-400 hover:bg-amber-50/30'}`}>
+                        {floorPlanUploading
+                          ? <><Clock className="w-4 h-4 text-amber-500 animate-spin flex-shrink-0" /><span className="text-sm text-slate-500">Uploading…</span></>
+                          : <><Upload className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="text-sm text-slate-500">Choose image or PDF…</span></>
+                        }
+                        <input type="file" accept="image/*,application/pdf" className="hidden" disabled={floorPlanUploading}
+                          onChange={e => { const f = e.target.files?.[0]; if (f) handleFloorPlanUpload(f); e.target.value = ''; }} />
+                      </label>
+                    )}
                   </div>
                 </div>
               </div>
