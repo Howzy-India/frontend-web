@@ -267,14 +267,6 @@ export default function AdminVerificationPanel() {
                 {selectedSubmission.isCloudProject ? (
                   <CloudProjectDetail
                     project={selectedSubmission.rawProject}
-                    remarks={remarks}
-                    setRemarks={setRemarks}
-                    remarksError={remarksError}
-                    setRemarksError={setRemarksError}
-                    processing={processing === selectedSubmission.id}
-                    status={selectedSubmission.status}
-                    onApprove={() => handleStatusChange(selectedSubmission.id, 'Approved')}
-                    onReject={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
                   />
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -297,7 +289,7 @@ export default function AdminVerificationPanel() {
                       </div>
                     </div>
 
-                    {/* Documents & Media + Actions */}
+                    {/* Documents & Media */}
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4 border-b border-slate-100 pb-2">Uploaded Documents</h3>
@@ -325,21 +317,22 @@ export default function AdminVerificationPanel() {
                           ))}
                         </div>
                       </div>
-
-                      <VerificationActions
-                        remarks={remarks}
-                        setRemarks={setRemarks}
-                        remarksError={remarksError}
-                        setRemarksError={setRemarksError}
-                        processing={processing === selectedSubmission.id}
-                        status={selectedSubmission.status}
-                        onApprove={() => handleStatusChange(selectedSubmission.id, 'Approved')}
-                        onReject={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
-                      />
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Sticky Footer — Verification Actions */}
+              <VerificationActions
+                remarks={remarks}
+                setRemarks={setRemarks}
+                remarksError={remarksError}
+                setRemarksError={setRemarksError}
+                processing={processing === selectedSubmission.id}
+                status={selectedSubmission.status}
+                onApprove={() => handleStatusChange(selectedSubmission.id, 'Approved')}
+                onReject={() => handleStatusChange(selectedSubmission.id, 'Rejected')}
+              />
             </motion.div>
           </div>
         )}
@@ -385,21 +378,20 @@ function VerificationActions({ remarks, setRemarks, remarksError, setRemarksErro
   if (status !== 'Pending') return null;
 
   return (
-    <div className="pt-6 border-t border-slate-100">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">Verification Actions</h3>
+    <div className="border-t border-slate-200 bg-slate-50/80 px-6 py-4">
       {!rejectMode ? (
         <div className="flex gap-3">
           <button
             onClick={onApprove}
             disabled={processing}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
             <CheckCircle2 className="w-4 h-4" /> Approve
           </button>
           <button
             onClick={handleRejectClick}
             disabled={processing}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
           >
             <XCircle className="w-4 h-4" /> Reject
           </button>
@@ -411,7 +403,7 @@ function VerificationActions({ remarks, setRemarks, remarksError, setRemarksErro
               Rejection Reason <span className="text-red-500">*</span>
             </label>
             <textarea
-              rows={3}
+              rows={2}
               autoFocus
               value={remarks}
               onChange={(e) => { setRemarks(e.target.value); if (e.target.value.trim()) setRemarksError(''); }}
@@ -424,14 +416,14 @@ function VerificationActions({ remarks, setRemarks, remarksError, setRemarksErro
             <button
               onClick={handleConfirmReject}
               disabled={processing}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               <XCircle className="w-4 h-4" /> Confirm Reject
             </button>
             <button
               onClick={handleCancelReject}
               disabled={processing}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-200 disabled:opacity-50 transition-colors"
+              className="px-5 py-3 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-300 disabled:opacity-50 transition-colors"
             >
               Cancel
             </button>
@@ -442,11 +434,11 @@ function VerificationActions({ remarks, setRemarks, remarksError, setRemarksErro
   );
 }
 
-interface CloudProjectDetailProps extends VerificationActionsProps {
+interface CloudProjectDetailProps {
   project: Record<string, any> | null;
 }
 
-function CloudProjectDetail({ project, ...actionsProps }: CloudProjectDetailProps) {
+function CloudProjectDetail({ project }: CloudProjectDetailProps) {
   if (!project) return <p className="text-slate-500 text-sm">No project data available.</p>;
 
   const infoFields = [
@@ -525,18 +517,9 @@ function CloudProjectDetail({ project, ...actionsProps }: CloudProjectDetailProp
             {project.details && <div><span className="text-xs font-medium text-slate-500 block">Description</span><span className="text-sm text-slate-900">{project.details}</span></div>}
           </div>
         )}
-        {project.configurations?.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Configurations</h3>
-            <div className="space-y-2">
-              {project.configurations.map((c: any, i: number) => (
-                <div key={i} className="text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
-                  {c.bhkCount} BHK — {c.minSft}–{c.maxSft} sqft ({c.unitCount} units)
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      </div>
+      <div>
+        {renderSection('Configurations', project.configurations?.map((c: any) => [`${c.bhkCount} BHK`, `${c.minSft}–${c.maxSft} sqft (${c.unitCount} units)`]) ?? [])}
         {project.amenities?.length > 0 && (
           <div className="mb-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Amenities</h3>
@@ -562,9 +545,6 @@ function CloudProjectDetail({ project, ...actionsProps }: CloudProjectDetailProp
             <a href={project.mapLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline font-medium">View on Google Maps</a>
           </div>
         )}
-      </div>
-      <div>
-        <VerificationActions {...actionsProps} />
       </div>
     </div>
   );
