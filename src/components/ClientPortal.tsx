@@ -246,8 +246,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const INITIAL_RESALE_FORM = {
     title: '', description: '', price: '', propertyType: 'Apartment',
     city: '', location: '', area: '', bedrooms: '', bathrooms: '',
-    builderName: '', projectName: '', segment: '', societyType: '',
-    landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
+    segment: '', societyType: '',
     emiFrom: '', ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
     address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
     mapLink: '', possession: '', floor: '', totalFloors: '', floorPlan: '',
@@ -441,8 +440,6 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
         bathrooms: resaleForm.bathrooms ? Number(resaleForm.bathrooms) : undefined,
         floor: resaleForm.floor ? Number(resaleForm.floor) : undefined,
         totalFloors: resaleForm.totalFloors ? Number(resaleForm.totalFloors) : undefined,
-        numberOfTowers: resaleForm.numberOfTowers ? Number(resaleForm.numberOfTowers) : undefined,
-        numberOfUnits: resaleForm.numberOfUnits ? Number(resaleForm.numberOfUnits) : undefined,
       };
       if (editingResaleId) {
         await api.updateMyResaleProperty(editingResaleId, payload);
@@ -1711,14 +1708,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                                               area: r.area ?? '',
                                               bedrooms: r.bedrooms == null ? '' : String(r.bedrooms),
                                               bathrooms: r.bathrooms == null ? '' : String(r.bathrooms),
-                                              builderName: r.builderName ?? '',
-                                              projectName: r.projectName ?? '',
                                               segment: r.segment ?? '',
                                               societyType: r.societyType ?? '',
-                                              landParcel: r.landParcel ?? '',
-                                              numberOfTowers: r.numberOfTowers == null ? '' : String(r.numberOfTowers),
-                                              numberOfUnits: r.numberOfUnits == null ? '' : String(r.numberOfUnits),
-                                              density: r.density ?? '',
                                               emiFrom: r.emiFrom ?? '',
                                               ownerName: r.ownerName ?? '',
                                               ownerPhone: r.ownerPhone ?? '',
@@ -2287,9 +2278,11 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                     </div>
                     <div>
                       <label htmlFor="resale-cluster" className="block text-sm font-semibold text-slate-700 mb-1.5">Cluster</label>
-                      <input id="resale-cluster" value={resaleForm.cluster} onChange={e => setResaleForm(f => ({...f, cluster: e.target.value}))}
-                        placeholder="e.g. Kokapet"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <select id="resale-cluster" value={resaleForm.cluster} onChange={e => setResaleForm(f => ({...f, cluster: e.target.value}))}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
+                        <option value="">Select Cluster</option>
+                        {['Neopolis','Kokapet','Gachibowli','Miyapur','Bachupally','LB Nagar','Kothapet','Uppal'].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -2347,50 +2340,6 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
               <div>
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-3 border-b border-slate-100 pb-2">Property Details</h3>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="resale-builder" className="block text-sm font-semibold text-slate-700 mb-1.5">Builder Name</label>
-                      <input id="resale-builder" value={resaleForm.builderName} onChange={e => setResaleForm(f => ({...f, builderName: e.target.value}))}
-                        placeholder="e.g. Prestige Group"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    </div>
-                    <div>
-                      <label htmlFor="resale-project" className="block text-sm font-semibold text-slate-700 mb-1.5">Project Name</label>
-                      <input id="resale-project" value={resaleForm.projectName} onChange={e => setResaleForm(f => ({...f, projectName: e.target.value}))}
-                        placeholder="e.g. Prestige Lakeside"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="resale-land-parcel" className="block text-sm font-semibold text-slate-700 mb-1.5">Land Parcel</label>
-                      <input id="resale-land-parcel" value={resaleForm.landParcel} onChange={e => setResaleForm(f => ({...f, landParcel: e.target.value}))}
-                        placeholder="e.g. 1.22 Acrs"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    </div>
-                    <div>
-                      <label htmlFor="resale-density" className="block text-sm font-semibold text-slate-700 mb-1.5">Density</label>
-                      <select id="resale-density" value={resaleForm.density} onChange={e => setResaleForm(f => ({...f, density: e.target.value}))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white">
-                        <option value="">Select Density</option>
-                        {['Low Density','Medium Density','High Density'].map(d => <option key={d}>{d}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label htmlFor="resale-towers" className="block text-sm font-semibold text-slate-700 mb-1.5">No. of Towers</label>
-                      <input id="resale-towers" type="number" min={1} value={resaleForm.numberOfTowers} onChange={e => setResaleForm(f => ({...f, numberOfTowers: e.target.value}))}
-                        placeholder="e.g. 4"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    </div>
-                    <div>
-                      <label htmlFor="resale-units" className="block text-sm font-semibold text-slate-700 mb-1.5">No. of Units</label>
-                      <input id="resale-units" type="number" min={1} value={resaleForm.numberOfUnits} onChange={e => setResaleForm(f => ({...f, numberOfUnits: e.target.value}))}
-                        placeholder="e.g. 120"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    </div>
-                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="resale-floor" className="block text-sm font-semibold text-slate-700 mb-1.5">Floor</label>
