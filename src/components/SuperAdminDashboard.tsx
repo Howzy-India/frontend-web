@@ -574,8 +574,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
   const [addForm, setAddForm] = useState({
     title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '',
     bedrooms: '', bathrooms: '', description: '',
-    builderName: '', projectName: '', segment: '', societyType: '',
-    landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
+    segment: '', societyType: '',
     emiFrom: '', floorPlan: '',
     ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
     address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
@@ -652,8 +651,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
       setAddForm({
         title: '', price: '', propertyType: 'Apartment', city: '', location: '', area: '',
         bedrooms: '', bathrooms: '', description: '',
-        builderName: '', projectName: '', segment: '', societyType: '',
-        landParcel: '', numberOfTowers: '', numberOfUnits: '', density: '',
+        segment: '', societyType: '',
         emiFrom: '', floorPlan: '',
         ownerName: '', ownerPhone: '', agentName: '', agentPhone: '',
         address: '', zone: '', cluster: '', state: '', pincode: '', landmark: '',
@@ -748,14 +746,6 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
               </select>
             </div>
             <div>
-              <label htmlFor="add-resale-builder" className="block text-xs font-semibold text-slate-600 mb-1">Builder Name</label>
-              <input id="add-resale-builder" value={addForm.builderName} onChange={e => setAddForm(f => ({...f, builderName: e.target.value}))} placeholder="e.g. Prestige Group" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
-              <label htmlFor="add-resale-project" className="block text-xs font-semibold text-slate-600 mb-1">Project Name</label>
-              <input id="add-resale-project" value={addForm.projectName} onChange={e => setAddForm(f => ({...f, projectName: e.target.value}))} placeholder="e.g. Prestige Lakeside" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
               <label htmlFor="add-resale-owner-name" className="block text-xs font-semibold text-slate-600 mb-1">Owner Name</label>
               <input id="add-resale-owner-name" value={addForm.ownerName} onChange={e => setAddForm(f => ({...f, ownerName: e.target.value}))} placeholder="Owner name" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
             </div>
@@ -792,7 +782,10 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
             </div>
             <div>
               <label htmlFor="add-resale-cluster" className="block text-xs font-semibold text-slate-600 mb-1">Cluster</label>
-              <input id="add-resale-cluster" value={addForm.cluster} onChange={e => setAddForm(f => ({...f, cluster: e.target.value}))} placeholder="e.g. Kokapet" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              <select id="add-resale-cluster" value={addForm.cluster} onChange={e => setAddForm(f => ({...f, cluster: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+                <option value="">Select Cluster</option>
+                {['Neopolis','Kokapet','Gachibowli','Miyapur','Bachupally','LB Nagar','Kothapet','Uppal'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
             <div>
               <label htmlFor="add-resale-landmark" className="block text-xs font-semibold text-slate-600 mb-1">Landmark</label>
@@ -801,25 +794,6 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
             <div>
               <label htmlFor="add-resale-emi" className="block text-xs font-semibold text-slate-600 mb-1">EMI From</label>
               <input id="add-resale-emi" value={addForm.emiFrom} onChange={e => setAddForm(f => ({...f, emiFrom: e.target.value}))} placeholder="e.g. 20k/month" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
-              <label htmlFor="add-resale-land-parcel" className="block text-xs font-semibold text-slate-600 mb-1">Land Parcel</label>
-              <input id="add-resale-land-parcel" value={addForm.landParcel} onChange={e => setAddForm(f => ({...f, landParcel: e.target.value}))} placeholder="e.g. 1.22 Acrs" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
-              <label htmlFor="add-resale-towers" className="block text-xs font-semibold text-slate-600 mb-1">No. of Towers</label>
-              <input id="add-resale-towers" type="number" value={addForm.numberOfTowers} onChange={e => setAddForm(f => ({...f, numberOfTowers: e.target.value}))} placeholder="e.g. 4" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
-              <label htmlFor="add-resale-units" className="block text-xs font-semibold text-slate-600 mb-1">No. of Units</label>
-              <input id="add-resale-units" type="number" value={addForm.numberOfUnits} onChange={e => setAddForm(f => ({...f, numberOfUnits: e.target.value}))} placeholder="e.g. 120" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-            </div>
-            <div>
-              <label htmlFor="add-resale-density" className="block text-xs font-semibold text-slate-600 mb-1">Density</label>
-              <select id="add-resale-density" value={addForm.density} onChange={e => setAddForm(f => ({...f, density: e.target.value}))} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
-                <option value="">Select</option>
-                {['Low Density','Medium Density','High Density'].map(d => <option key={d}>{d}</option>)}
-              </select>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Floor Plan (image/PDF)</label>
