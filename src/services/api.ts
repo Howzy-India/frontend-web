@@ -128,7 +128,7 @@ export const api = {
   deleteProperty: (id: string) => del<any>(`/admin/properties/${id}`),
   deleteProject: (id: string) => del<any>(`/admin/properties/${id}`),
   approveProject: (id: string) => post<any>(`/admin/properties/${id}/approve`, {}),
-  rejectProject: (id: string) => post<any>(`/admin/properties/${id}/reject`, {}),
+  rejectProject: (id: string, reason?: string) => post<any>(`/admin/properties/${id}/reject`, { reason }),
   getPendingProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
   getMyOnboardedProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
   getBackupSheetUrl: () => get<{ sheetUrl: string }>('/admin/settings/backup-sheet'),
