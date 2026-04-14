@@ -67,6 +67,8 @@ export interface ProjectConfiguration {
 }
 
 export interface CreateProjectInput {
+  /** Optional client-generated unique ID so Storage and DB share the same folder. */
+  uniqueId?: string;
   name: string;
   developerName: string;
   reraNumber?: string;
