@@ -165,9 +165,9 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
     }
   };
 
-  // All authenticated partners can see both onboarding options
-  const showBuilderOnboarding = true;
-  const showPartnerOnboarding = true;
+  // howzer_sourcing: Project / FarmLand / Plots only; howzer_sales: Partner only
+  const showBuilderOnboarding = userRole === 'howzer_sourcing';
+  const showPartnerOnboarding = userRole === 'howzer_sales';
 
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
