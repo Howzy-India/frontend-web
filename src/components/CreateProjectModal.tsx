@@ -157,6 +157,13 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
   const [apiError, setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Stable folder for this project's Storage files.
+  // For edits use the existing uniqueId; for new projects generate one upfront so
+  // files land in the correct folder before we even know the DB-assigned id.
+  const uploadFolder = React.useRef<string>(
+    initialData?.uniqueId ?? `PROP-${crypto.randomUUID()}`
+  );
+
   // Pre-fill form when editing
   React.useEffect(() => {
     if (!initialData || !projectId) return;
@@ -232,7 +239,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
   const handleUploadPhoto = async (i: number, file: File) => {
     updatePhoto(i, { file, uploading: true, error: '' });
     try {
-      const url = await uploadToStorage(file, `projects/photos/${Date.now()}_${file.name}`);
+      // Scope photos to this project's folder; timestamp avoids name collisions
+      const url = await uploadToStorage(file, `projects/${uploadFolder.current}/photos/${Date.now()}_${file.name}`);
       updatePhoto(i, { uploadedUrl: url, uploading: false });
     } catch { updatePhoto(i, { uploading: false, error: 'Upload failed' }); }
   };
@@ -242,10 +250,11 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     setForm(prev => ({ ...prev, [field]: { ...prev[field], ...partial } }));
 
   const handleUploadSingle = async (field: 'videoFile' | 'brochureFile' | 'agreementFile', file: File) => {
-    const folder = field === 'videoFile' ? 'videos' : field === 'brochureFile' ? 'brochures' : 'agreements';
+    const subFolder = field === 'videoFile' ? 'videos' : field === 'brochureFile' ? 'brochures' : 'agreements';
     updateSingle(field, { file, uploading: true, error: '' });
     try {
-      const url = await uploadToStorage(file, `projects/${folder}/${Date.now()}_${file.name}`);
+      // Use just the filename (no timestamp) so re-uploading replaces the previous version
+      const url = await uploadToStorage(file, `projects/${uploadFolder.current}/${subFolder}/${file.name}`);
       updateSingle(field, { uploadedUrl: url, uploading: false });
     } catch { updateSingle(field, { uploading: false, error: 'Upload failed' }); }
   };
@@ -398,7 +407,9 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       if (projectId) {
         await api.updateProject(projectId, buildPayload());
       } else {
-        await api.addProperty(buildPayload());
+        // Pass the pre-generated uniqueId so the backend uses the same ID
+        // as the Storage folder where files were already uploaded.
+        await api.addProperty({ ...buildPayload(), uniqueId: uploadFolder.current });
       }
       onSuccess(); onClose();
     } catch (ex: unknown) {
