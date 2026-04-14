@@ -62,6 +62,7 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
   const [leads, setLeads] = useState<any[]>([]);
   const [assignedLeads, setAssignedLeads] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [newLeadToast, setNewLeadToast] = useState<any>(null);
   const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
@@ -84,6 +85,8 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
         setAssignedLeads(assignedLeadsData.enquiries || []);
       } catch (error) {
         console.error("Failed to fetch data", error);
+      } finally {
+        setProjectsLoading(false);
       }
     };
     fetchData();
@@ -305,7 +308,7 @@ export default function PilotDashboard({ onLogout }: PilotDashboardProps) {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="max-w-6xl mx-auto"
           >
-            {activeTab === 'listed' && <ListedProjectsView projects={projects.filter(p => p.propertyType === 'project')} />}
+            {activeTab === 'listed' && <ListedProjectsView projects={projects.filter(p => p.propertyType === 'project')} loading={projectsLoading} />}
             {activeTab === 'plots' && <ListedPlotsView projects={listedPlots} />}
             {activeTab === 'farmlands' && <ListedFarmLandsView projects={listedFarmLands} />}
             {activeTab === 'upcoming' && <UpcomingProjectsView projects={upcomingProjects} />}
@@ -422,13 +425,25 @@ function PropertyTable({ data, columns, onRowClick }: { data: any[], columns: an
                 ))}
               </tr>
             ))}
-            {sortedData.length === 0 && (
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length} className="p-8 text-center">
+                  <div className="flex items-center justify-center gap-3 text-slate-400 text-sm">
+                    <svg className="animate-spin w-5 h-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Loading properties…
+                  </div>
+                </td>
+              </tr>
+            ) : sortedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="p-8 text-center text-slate-500">
                   No properties found.
                 </td>
               </tr>
-            )}
+            ) : null}
           </tbody>
         </table>
       </div>
@@ -436,7 +451,7 @@ function PropertyTable({ data, columns, onRowClick }: { data: any[], columns: an
   );
 }
 
-function ListedProjectsView({ projects = [] }: { projects?: any[] }) {
+function ListedProjectsView({ projects = [], loading = false }: { projects?: any[]; loading?: boolean }) {
   const [locationFilter, setLocationFilter] = useState("All");
   const [projectTypeFilter, setProjectTypeFilter] = useState("All");
   const [projectSegmentFilter, setProjectSegmentFilter] = useState("All");
