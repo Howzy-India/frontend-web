@@ -163,6 +163,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
   const [leads, setLeads] = useState<any[]>([]);
   const [listedPlots, setListedPlots] = useState<any[]>([]);
   const [listedFarmLands, setListedFarmLands] = useState<any[]>([]);
@@ -197,6 +198,8 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
         setLeads(leadsData.leads);
       } catch (error) {
         console.error("Failed to fetch data", error);
+      } finally {
+        setProjectsLoading(false);
       }
     };
     fetchData();
@@ -324,9 +327,9 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'social-leads': return <SocialMediaLeadsView leads={socialMediaLeads} />;
       case 'lead-allocation': return <LeadAllocationManager />;
       case 'bulk-lead-upload': return <BulkLeadUpload />;
-      case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'PROJECT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
-      case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'PLOT')} userRole={userRole} onPropertyAdded={refreshProjects} />;
-      case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'FARMLAND')} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'projects': return <AllPropertiesView type="Projects" data={projects.filter(p => p.propertyType === 'PROJECT')} loading={projectsLoading} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'plots': return <AllPropertiesView type="Plots" data={projects.filter(p => p.propertyType === 'PLOT')} loading={projectsLoading} userRole={userRole} onPropertyAdded={refreshProjects} />;
+      case 'farmlands': return <AllPropertiesView type="Farm Lands" data={projects.filter(p => p.propertyType === 'FARMLAND')} loading={projectsLoading} userRole={userRole} onPropertyAdded={refreshProjects} />;
       case 'bulk-property-upload': return <BulkPropertyUpload />;
       case 'client-listings': return <ClientListingsVerification />;
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
@@ -1460,11 +1463,13 @@ const PROPERTY_TYPE_MAP: Record<string, 'PROJECT' | 'PLOT' | 'FARMLAND'> = {
 const AllPropertiesView = React.memo(function AllPropertiesView({
   type,
   data,
+  loading = false,
   userRole,
   onPropertyAdded,
 }: {
   type: string;
   data: any[];
+  loading?: boolean;
   userRole?: string;
   onPropertyAdded?: () => void;
 }) {
@@ -1574,7 +1579,19 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {displayData.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-8 py-12 text-center">
+                    <div className="flex items-center justify-center gap-3 text-slate-400 text-sm">
+                      <svg className="animate-spin w-5 h-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Loading {type.toLowerCase()}…
+                    </div>
+                  </td>
+                </tr>
+              ) : displayData.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-8 py-12 text-center text-slate-400 text-sm">
                     No {type.toLowerCase()} found
