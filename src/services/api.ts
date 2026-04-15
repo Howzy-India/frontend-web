@@ -92,7 +92,6 @@ export interface CreateProjectInput {
   availableUnits?: number;
   density?: DensityType;
   sftCostingPerSqft?: number;
-  emiStartsFrom?: string;
   pricingTwoBhk?: number;
   pricingThreeBhk?: number;
   pricingFourBhk?: number;
