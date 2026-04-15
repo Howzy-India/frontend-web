@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Upload, Loader2, Trash2, Plus } from 'lucide-react';
+import { X, Upload, Loader2, Trash2, Plus, Link } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import {
@@ -50,9 +50,9 @@ interface FormState {
   address: string; zone: ProjectZone | ''; cluster: string; area: string;
   city: string; state: string; pincode: string; landmark: string; mapLink: string;
   landParcel: string; numberOfTowers: string; totalUnits: string; availableUnits: string;
-  density: DensityType | ''; sftCostingPerSqft: string; emiStartsFrom: string;
+  density: DensityType | ''; sftCostingPerSqft: string;
   configurations: ConfigRow[];
-  photoFiles: MediaFile[]; videoFile: MediaFile; brochureFile: MediaFile; agreementFile: MediaFile;
+  photoFiles: MediaFile[]; videoLink3D: string; brochureFile: MediaFile; agreementFile: MediaFile;
   projectManagerName: string; projectManagerContact: string; projectManagerEmail: string;
   spocName: string; spocContact: string; spocEmail: string;
   leadRegistrationType: string;
@@ -73,9 +73,9 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
     address: '', zone: '', cluster: '', area: '', city: 'Hyderabad',
     state: 'Telangana', pincode: '', landmark: '', mapLink: '',
     landParcel: '', numberOfTowers: '', totalUnits: '', availableUnits: '',
-    density: '', sftCostingPerSqft: '', emiStartsFrom: '',
+    density: '', sftCostingPerSqft: '',
     configurations: [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
-    photoFiles: [emptyMedia()], videoFile: emptyMedia(), brochureFile: emptyMedia(), agreementFile: emptyMedia(),
+    photoFiles: [emptyMedia()], videoLink3D: '', brochureFile: emptyMedia(), agreementFile: emptyMedia(),
     projectManagerName: '', projectManagerContact: '', projectManagerEmail: '',
     spocName: '', spocContact: '', spocEmail: '',
     leadRegistrationType: '',
@@ -155,6 +155,87 @@ function FileUploadField({
   );
 }
 
+// ── MultiPhotoUpload ─────────────────────────────────────────────────
+function MultiPhotoUpload({
+  photos, uploadFolder, error, onAdd, onRemove,
+}: {
+  photos: MediaFile[];
+  uploadFolder: string;
+  error?: string;
+  onAdd: (files: File[]) => void;
+  onRemove: (index: number) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const uploadedCount = photos.filter(m => m.uploadedUrl).length;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className={lc()}>
+          Project Photos <span className="text-red-500">*</span>
+          <span className="ml-1 text-slate-400 font-normal normal-case tracking-normal">
+            ({uploadedCount}/{MAX_PHOTOS} — min {MIN_PHOTOS})
+          </span>
+          {error && <ErrTip msg={error} />}
+        </span>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={photos.length >= MAX_PHOTOS}
+          className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <Plus className="w-3.5 h-3.5" /> Add Photos
+        </button>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png"
+        multiple
+        className="hidden"
+        onChange={e => {
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) onAdd(files);
+          e.target.value = '';
+        }}
+      />
+      {photos.length === 0 || !photos.some(m => m.uploadedUrl || m.uploading || m.file) ? (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className={`w-full flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-5 transition-colors text-center justify-center ${error ? 'border-red-300 bg-red-50/40' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+        >
+          <Upload className="w-5 h-5 text-slate-400" />
+          <span className="text-sm text-slate-500">Click to select photos (JPG, JPEG, PNG)</span>
+        </button>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {photos.filter(m => m.uploadedUrl || m.uploading || m.file).map((m, i) => (
+            <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 aspect-video flex items-center justify-center">
+              {m.uploadedUrl ? (
+                <img src={m.uploadedUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+              ) : m.uploading ? (
+                <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
+              ) : (
+                <span className="text-[11px] text-slate-500 truncate px-2">{m.file?.name}</span>
+              )}
+              {m.error && (
+                <span className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[10px] px-1.5 py-0.5 text-center">{m.error}</span>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Modal Component ─────────────────────────────────────────────
 interface CreateProjectModalProps {
   propertyType: PropertyType;
@@ -208,7 +289,6 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       availableUnits: initialData.availableUnits != null ? String(initialData.availableUnits) : '',
       density: initialData.density ?? '',
       sftCostingPerSqft: initialData.sftCostingPerSqft != null ? String(initialData.sftCostingPerSqft) : '',
-      emiStartsFrom: initialData.emiStartsFrom ?? '',
       configurations: (initialData.configurations ?? []).length > 0
         ? (initialData.configurations as any[]).map((c: any) => ({
             bhkCount: String(c.bhkCount ?? c.bhk_count ?? ''),
@@ -220,7 +300,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       photoFiles: (initialData.photos ?? []).length > 0
         ? (initialData.photos as string[]).map(url => ({ file: null, uploadedUrl: url, uploading: false, error: '' }))
         : [emptyMedia()],
-      videoFile: toMedia(initialData.videoLink3D),
+      videoLink3D: initialData.videoLink3D ?? '',
       brochureFile: toMedia(initialData.brochureLink),
       agreementFile: toMedia(initialData.onboardingAgreementLink),
       projectManagerName: initialData.projectManagerName ?? initialData.projectManager?.name ?? '',
@@ -268,14 +348,13 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
   };
 
   // ── Single-file helpers ────────────────────────────────────────────
-  const updateSingle = (field: 'videoFile' | 'brochureFile' | 'agreementFile', partial: Partial<MediaFile>) =>
+  const updateSingle = (field: 'brochureFile' | 'agreementFile', partial: Partial<MediaFile>) =>
     setForm(prev => ({ ...prev, [field]: { ...prev[field], ...partial } }));
 
-  const handleUploadSingle = async (field: 'videoFile' | 'brochureFile' | 'agreementFile', file: File) => {
-    const subFolder = field === 'videoFile' ? 'videos' : field === 'brochureFile' ? 'brochures' : 'agreements';
+  const handleUploadSingle = async (field: 'brochureFile' | 'agreementFile', file: File) => {
+    const subFolder = field === 'brochureFile' ? 'brochures' : 'agreements';
     updateSingle(field, { file, uploading: true, error: '' });
     try {
-      // Use just the filename (no timestamp) so re-uploading replaces the previous version
       const url = await uploadToStorage(file, `projects/${uploadFolder.current}/${subFolder}/${file.name}`);
       updateSingle(field, { uploadedUrl: url, uploading: false });
     } catch { updateSingle(field, { uploading: false, error: 'Upload failed' }); }
@@ -311,7 +390,6 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     if (!form.totalUnits.trim())       e.totalUnits      = 'Total units is required.';
     if (!form.availableUnits.trim())   e.availableUnits  = 'Available units is required.';
     if (!form.sftCostingPerSqft.trim()) e.sftCostingPerSqft = 'SFT costing is required.';
-    if (!form.emiStartsFrom.trim())    e.emiStartsFrom   = 'EMI starts from is required.';
 
     // Section 4 – BHK Configurations
     const hasValidConfig = form.configurations.some(c => c.bhkCount && c.minSft && c.maxSft && c.unitCount);
@@ -321,7 +399,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     const uploadedPhotoCount = form.photoFiles.filter(m => m.uploadedUrl).length;
     if (uploadedPhotoCount < MIN_PHOTOS)
       e.photoFiles = `At least ${MIN_PHOTOS} photos are required (${uploadedPhotoCount} uploaded).`;
-    if (!form.videoFile.uploadedUrl)   e.videoFile       = '3D / walkthrough video is required.';
+    if (!form.videoLink3D.trim())      e.videoLink3D     = '3D / walkthrough video link is required.';
+    else if (!/^https?:\/\//.test(form.videoLink3D.trim())) e.videoLink3D = 'Enter a valid URL (https://…)';
     if (!form.brochureFile.uploadedUrl) e.brochureFile   = 'Brochure is required.';
     if (!form.agreementFile.uploadedUrl) e.agreementFile = 'Onboarding agreement is required.';
 
@@ -407,8 +486,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       landParcel: num(form.landParcel), numberOfTowers: num(form.numberOfTowers),
       totalUnits: num(form.totalUnits), availableUnits: num(form.availableUnits),
       density: (form.density as DensityType) || undefined,
-      sftCostingPerSqft: num(form.sftCostingPerSqft), emiStartsFrom: str(form.emiStartsFrom),
-      videoLink3D: form.videoFile.uploadedUrl || undefined,
+      sftCostingPerSqft: num(form.sftCostingPerSqft),
+      videoLink3D: str(form.videoLink3D),
       brochureLink: form.brochureFile.uploadedUrl || undefined,
       onboardingAgreementLink: form.agreementFile.uploadedUrl || undefined,
       projectManagerName: str(form.projectManagerName), projectManagerContact: str(form.projectManagerContact),
@@ -445,7 +524,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     e.preventDefault();
     if (!validate()) { setApiError('Please fix the highlighted fields.'); return; }
     const anyUploading = form.photoFiles.some(m => m.uploading) ||
-      form.videoFile.uploading || form.brochureFile.uploading || form.agreementFile.uploading;
+      form.brochureFile.uploading || form.agreementFile.uploading;
     if (anyUploading) { setApiError('Please wait for all uploads to finish.'); return; }
     setApiError(''); setSubmitting(true);
     try {
@@ -633,15 +712,9 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <input type="number" min="0" value={form.availableUnits} onChange={e => set('availableUnits', e.target.value)} className={errors.availableUnits ? fcE() : fc()} placeholder="200" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={lc()}>SFT Costing (₹/sqft) <span className="text-red-500">*</span>{errors.sftCostingPerSqft && <ErrTip msg={errors.sftCostingPerSqft} />}</label>
-                  <input type="number" min="0" value={form.sftCostingPerSqft} onChange={e => set('sftCostingPerSqft', e.target.value)} className={errors.sftCostingPerSqft ? fcE() : fc()} placeholder="7500" />
-                </div>
-                <div>
-                  <label className={lc()}>EMI Starts From <span className="text-red-500">*</span>{errors.emiStartsFrom && <ErrTip msg={errors.emiStartsFrom} />}</label>
-                  <input value={form.emiStartsFrom} onChange={e => set('emiStartsFrom', e.target.value)} className={errors.emiStartsFrom ? fcE() : fc()} placeholder="e.g. ₹20k/month" />
-                </div>
+              <div>
+                <label className={lc()}>SFT Costing (₹/sqft) <span className="text-red-500">*</span>{errors.sftCostingPerSqft && <ErrTip msg={errors.sftCostingPerSqft} />}</label>
+                <input type="number" min="0" value={form.sftCostingPerSqft} onChange={e => set('sftCostingPerSqft', e.target.value)} className={errors.sftCostingPerSqft ? fcE() : fc()} placeholder="7500" />
               </div>
             </div>
 
@@ -693,42 +766,44 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
             <div className={sec()}>
               <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">5</span> Media &amp; Files</p>
 
-              {/* Photos */}
+              {/* Photos — multi-select */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className={lc()}>
-                    Project Photos <span className="text-red-500">*</span>
-                    <span className="ml-1 text-slate-400 font-normal normal-case tracking-normal">({form.photoFiles.filter(m => m.uploadedUrl).length}/{MAX_PHOTOS} — min {MIN_PHOTOS})</span>
-                    {errors.photoFiles && <ErrTip msg={errors.photoFiles} />}
-                  </span>
-                  <button type="button"
-                    onClick={() => setPhotos(prev => prev.length < MAX_PHOTOS ? [...prev, emptyMedia()] : prev)}
-                    disabled={form.photoFiles.length >= MAX_PHOTOS}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                    <Plus className="w-3.5 h-3.5" /> Add Photo
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {form.photoFiles.map((m, i) => (
-                    <div key={i} className="flex gap-2 items-start">
-                      <div className="flex-1">
-                        <FileUploadField label={`Photo ${i + 1}`} media={m} accept="image/jpeg,image/jpg,image/png" hint="JPG, JPEG, PNG"
-                          onFileChange={file => handleUploadPhoto(i, file)}
-                          onClear={() => updatePhoto(i, { file: null, uploadedUrl: '', error: '' })} />
-                      </div>
-                      <button type="button" onClick={() => setPhotos(prev => prev.length === 1 ? [emptyMedia()] : prev.filter((_, idx) => idx !== i))}
-                        className="mt-6 p-2 text-slate-300 hover:text-red-500 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <MultiPhotoUpload
+                  photos={form.photoFiles}
+                  uploadFolder={uploadFolder.current}
+                  error={errors.photoFiles}
+                  onAdd={(newFiles) => {
+                    const existing = form.photoFiles.filter(m => m.uploadedUrl || m.uploading || m.file);
+                    const slots = MAX_PHOTOS - existing.length;
+                    const toAdd = newFiles.slice(0, slots);
+                    const startIdx = existing.length;
+                    setPhotos(() => [
+                      ...existing,
+                      ...toAdd.map(f => ({ file: f, uploadedUrl: '', uploading: false, error: '' })),
+                    ]);
+                    toAdd.forEach((file, relIdx) => handleUploadPhoto(startIdx + relIdx, file));
+                  }}
+                  onRemove={(i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                />
               </div>
 
-              <FileUploadField label="3D / Walkthrough Video" media={form.videoFile} accept="video/mp4,video/x-ms-wmv,.wmv" hint="MP4, WMV"
-                required fieldError={errors.videoFile}
-                onFileChange={f => handleUploadSingle('videoFile', f)}
-                onClear={() => updateSingle('videoFile', { file: null, uploadedUrl: '', error: '' })} />
+              {/* 3D Video — YouTube link */}
+              <div>
+                <label className={lc()}>
+                  3D / Walkthrough Video (YouTube) <span className="text-red-500">*</span>
+                  {errors.videoLink3D && <ErrTip msg={errors.videoLink3D} />}
+                </label>
+                <div className="relative flex items-center">
+                  <Link className="absolute left-3 w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <input
+                    type="url"
+                    value={form.videoLink3D}
+                    onChange={e => set('videoLink3D', e.target.value)}
+                    className={(errors.videoLink3D ? fcE() : fc()) + ' pl-9'}
+                    placeholder="https://youtube.com/watch?v=…"
+                  />
+                </div>
+              </div>
 
               <FileUploadField label="Brochure" media={form.brochureFile} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hint="PDF, DOC, DOCX"
                 required fieldError={errors.brochureFile}
@@ -802,7 +877,11 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                 <input type="email" value={form.spocEmail} onChange={e => set('spocEmail', e.target.value)} className={errors.spocEmail ? fcE() : fc()} placeholder="spoc@example.com" />
               </div>
 
-              {/* Lead Registration */}
+            </div>
+
+            {/* ── Section: Lead Registration ── */}
+            <div className={sec()}>
+              <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">7</span> Lead Registration</p>
               <div>
                 <label className={lc()}>Lead Registration Type <span className="text-red-500">*</span>{errors.leadRegistrationType && <ErrTip msg={errors.leadRegistrationType} />}</label>
                 <select value={form.leadRegistrationType} onChange={e => set('leadRegistrationType', e.target.value)} className={errors.leadRegistrationType ? fcE('bg-red-50/40') : fc('bg-white')}>
@@ -839,7 +918,7 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
 
             {/* ── Section: Description & Amenities ── */}
             <div className={sec()}>
-              <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">7</span> Description &amp; Amenities</p>
+              <p className={secH()}><span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">8</span> Description &amp; Amenities</p>
               <div>
                 <label className={lc()}>USP (Unique Selling Point) <span className="text-red-500">*</span>{errors.usp && <ErrTip msg={errors.usp} />}</label>
                 <input value={form.usp} onChange={e => set('usp', e.target.value)} className={errors.usp ? fcE() : fc()} placeholder="e.g. Only gated community with lake view" />
