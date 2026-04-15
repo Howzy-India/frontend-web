@@ -102,8 +102,17 @@ export interface CreateProjectInput {
   agreementPercentage?: number;
   projectManagerName?: string;
   projectManagerContact?: string;
+  projectManagerEmail?: string;
   spocName?: string;
   spocContact?: string;
+  spocEmail?: string;
+  leadRegistrationType?: string;
+  leadRegistrationEmail?: string;
+  leadRegistrationAppLink?: string;
+  leadRegistrationAppId?: string;
+  leadRegistrationAppPassword?: string;
+  commissionType?: string;
+  commissionValue?: number;
   usp?: string;
   teaser?: string;
   details?: string;

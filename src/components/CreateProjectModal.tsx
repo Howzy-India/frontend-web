@@ -53,8 +53,15 @@ interface FormState {
   density: DensityType | ''; sftCostingPerSqft: string; emiStartsFrom: string;
   configurations: ConfigRow[];
   photoFiles: MediaFile[]; videoFile: MediaFile; brochureFile: MediaFile; agreementFile: MediaFile;
-  agreementPercentage: string;
-  projectManagerName: string; projectManagerContact: string; spocName: string; spocContact: string;
+  projectManagerName: string; projectManagerContact: string; projectManagerEmail: string;
+  spocName: string; spocContact: string; spocEmail: string;
+  leadRegistrationType: string;
+  leadRegistrationEmail: string;
+  leadRegistrationAppLink: string;
+  leadRegistrationAppId: string;
+  leadRegistrationAppPassword: string;
+  commissionType: string;
+  commissionValue: string;
   usp: string; details: string; amenities: string[];
 }
 
@@ -69,8 +76,15 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
     density: '', sftCostingPerSqft: '', emiStartsFrom: '',
     configurations: [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
     photoFiles: [emptyMedia()], videoFile: emptyMedia(), brochureFile: emptyMedia(), agreementFile: emptyMedia(),
-    agreementPercentage: '',
-    projectManagerName: '', projectManagerContact: '', spocName: '', spocContact: '',
+    projectManagerName: '', projectManagerContact: '', projectManagerEmail: '',
+    spocName: '', spocContact: '', spocEmail: '',
+    leadRegistrationType: '',
+    leadRegistrationEmail: '',
+    leadRegistrationAppLink: '',
+    leadRegistrationAppId: '',
+    leadRegistrationAppPassword: '',
+    commissionType: '',
+    commissionValue: '',
     usp: '', details: '', amenities: [],
     _propertyType: propertyType,
   } as FormState & { _propertyType: PropertyType };
@@ -209,11 +223,19 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       videoFile: toMedia(initialData.videoLink3D),
       brochureFile: toMedia(initialData.brochureLink),
       agreementFile: toMedia(initialData.onboardingAgreementLink),
-      agreementPercentage: initialData.agreementPercentage != null ? String(initialData.agreementPercentage) : '',
-      projectManagerName: initialData.projectManagerName ?? '',
-      projectManagerContact: initialData.projectManagerContact ?? '',
-      spocName: initialData.spocName ?? '',
-      spocContact: initialData.spocContact ?? '',
+      projectManagerName: initialData.projectManagerName ?? initialData.projectManager?.name ?? '',
+      projectManagerContact: initialData.projectManagerContact ?? initialData.projectManager?.contact ?? '',
+      projectManagerEmail: initialData.projectManagerEmail ?? initialData.projectManager?.email ?? '',
+      spocName: initialData.spocName ?? initialData.spoc?.name ?? '',
+      spocContact: initialData.spocContact ?? initialData.spoc?.contact ?? '',
+      spocEmail: initialData.spocEmail ?? initialData.spoc?.email ?? '',
+      leadRegistrationType: initialData.leadRegistrationType ?? '',
+      leadRegistrationEmail: initialData.leadRegistrationEmail ?? '',
+      leadRegistrationAppLink: initialData.leadRegistrationAppLink ?? '',
+      leadRegistrationAppId: initialData.leadRegistrationAppId ?? '',
+      leadRegistrationAppPassword: initialData.leadRegistrationAppPassword ?? '',
+      commissionType: initialData.commissionType ?? '',
+      commissionValue: initialData.commissionValue != null ? String(initialData.commissionValue) : '',
       usp: initialData.usp ?? '',
       details: initialData.details ?? '',
       amenities: initialData.amenities ?? [],
@@ -302,12 +324,6 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
     if (!form.videoFile.uploadedUrl)   e.videoFile       = '3D / walkthrough video is required.';
     if (!form.brochureFile.uploadedUrl) e.brochureFile   = 'Brochure is required.';
     if (!form.agreementFile.uploadedUrl) e.agreementFile = 'Onboarding agreement is required.';
-    if (!form.agreementPercentage.trim()) {
-      e.agreementPercentage = 'Agreement percentage is required.';
-    } else {
-      const pct = Number(form.agreementPercentage);
-      if (isNaN(pct) || pct < 0 || pct > 100) e.agreementPercentage = 'Enter a valid percentage between 0 and 100.';
-    }
 
     // Section 6 – Team & Contacts
     if (!form.projectManagerName.trim()) e.projectManagerName = 'Project Manager name is required.';
@@ -334,6 +350,27 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       form.projectManagerContact.replace(/\s/g, '') === form.spocContact.replace(/\s/g, '')
     ) {
       e.spocContact = 'SPOC Contact must differ from Project Manager Contact.';
+    }
+
+    // Lead Registration
+    if (!form.leadRegistrationType) {
+      e.leadRegistrationType = 'Lead Registration Type is required.';
+    } else if (form.leadRegistrationType === 'Email Process') {
+      if (!form.leadRegistrationEmail.trim()) e.leadRegistrationEmail = 'Lead registration email is required.';
+    } else if (form.leadRegistrationType === 'CRM App') {
+      if (!form.leadRegistrationAppLink.trim()) e.leadRegistrationAppLink = 'App link is required.';
+      if (!form.leadRegistrationAppId.trim())   e.leadRegistrationAppId   = 'App ID is required.';
+      if (!form.leadRegistrationAppPassword.trim()) e.leadRegistrationAppPassword = 'App password is required.';
+    }
+
+    // Commission
+    if (!form.commissionType) {
+      e.commissionType = 'Commission type is required.';
+    }
+    if (!form.commissionValue.trim()) {
+      e.commissionValue = 'Commission value is required.';
+    } else if (isNaN(Number(form.commissionValue)) || Number(form.commissionValue) < 0) {
+      e.commissionValue = 'Enter a valid positive number.';
     }
 
     // Section 7 – Description & Amenities
@@ -374,9 +411,17 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       videoLink3D: form.videoFile.uploadedUrl || undefined,
       brochureLink: form.brochureFile.uploadedUrl || undefined,
       onboardingAgreementLink: form.agreementFile.uploadedUrl || undefined,
-      agreementPercentage: form.agreementPercentage.trim() ? Number(form.agreementPercentage) : undefined,
       projectManagerName: str(form.projectManagerName), projectManagerContact: str(form.projectManagerContact),
+      projectManagerEmail: str(form.projectManagerEmail),
       spocName: str(form.spocName), spocContact: str(form.spocContact),
+      spocEmail: str(form.spocEmail),
+      leadRegistrationType: str(form.leadRegistrationType),
+      leadRegistrationEmail: str(form.leadRegistrationEmail),
+      leadRegistrationAppLink: str(form.leadRegistrationAppLink),
+      leadRegistrationAppId: str(form.leadRegistrationAppId),
+      leadRegistrationAppPassword: str(form.leadRegistrationAppPassword),
+      commissionType: str(form.commissionType),
+      commissionValue: form.commissionValue.trim() ? Number(form.commissionValue) : undefined,
       usp: str(form.usp), details: str(form.details),
       status: form.status,
       configurations: configs.length ? configs : undefined,
@@ -695,18 +740,33 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                 onFileChange={f => handleUploadSingle('agreementFile', f)}
                 onClear={() => updateSingle('agreementFile', { file: null, uploadedUrl: '', error: '' })} />
 
-              <div>
-                <label className={lc()}>
-                  Percentage Mentioned in Agreement (%) <span className="text-red-500">*</span>
-                  {errors.agreementPercentage && <ErrTip msg={errors.agreementPercentage} />}
-                </label>
-                <input
-                  type="number" min="0" max="100" step="0.01"
-                  value={form.agreementPercentage}
-                  onChange={e => set('agreementPercentage', e.target.value)}
-                  className={errors.agreementPercentage ? fcE() : fc()}
-                  placeholder="e.g. 2.5"
-                />
+              {/* Commission */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={lc()}>Commission Type <span className="text-red-500">*</span>{errors.commissionType && <ErrTip msg={errors.commissionType} />}</label>
+                  <select value={form.commissionType} onChange={e => set('commissionType', e.target.value)} className={errors.commissionType ? fcE('bg-red-50/40') : fc('bg-white')}>
+                    <option value="">Select…</option>
+                    <option value="PerSqft">Per Sqft</option>
+                    <option value="Percentage">Percentage</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={lc()}>Commission Value <span className="text-red-500">*</span>{errors.commissionValue && <ErrTip msg={errors.commissionValue} />}</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="number" min="0" step="any"
+                      value={form.commissionValue}
+                      onChange={e => set('commissionValue', e.target.value)}
+                      className={(errors.commissionValue ? fcE() : fc()) + ' pr-20'}
+                      placeholder={form.commissionType === 'PerSqft' ? 'e.g. 1000' : 'e.g. 2.5'}
+                    />
+                    {form.commissionType && (
+                      <span className="absolute right-3 text-xs text-slate-500 font-medium select-none pointer-events-none">
+                        {form.commissionType === 'PerSqft' ? '/ sqft' : '%'}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -723,6 +783,10 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <input value={form.projectManagerContact} onChange={e => set('projectManagerContact', e.target.value)} className={errors.projectManagerContact ? fcE() : fc()} placeholder="9876543210" maxLength={13} />
                 </div>
               </div>
+              <div>
+                <label className={lc()}>Project Manager Email{errors.projectManagerEmail && <ErrTip msg={errors.projectManagerEmail} />}</label>
+                <input type="email" value={form.projectManagerEmail} onChange={e => set('projectManagerEmail', e.target.value)} className={errors.projectManagerEmail ? fcE() : fc()} placeholder="pm@example.com" />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={lc()}>SPOC Name <span className="text-red-500">*</span>{errors.spocName && <ErrTip msg={errors.spocName} />}</label>
@@ -733,6 +797,44 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                   <input value={form.spocContact} onChange={e => set('spocContact', e.target.value)} className={errors.spocContact ? fcE() : fc()} placeholder="9876543210" maxLength={13} />
                 </div>
               </div>
+              <div>
+                <label className={lc()}>SPOC Email{errors.spocEmail && <ErrTip msg={errors.spocEmail} />}</label>
+                <input type="email" value={form.spocEmail} onChange={e => set('spocEmail', e.target.value)} className={errors.spocEmail ? fcE() : fc()} placeholder="spoc@example.com" />
+              </div>
+
+              {/* Lead Registration */}
+              <div>
+                <label className={lc()}>Lead Registration Type <span className="text-red-500">*</span>{errors.leadRegistrationType && <ErrTip msg={errors.leadRegistrationType} />}</label>
+                <select value={form.leadRegistrationType} onChange={e => set('leadRegistrationType', e.target.value)} className={errors.leadRegistrationType ? fcE('bg-red-50/40') : fc('bg-white')}>
+                  <option value="">Select…</option>
+                  <option value="Email Process">Email Process</option>
+                  <option value="CRM App">CRM App</option>
+                </select>
+              </div>
+              {form.leadRegistrationType === 'Email Process' && (
+                <div>
+                  <label className={lc()}>Lead Registration Email <span className="text-red-500">*</span>{errors.leadRegistrationEmail && <ErrTip msg={errors.leadRegistrationEmail} />}</label>
+                  <input type="email" value={form.leadRegistrationEmail} onChange={e => set('leadRegistrationEmail', e.target.value)} className={errors.leadRegistrationEmail ? fcE() : fc()} placeholder="leads@example.com" />
+                </div>
+              )}
+              {form.leadRegistrationType === 'CRM App' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className={lc()}>App Link <span className="text-red-500">*</span>{errors.leadRegistrationAppLink && <ErrTip msg={errors.leadRegistrationAppLink} />}</label>
+                    <input type="url" value={form.leadRegistrationAppLink} onChange={e => set('leadRegistrationAppLink', e.target.value)} className={errors.leadRegistrationAppLink ? fcE() : fc()} placeholder="https://crm.example.com" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={lc()}>App ID <span className="text-red-500">*</span>{errors.leadRegistrationAppId && <ErrTip msg={errors.leadRegistrationAppId} />}</label>
+                      <input value={form.leadRegistrationAppId} onChange={e => set('leadRegistrationAppId', e.target.value)} className={errors.leadRegistrationAppId ? fcE() : fc()} placeholder="App user ID" />
+                    </div>
+                    <div>
+                      <label className={lc()}>App Password <span className="text-red-500">*</span>{errors.leadRegistrationAppPassword && <ErrTip msg={errors.leadRegistrationAppPassword} />}</label>
+                      <input type="password" value={form.leadRegistrationAppPassword} onChange={e => set('leadRegistrationAppPassword', e.target.value)} className={errors.leadRegistrationAppPassword ? fcE() : fc()} placeholder="••••••••" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ── Section: Description & Amenities ── */}
