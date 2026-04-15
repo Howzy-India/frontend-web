@@ -2305,8 +2305,85 @@ const EmployeesManagement = React.memo(function EmployeesManagement({ isSuperAdm
 });
 
 const SystemSettings = React.memo(function SystemSettings() {
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; updated: number; errors: Array<{ row: number; uniqueId?: string; error: string }> } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    setExportLoading(true);
+    try {
+      const blob = await api.exportProjectsCsv();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `projects-export-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Export failed: ' + String(err));
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportLoading(true);
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const result = await api.importProjectsCsv(text);
+      setImportResult({ imported: result.imported, updated: result.updated, errors: result.errors });
+    } catch (err) {
+      alert('Import failed: ' + String(err));
+    } finally {
+      setImportLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="max-w-3xl space-y-8">
+      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
+        <h3 className="text-lg font-bold text-slate-900 mb-2">Projects Data</h3>
+        <p className="text-xs text-slate-500 mb-6">Export all active projects to CSV or import a CSV to create / override existing projects.</p>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={handleExport}
+            disabled={exportLoading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all"
+          >
+            {exportLoading ? 'Exporting…' : '↓ Export Projects CSV'}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importLoading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 text-slate-700 text-sm font-bold rounded-xl transition-all"
+          >
+            {importLoading ? 'Importing…' : '↑ Import Projects CSV'}
+          </button>
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleImport} />
+        </div>
+        {importResult && (
+          <div className="mt-5 p-4 bg-slate-50 rounded-xl text-sm space-y-1">
+            <p className="font-bold text-slate-800">Import complete</p>
+            <p className="text-green-700">Created: {importResult.imported} &nbsp;|&nbsp; Updated: {importResult.updated}</p>
+            {importResult.errors.length > 0 && (
+              <div className="mt-2">
+                <p className="font-semibold text-red-600 mb-1">Errors ({importResult.errors.length})</p>
+                <ul className="space-y-0.5 text-red-500 max-h-40 overflow-y-auto">
+                  {importResult.errors.map((e, i) => (
+                    <li key={i}>Row {e.row}{e.uniqueId ? ` (${e.uniqueId})` : ''}: {e.error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
         <h3 className="text-lg font-bold text-slate-900 mb-6">Platform Configuration</h3>
         <div className="space-y-6">

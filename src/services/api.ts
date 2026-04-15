@@ -134,7 +134,22 @@ export const api = {
   rejectProject: (id: string, reason?: string) => post<any>(`/admin/properties/${id}/reject`, { reason }),
   getPendingProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
   getMyOnboardedProjects: () => get<any>('/projects?status=PENDING_APPROVAL'),
-  getBackupSheetUrl: () => get<{ sheetUrl: string }>('/admin/settings/backup-sheet'),
+  exportProjectsCsv: async () => {
+    const headers = await authHeaders();
+    const res = await fetch(`${BASE_URL}/admin/projects/export`, { headers });
+    if (!res.ok) throw new Error(await res.text());
+    return res.blob();
+  },
+  importProjectsCsv: async (csvText: string) => {
+    const token = await getIdToken().catch(() => '');
+    const res = await fetch(`${BASE_URL}/admin/projects/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/csv', Authorization: `Bearer ${token}` },
+      body: csvText,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{ success: boolean; imported: number; updated: number; errors: Array<{ row: number; uniqueId?: string; error: string }>; results: any[] }>;
+  },
   getPublicStats: () => get<any>('/public/stats', false),
 
   // ── Leads ─────────────────────────────────────────────────────────
