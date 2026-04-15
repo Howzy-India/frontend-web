@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, XCircle, Clock, Eye, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2, RefreshCw } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Eye, EyeOff, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2, RefreshCw, ExternalLink, Download } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function AdminVerificationPanel() {
@@ -444,9 +444,12 @@ interface CloudProjectDetailProps {
 }
 
 function CloudProjectDetail({ project }: CloudProjectDetailProps) {
+  const [showAppPassword, setShowAppPassword] = React.useState(false);
+  const [lightboxUrl, setLightboxUrl] = React.useState<string | null>(null);
+
   if (!project) return <p className="text-slate-500 text-sm">No project data available.</p>;
 
-  const infoFields = [
+  const infoFields: [string, any][] = [
     ['Project Name', project.name],
     ['Developer', project.developerName],
     ['RERA Number', project.reraNumber],
@@ -456,7 +459,7 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     ['Possession Status', project.possessionStatus],
     ['Possession Date', project.possessionDate],
   ];
-  const locationFields = [
+  const locationFields: [string, any][] = [
     ['Address', project.address],
     ['Zone', project.zone],
     ['Cluster / Location', project.location],
@@ -466,7 +469,7 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     ['Pincode', project.pincode],
     ['Landmark', project.landmark],
   ];
-  const detailFields = [
+  const detailFields: [string, any][] = [
     ['Land Parcel (Acres)', project.landParcel],
     ['No. of Towers', project.numberOfTowers],
     ['Total Units', project.totalUnits],
@@ -474,12 +477,17 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     ['Density', project.density],
     ['SFT Costing (₹/sqft)', project.sftCostingPerSqft],
   ];
-  const pricingFields = [
+  const pricingFields: [string, any][] = [
     ['2 BHK Price (₹)', project.pricing?.twoBhk],
     ['3 BHK Price (₹)', project.pricing?.threeBhk],
     ['4 BHK Price (₹)', project.pricing?.fourBhk],
   ];
-  const contactFields = [
+  const commissionFields: [string, any][] = [
+    ['Commission Type', project.commissionType],
+    ['Commission Value', project.commissionValue],
+    ['Agreement %', project.agreementPercentage],
+  ];
+  const contactFields: [string, any][] = [
     ['Project Manager', project.projectManager?.name],
     ['PM Contact', project.projectManager?.contact],
     ['PM Email', project.projectManager?.email],
@@ -487,18 +495,7 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     ['SPOC Contact', project.spoc?.contact],
     ['SPOC Email', project.spoc?.email],
   ];
-  const leadRegFields = [
-    ['Lead Reg. Type', project.leadRegistrationType],
-    ['Lead Reg. Email', project.leadRegistrationEmail],
-    ['Lead Reg. App Link', project.leadRegistrationAppLink],
-    ['Lead Reg. App ID', project.leadRegistrationAppId],
-  ];
-  const commissionFields = [
-    ['Commission Type', project.commissionType],
-    ['Commission Value', project.commissionValue],
-    ['Agreement %', project.agreementPercentage],
-  ];
-  const submittedByFields = [
+  const submittedByFields: [string, any][] = [
     ['Name', project.submittedByName],
     ['Mobile', project.submittedByMobile],
     ['UID', project.createdBy],
@@ -522,54 +519,244 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     );
   };
 
+  const photos: string[] = project.photos ?? [];
+  const hasMedia = photos.length > 0 || project.videoLink3D || project.brochureLink || project.onboardingAgreementLink;
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        {renderSection('Basic Information', infoFields)}
-        {renderSection('Location', locationFields)}
-        {renderSection('Site Details', detailFields)}
-        {renderSection('Pricing', pricingFields)}
-        {renderSection('Team Contacts', contactFields)}
-        {renderSection('Lead Registration', leadRegFields)}
-        {renderSection('Commission & Agreement', commissionFields)}
-        {renderSection('Submitted By', submittedByFields)}
-        {(project.usp || project.teaser || project.details) && (
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Marketing</h3>
-            {project.usp && <div className="mb-2"><span className="text-xs font-medium text-slate-500 block">USP</span><span className="text-sm text-slate-900">{project.usp}</span></div>}
-            {project.teaser && <div className="mb-2"><span className="text-xs font-medium text-slate-500 block">Teaser</span><span className="text-sm text-slate-900">{project.teaser}</span></div>}
-            {project.details && <div><span className="text-xs font-medium text-slate-500 block">Description</span><span className="text-sm text-slate-900">{project.details}</span></div>}
-          </div>
-        )}
-      </div>
-      <div>
-        {renderSection('Configurations', project.configurations?.map((c: any) => [`${c.bhkCount} BHK`, `${c.minSft}–${c.maxSft} sqft (${c.unitCount} units)`]) ?? [])}
-        {project.amenities?.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Amenities</h3>
-            <div className="flex flex-wrap gap-2">
-              {project.amenities.map((a: string, i: number) => (
-                <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">{a}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        {project.photos?.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Photos</h3>
-            <div className="flex flex-wrap gap-2">
-              {project.photos.map((url: string, i: number) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline">Photo {i + 1}</a>
-              ))}
-            </div>
-          </div>
-        )}
+    <>
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/70 hover:text-white p-2"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Project photo"
+            className="max-w-[90vw] max-h-[85vh] rounded-xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      <div className="space-y-0">
+        {/* ── 1. Basic Information ── */}
+        {renderSection('1. Basic Information', infoFields)}
+
+        {/* ── 2. Location ── */}
+        {renderSection('2. Location', locationFields)}
         {project.mapLink && (
-          <div className="mb-6">
-            <a href={project.mapLink} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 underline font-medium">View on Google Maps</a>
+          <div className="mb-6 -mt-3">
+            <a href={project.mapLink} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium underline">
+              <Map className="w-3.5 h-3.5" /> View on Google Maps
+            </a>
           </div>
         )}
+
+        {/* ── 3. Project Details ── */}
+        {renderSection('3. Project Details', detailFields)}
+
+        {/* ── 4. BHK Configurations ── */}
+        {(project.configurations?.length > 0) && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">4. BHK Configurations</h3>
+            <div className="space-y-2">
+              {project.configurations.map((c: any, i: number) => (
+                <div key={i} className="flex items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-sm font-bold text-indigo-700 w-16 flex-shrink-0">{c.bhkCount} BHK</span>
+                  <span className="text-xs text-slate-600">{c.minSft}–{c.maxSft} sqft</span>
+                  <span className="text-xs text-slate-500 ml-auto">{c.unitCount} units</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {renderSection('4. Pricing', pricingFields)}
+
+        {/* ── 5. Media & Files ── */}
+        {hasMedia && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">5. Media &amp; Files</h3>
+
+            {/* Photos */}
+            {photos.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-medium text-slate-500 mb-2">Project Photos ({photos.length})</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {photos.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setLightboxUrl(url)}
+                      className="relative aspect-video bg-slate-100 rounded-xl border border-slate-200 overflow-hidden group focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    >
+                      <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Eye className="w-5 h-5 text-white" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3D Video */}
+            {project.videoLink3D && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-slate-500 mb-1">3D / Walkthrough Video</p>
+                <a
+                  href={project.videoLink3D}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
+                >
+                  <Video className="w-4 h-4" />
+                  <span className="truncate max-w-[240px]">{project.videoLink3D}</span>
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                </a>
+              </div>
+            )}
+
+            {/* Brochure */}
+            {project.brochureLink && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-slate-500 mb-1">Brochure</p>
+                <a
+                  href={project.brochureLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Brochure
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                </a>
+              </div>
+            )}
+
+            {/* Onboarding Agreement */}
+            {project.onboardingAgreementLink && (
+              <div className="mb-3">
+                <p className="text-xs font-medium text-slate-500 mb-1">Onboarding Agreement</p>
+                <a
+                  href={project.onboardingAgreementLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 font-medium transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Onboarding Agreement
+                  <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 5b. Commission ── */}
+        {renderSection('Commission', commissionFields)}
+
+        {/* ── 6. Team & Contacts ── */}
+        {renderSection('6. Team & Contacts', contactFields)}
+
+        {/* ── 7. Lead Registration ── */}
+        {project.leadRegistrationType && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">7. Lead Registration</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-slate-500">Type</span>
+                <span className="text-sm font-semibold text-slate-900">{project.leadRegistrationType}</span>
+              </div>
+              {project.leadRegistrationEmail && (
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-500">Email</span>
+                  <span className="text-sm font-semibold text-slate-900">{project.leadRegistrationEmail}</span>
+                </div>
+              )}
+              {project.leadRegistrationAppLink && (
+                <div className="flex flex-col col-span-2">
+                  <span className="text-xs font-medium text-slate-500">App Link</span>
+                  <a href={project.leadRegistrationAppLink} target="_blank" rel="noreferrer"
+                    className="text-sm font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1 truncate">
+                    {project.leadRegistrationAppLink}
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                  </a>
+                </div>
+              )}
+              {project.leadRegistrationAppId && (
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-500">App ID</span>
+                  <span className="text-sm font-semibold text-slate-900">{project.leadRegistrationAppId}</span>
+                </div>
+              )}
+              {project.leadRegistrationAppPassword && (
+                <div className="flex flex-col">
+                  <span className="text-xs font-medium text-slate-500">App Password</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-sm font-semibold text-slate-900 font-mono tracking-widest">
+                      {showAppPassword ? project.leadRegistrationAppPassword : '••••••••'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAppPassword(v => !v)}
+                      className="text-slate-400 hover:text-slate-700 transition-colors"
+                      aria-label={showAppPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showAppPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── 8. Description & Amenities ── */}
+        {(project.usp || project.details || project.amenities?.length > 0) && (
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">8. Description &amp; Amenities</h3>
+            {project.usp && (
+              <div className="mb-3">
+                <span className="text-xs font-medium text-slate-500 block mb-0.5">USP</span>
+                <span className="text-sm text-slate-900">{project.usp}</span>
+              </div>
+            )}
+            {project.teaser && (
+              <div className="mb-3">
+                <span className="text-xs font-medium text-slate-500 block mb-0.5">Teaser</span>
+                <span className="text-sm text-slate-900">{project.teaser}</span>
+              </div>
+            )}
+            {project.details && (
+              <div className="mb-3">
+                <span className="text-xs font-medium text-slate-500 block mb-0.5">Description</span>
+                <span className="text-sm text-slate-900">{project.details}</span>
+              </div>
+            )}
+            {project.amenities?.length > 0 && (
+              <div>
+                <span className="text-xs font-medium text-slate-500 block mb-2">Amenities</span>
+                <div className="flex flex-wrap gap-2">
+                  {project.amenities.map((a: string, i: number) => (
+                    <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-full">{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Submitted By ── */}
+        {renderSection('Submitted By', submittedByFields)}
       </div>
-    </div>
+    </>
   );
 }
