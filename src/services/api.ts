@@ -112,6 +112,8 @@ export interface CreateProjectInput {
   leadRegistrationAppPassword?: string;
   commissionType?: string;
   commissionValue?: number;
+  submittedByName?: string;
+  submittedByMobile?: string;
   usp?: string;
   teaser?: string;
   details?: string;
