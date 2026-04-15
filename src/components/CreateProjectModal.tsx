@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { X, Upload, Loader2, Trash2, Plus, Link } from 'lucide-react';
+import React, { useRef, useState, useCallback } from 'react';
+import { X, Upload, Loader2, Trash2, Plus, Link, Eye, EyeOff } from 'lucide-react';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import {
@@ -240,17 +240,19 @@ function MultiPhotoUpload({
 interface CreateProjectModalProps {
   propertyType: PropertyType;
   userRole?: string;
+  user?: { name: string | null; phoneNumber: string | null };
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
   projectId?: string;
 }
 
-export default function CreateProjectModal({ propertyType, userRole, onClose, onSuccess, initialData, projectId }: CreateProjectModalProps) {
+export default function CreateProjectModal({ propertyType, userRole, user, onClose, onSuccess, initialData, projectId }: CreateProjectModalProps) {
   const [form, setForm] = useState<FormState>(() => emptyForm(propertyType, userRole));
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [apiError, setApiError]   = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showAppPassword, setShowAppPassword] = useState(false);
 
   // Stable folder for this project's Storage files.
   // For edits use the existing uniqueId; for new projects generate one upfront so
@@ -501,6 +503,8 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
       leadRegistrationAppPassword: str(form.leadRegistrationAppPassword),
       commissionType: str(form.commissionType),
       commissionValue: form.commissionValue.trim() ? Number(form.commissionValue) : undefined,
+      submittedByName: user?.name ?? undefined,
+      submittedByMobile: user?.phoneNumber ?? undefined,
       usp: str(form.usp), details: str(form.details),
       status: form.status,
       configurations: configs.length ? configs : undefined,
@@ -909,7 +913,12 @@ export default function CreateProjectModal({ propertyType, userRole, onClose, on
                     </div>
                     <div>
                       <label className={lc()}>App Password <span className="text-red-500">*</span>{errors.leadRegistrationAppPassword && <ErrTip msg={errors.leadRegistrationAppPassword} />}</label>
-                      <input type="password" value={form.leadRegistrationAppPassword} onChange={e => set('leadRegistrationAppPassword', e.target.value)} className={errors.leadRegistrationAppPassword ? fcE() : fc()} placeholder="••••••••" />
+                      <div className="relative">
+                        <input type={showAppPassword ? 'text' : 'password'} value={form.leadRegistrationAppPassword} onChange={e => set('leadRegistrationAppPassword', e.target.value)} className={`${errors.leadRegistrationAppPassword ? fcE() : fc()} pr-10`} placeholder="••••••••" />
+                        <button type="button" onClick={() => setShowAppPassword(v => !v)} className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600" tabIndex={-1} aria-label={showAppPassword ? 'Hide password' : 'Show password'}>
+                          {showAppPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

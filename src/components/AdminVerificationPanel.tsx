@@ -190,7 +190,12 @@ export default function AdminVerificationPanel() {
                         <span className="text-slate-600">{sub.type}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-slate-600">{sub.details?.ownerName || sub.details?.builderName || sub.details?.partnerName || sub.details?.submittedBy || sub.email}</td>
+                    <td className="p-4 text-slate-600">
+                      <div className="font-medium">{sub.details?.ownerName || sub.details?.builderName || sub.details?.partnerName || sub.rawProject?.submittedByName || sub.details?.submittedBy || sub.email || '—'}</div>
+                      {(sub.rawProject?.submittedByMobile) && (
+                        <div className="text-xs text-slate-400">{sub.rawProject.submittedByMobile}</div>
+                      )}
+                    </td>
                     <td className="p-4 text-slate-600">{sub.date}</td>
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -468,7 +473,6 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
     ['Available Units', project.availableUnits],
     ['Density', project.density],
     ['SFT Costing (₹/sqft)', project.sftCostingPerSqft],
-    ['EMI Starts From', project.emiStartsFrom],
   ];
   const pricingFields = [
     ['2 BHK Price (₹)', project.pricing?.twoBhk],
@@ -478,9 +482,26 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
   const contactFields = [
     ['Project Manager', project.projectManager?.name],
     ['PM Contact', project.projectManager?.contact],
+    ['PM Email', project.projectManager?.email],
     ['SPOC', project.spoc?.name],
     ['SPOC Contact', project.spoc?.contact],
-    ['Submitted By', project.createdBy],
+    ['SPOC Email', project.spoc?.email],
+  ];
+  const leadRegFields = [
+    ['Lead Reg. Type', project.leadRegistrationType],
+    ['Lead Reg. Email', project.leadRegistrationEmail],
+    ['Lead Reg. App Link', project.leadRegistrationAppLink],
+    ['Lead Reg. App ID', project.leadRegistrationAppId],
+  ];
+  const commissionFields = [
+    ['Commission Type', project.commissionType],
+    ['Commission Value', project.commissionValue],
+    ['Agreement %', project.agreementPercentage],
+  ];
+  const submittedByFields = [
+    ['Name', project.submittedByName],
+    ['Mobile', project.submittedByMobile],
+    ['UID', project.createdBy],
   ];
 
   const renderSection = (title: string, fields: [string, any][]) => {
@@ -509,6 +530,9 @@ function CloudProjectDetail({ project }: CloudProjectDetailProps) {
         {renderSection('Site Details', detailFields)}
         {renderSection('Pricing', pricingFields)}
         {renderSection('Team Contacts', contactFields)}
+        {renderSection('Lead Registration', leadRegFields)}
+        {renderSection('Commission & Agreement', commissionFields)}
+        {renderSection('Submitted By', submittedByFields)}
         {(project.usp || project.teaser || project.details) && (
           <div className="mb-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 border-b border-slate-100 pb-2">Marketing</h3>

@@ -641,6 +641,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
         <CreateProjectModal
           propertyType="PROJECT"
           userRole={userRole}
+          user={user}
           onClose={() => setIsProjectModalOpen(false)}
           onSuccess={() => {
             setIsProjectModalOpen(false);
@@ -654,6 +655,7 @@ export default function PartnerDashboard({ onLogout, userEmail = '' }: PartnerDa
         <CreateProjectModal
           propertyType="PROJECT"
           userRole={userRole}
+          user={user}
           projectId={editingProject.id}
           initialData={editingProject.data}
           onClose={() => setEditingProject(null)}

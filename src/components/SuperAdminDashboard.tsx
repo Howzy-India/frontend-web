@@ -1546,6 +1546,7 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
         <CreateProjectModal
           propertyType={propertyType}
           userRole={userRole}
+          user={user}
           onClose={() => setShowModal(false)}
           onSuccess={handleSuccess}
         />
@@ -1559,6 +1560,7 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
         <CreateProjectModal
           propertyType={editProject.propertyType ?? propertyType}
           userRole={userRole}
+          user={user}
           initialData={editProject}
           projectId={editProject.id}
           onClose={() => setEditProject(null)}
