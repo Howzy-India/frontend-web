@@ -52,6 +52,48 @@ const maskContact = (contact: string | undefined) => {
   });
 };
 
+const builderPocColumn = {
+  key: 'builderPoc',
+  label: 'Builder POC',
+  sortable: false,
+  render: (p: any) => (
+    <div className="flex flex-col gap-1 text-xs">
+      {p.builderPoc ? (
+        <>
+          <span className="font-medium text-slate-900">{p.builderPoc.name}</span>
+          <span className="font-mono text-slate-500">{maskContact(p.builderPoc.contact)}</span>
+        </>
+      ) : (
+        <span className="text-slate-400">Not Assigned</span>
+      )}
+    </div>
+  )
+};
+
+const uspColumn = {
+  key: 'usp',
+  label: 'USP',
+  sortable: false,
+  render: (p: any) => (
+    <div className="text-xs text-slate-600 max-w-[200px] truncate" title={p.usp}>
+      {p.usp}
+    </div>
+  )
+};
+
+const availabilityEntriesColumn = {
+  key: 'availability',
+  label: 'Availability',
+  sortable: false,
+  render: (p: any) => (
+    <div className="flex flex-col gap-1 text-xs">
+      {p.availability ? Object.entries(p.availability).map(([size, count]) => (
+        <span key={size} className="text-slate-600">{size}: <span className="font-mono font-medium text-slate-900">{count as React.ReactNode}</span></span>
+      )) : <span className="text-slate-400">N/A</span>}
+    </div>
+  )
+};
+
 interface PartnerDashboardProps {
   readonly onLogout: () => void;
 }
@@ -531,23 +573,7 @@ function ListedProjectsView({ projects = [], loading = false }: { projects?: any
         </div>
       )
     },
-    {
-      key: 'builderPoc',
-      label: 'Builder POC',
-      sortable: false,
-      render: (p: any) => (
-        <div className="flex flex-col gap-1 text-xs">
-          {p.builderPoc ? (
-            <>
-              <span className="font-medium text-slate-900">{p.builderPoc.name}</span>
-              <span className="font-mono text-slate-500">{maskContact(p.builderPoc.contact)}</span>
-            </>
-          ) : (
-            <span className="text-slate-400">Not Assigned</span>
-          )}
-        </div>
-      )
-    }
+    builderPocColumn
   ];
 
   return (
@@ -782,45 +808,9 @@ function ListedPlotsView({ projects = [] }: { projects?: any[] }) {
         </div>
       )
     },
-    {
-      key: 'usp',
-      label: 'USP',
-      sortable: false,
-      render: (p: any) => (
-        <div className="text-xs text-slate-600 max-w-[200px] truncate" title={p.usp}>
-          {p.usp}
-        </div>
-      )
-    },
-    {
-      key: 'availability',
-      label: 'Availability',
-      sortable: false,
-      render: (p: any) => (
-        <div className="flex flex-col gap-1 text-xs">
-          {p.availability ? Object.entries(p.availability).map(([size, count]) => (
-            <span key={size} className="text-slate-600">{size}: <span className="font-mono font-medium text-slate-900">{count as React.ReactNode}</span></span>
-          )) : <span className="text-slate-400">N/A</span>}
-        </div>
-      )
-    },
-    {
-      key: 'builderPoc',
-      label: 'Builder POC',
-      sortable: false,
-      render: (p: any) => (
-        <div className="flex flex-col gap-1 text-xs">
-          {p.builderPoc ? (
-            <>
-              <span className="font-medium text-slate-900">{p.builderPoc.name}</span>
-              <span className="font-mono text-slate-500">{maskContact(p.builderPoc.contact)}</span>
-            </>
-          ) : (
-            <span className="text-slate-400">Not Assigned</span>
-          )}
-        </div>
-      )
-    }
+    uspColumn,
+    availabilityEntriesColumn,
+    builderPocColumn,
   ];
 
   return (
@@ -894,45 +884,9 @@ function ListedFarmLandsView({ projects = [] }: { projects?: any[] }) {
         </div>
       )
     },
-    {
-      key: 'usp',
-      label: 'USP',
-      sortable: false,
-      render: (p: any) => (
-        <div className="text-xs text-slate-600 max-w-[200px] truncate" title={p.usp}>
-          {p.usp}
-        </div>
-      )
-    },
-    {
-      key: 'availability',
-      label: 'Availability',
-      sortable: false,
-      render: (p: any) => (
-        <div className="flex flex-col gap-1 text-xs">
-          {p.availability ? Object.entries(p.availability).map(([size, count]) => (
-            <span key={size} className="text-slate-600">{size}: <span className="font-mono font-medium text-slate-900">{count as React.ReactNode}</span></span>
-          )) : <span className="text-slate-400">N/A</span>}
-        </div>
-      )
-    },
-    {
-      key: 'builderPoc',
-      label: 'Builder POC',
-      sortable: false,
-      render: (p: any) => (
-        <div className="flex flex-col gap-1 text-xs">
-          {p.builderPoc ? (
-            <>
-              <span className="font-medium text-slate-900">{p.builderPoc.name}</span>
-              <span className="font-mono text-slate-500">{maskContact(p.builderPoc.contact)}</span>
-            </>
-          ) : (
-            <span className="text-slate-400">Not Assigned</span>
-          )}
-        </div>
-      )
-    }
+    uspColumn,
+    availabilityEntriesColumn,
+    builderPocColumn,
   ];
 
   return (
