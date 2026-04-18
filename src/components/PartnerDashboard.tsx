@@ -1073,8 +1073,9 @@ function AddLeadModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (l
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Full Name</label>
+            <label htmlFor="lead-name" className="text-sm font-semibold text-slate-700">Full Name</label>
             <input 
+              id="lead-name"
               required
               type="text" 
               value={formData.name}
@@ -1085,8 +1086,9 @@ function AddLeadModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (l
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Contact Number</label>
+            <label htmlFor="lead-contact" className="text-sm font-semibold text-slate-700">Contact Number</label>
             <input 
+              id="lead-contact"
               required
               type="tel" 
               value={formData.contact}
@@ -1098,8 +1100,9 @@ function AddLeadModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (l
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700">Budget</label>
+              <label htmlFor="lead-budget" className="text-sm font-semibold text-slate-700">Budget</label>
               <input 
+                id="lead-budget"
                 required
                 type="text" 
                 value={formData.budget}
@@ -1109,8 +1112,9 @@ function AddLeadModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (l
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-semibold text-slate-700">Looking BHK</label>
+              <label htmlFor="lead-bhk" className="text-sm font-semibold text-slate-700">Looking BHK</label>
               <select 
+                id="lead-bhk"
                 value={formData.lookingBhk}
                 onChange={(e) => setFormData({...formData, lookingBhk: e.target.value})}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
@@ -1126,8 +1130,9 @@ function AddLeadModal({ onClose, onSubmit }: { onClose: () => void, onSubmit: (l
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-semibold text-slate-700">Preferred Location</label>
+            <label htmlFor="lead-location" className="text-sm font-semibold text-slate-700">Preferred Location</label>
             <input 
+              id="lead-location"
               required
               type="text" 
               value={formData.locationPreferred}
@@ -1309,14 +1314,14 @@ function LeadsView({ leads, projects = [], onUploadDeed, onCreateLead, onUpdateL
                         </p>
                         <div className="flex items-center gap-1">
                           <a 
-                            href={`tel:${lead.contact.replace(/[^0-9+]/g, '')}`}
+                            href={`tel:${lead.contact.replaceAll(/[^0-9+]/g, '')}`}
                             className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition-colors"
                             title="Call Direct"
                           >
                             <PhoneCall className="w-3.5 h-3.5" />
                           </a>
                           <a 
-                            href={`https://wa.me/${lead.contact.replace(/[^0-9]/g, '')}`}
+                            href={`https://wa.me/${lead.contact.replaceAll(/[^0-9]/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
@@ -1442,10 +1447,11 @@ function LeadsView({ leads, projects = [], onUploadDeed, onCreateLead, onUpdateL
               </div>
               <form onSubmit={handleSetReminder} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="reminder-client" className="block text-sm font-medium text-slate-700 mb-1">
                     Client Name
                   </label>
                   <input 
+                    id="reminder-client"
                     type="text" 
                     value={reminderLead} 
                     disabled 
@@ -1453,10 +1459,11 @@ function LeadsView({ leads, projects = [], onUploadDeed, onCreateLead, onUpdateL
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="reminder-date" className="block text-sm font-medium text-slate-700 mb-1">
                     Date & Time
                   </label>
                   <input 
+                    id="reminder-date"
                     type="datetime-local" 
                     required
                     value={reminderDate}
@@ -1465,10 +1472,11 @@ function LeadsView({ leads, projects = [], onUploadDeed, onCreateLead, onUpdateL
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="reminder-note" className="block text-sm font-medium text-slate-700 mb-1">
                     Note / Update
                   </label>
                   <textarea 
+                    id="reminder-note"
                     value={reminderNote}
                     onChange={(e) => setReminderNote(e.target.value)}
                     placeholder="Add details about the follow-up..."
