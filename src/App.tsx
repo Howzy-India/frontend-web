@@ -9,15 +9,15 @@ import { api } from './services/api';
 import { TEST_IDS } from './constants/testIds';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const PilotDashboard = lazy(() => import('./components/PilotDashboard'));
 const PartnerDashboard = lazy(() => import('./components/PartnerDashboard'));
+const HowzerEmployeeDashboard = lazy(() => import('./components/HowzerEmployeeDashboard'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdminDashboard'));
 const ClientPortal = lazy(() => import('./components/ClientPortal'));
 
 type ViewState =
   | 'splash'
-  | 'pilot_dashboard'
   | 'partner_dashboard'
+  | 'howzer_employee_dashboard'
   | 'super_admin_dashboard'
   | 'client_portal';
 
@@ -67,12 +67,11 @@ export default function App() {
       case 'super_admin':
       case 'admin':
         return 'super_admin_dashboard';
-      case 'sales_agent':
-      case 'sourcing_agent':
-        return 'pilot_dashboard';
+      case 'partner':
+        return 'partner_dashboard';
       case 'howzer_sourcing':
       case 'howzer_sales':
-        return 'partner_dashboard';
+        return 'howzer_employee_dashboard';
       default:
         return 'client_portal';
     }
@@ -148,11 +147,11 @@ export default function App() {
         >
           <Suspense fallback={<Splash />}>
             {view === 'splash' && <Splash />}
-            {view === 'pilot_dashboard' && (
-              <PilotDashboard onLogout={handleLogout} />
-            )}
             {view === 'partner_dashboard' && (
-              <PartnerDashboard onLogout={handleLogout} userEmail={user?.email ?? ''} />
+              <PartnerDashboard onLogout={handleLogout} />
+            )}
+            {view === 'howzer_employee_dashboard' && (
+              <HowzerEmployeeDashboard onLogout={handleLogout} userEmail={user?.email ?? ''} />
             )}
             {view === 'super_admin_dashboard' && (
               <SuperAdminDashboard
