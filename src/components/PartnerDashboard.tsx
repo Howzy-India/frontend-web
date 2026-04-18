@@ -112,7 +112,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
   const [listedPlots, setListedPlots] = useState<any[]>([]);
   const [listedFarmLands, setListedFarmLands] = useState<any[]>([]);
 
-  const firestoreNotifications = useNotifications('pilot');
+  const firestoreNotifications = useNotifications('partner');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,7 +120,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
         const [projectsData, leadsData, assignedLeadsData] = await Promise.all([
           api.getProjects(),
           api.getLeads(),
-          api.getPilotAssignedEnquiries()
+          api.getPartnerAssignedEnquiries()
         ]);
         setProjects(projectsData.projects);
         setLeads(leadsData.leads);
@@ -151,7 +151,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
       await api.updateEnquiryStatus(id, status);
-      const data = await api.getPilotAssignedEnquiries();
+      const data = await api.getPartnerAssignedEnquiries();
       setAssignedLeads(data.enquiries || []);
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -217,7 +217,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
               transition={{ delay: 1.6, duration: 0.5 }}
               className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-md ml-2"
             >
-              Pilot
+              Partner
             </motion.span>
           </div>
 
