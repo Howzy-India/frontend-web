@@ -197,6 +197,11 @@ export const api = {
   // ── Admin ─────────────────────────────────────────────────────────
   getSalesTeam: () => get<any>('/admin/sales-team'),
   getPartners: () => get<any>('/admin/partners'),
+  updatePartner: (
+    uid: string,
+    data: { name?: string; email?: string; status?: 'active' | 'disabled' }
+  ) => patch<any>(`/admin/partners/${uid}`, data),
+  deletePartner: (uid: string) => del<any>(`/admin/partners/${uid}`),
   getAdminUsers: () => get<any>('/admin/users'),
   createAdminUser: (data: { name: string; phone: string; email?: string }) =>
     post<any>('/admin/users', data),
