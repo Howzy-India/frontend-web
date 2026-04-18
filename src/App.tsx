@@ -9,14 +9,12 @@ import { api } from './services/api';
 import { TEST_IDS } from './constants/testIds';
 import ErrorBoundary from './components/ErrorBoundary';
 
-const PartnerDashboard = lazy(() => import('./components/PartnerDashboard'));
 const HowzerEmployeeDashboard = lazy(() => import('./components/HowzerEmployeeDashboard'));
 const SuperAdminDashboard = lazy(() => import('./components/SuperAdminDashboard'));
 const ClientPortal = lazy(() => import('./components/ClientPortal'));
 
 type ViewState =
   | 'splash'
-  | 'partner_dashboard'
   | 'howzer_employee_dashboard'
   | 'super_admin_dashboard'
   | 'client_portal';
@@ -67,8 +65,8 @@ export default function App() {
       case 'super_admin':
       case 'admin':
         return 'super_admin_dashboard';
-      case 'partner':
-        return 'partner_dashboard';
+      case 'howzer_employee':
+        return 'howzer_employee_dashboard';
       case 'howzer_sourcing':
       case 'howzer_sales':
         return 'howzer_employee_dashboard';
@@ -147,9 +145,6 @@ export default function App() {
         >
           <Suspense fallback={<Splash />}>
             {view === 'splash' && <Splash />}
-            {view === 'partner_dashboard' && (
-              <PartnerDashboard onLogout={handleLogout} />
-            )}
             {view === 'howzer_employee_dashboard' && (
               <HowzerEmployeeDashboard onLogout={handleLogout} userEmail={user?.email ?? ''} />
             )}

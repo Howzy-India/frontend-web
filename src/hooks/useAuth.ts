@@ -9,7 +9,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { auth, createRecaptchaVerifier, clearRecaptchaVerifier, functions } from '../firebase';
 
-export type AppRole = 'super_admin' | 'admin' | 'howzer_sourcing' | 'howzer_sales' | 'partner' | 'client' | null;
+export type AppRole = 'super_admin' | 'admin' | 'howzer_sourcing' | 'howzer_sales' | 'howzer_employee' | 'client' | null;
 
 export interface AuthUser {
   uid: string;
