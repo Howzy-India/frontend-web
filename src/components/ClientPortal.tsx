@@ -270,6 +270,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const notifRef = useRef<HTMLDivElement>(null);
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
   const [profileContactTime, setProfileContactTime] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
   
   const [isFarmLandModalOpen, setIsFarmLandModalOpen] = useState(false);
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
@@ -289,7 +290,10 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   // Load contact time eagerly so the profile edit modal has it on first open
   useEffect(() => {
     if (uid) {
-      getClientProfile(uid).then(p => { if (p?.contactTime) setProfileContactTime(p.contactTime); }).catch(() => null);
+      getClientProfile(uid).then(p => {
+        if (p?.contactTime) setProfileContactTime(p.contactTime);
+        if (p?.phone) setProfilePhone(p.phone);
+      }).catch(() => null);
     }
   }, [uid]);
   const fetchEnquiries = async () => {
@@ -2488,6 +2492,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           uid={uid}
           currentName={userName ?? ''}
           currentContactTime={profileContactTime}
+          phone={profilePhone}
           onSave={(name) => { onProfileUpdate?.(name); }}
           onClose={() => setIsProfileEditOpen(false)}
         />
