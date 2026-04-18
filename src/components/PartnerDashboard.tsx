@@ -12,7 +12,6 @@ import {
   X,
   Search,
   Filter,
-  PlayCircle,
   PhoneCall,
   MessageCircle,
   CalendarClock,
@@ -24,8 +23,9 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon,
   UserPlus,
-  Phone,
-  Clock
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import Logo from './Logo';
 import AssignedLeadsTable from './AssignedLeadsTable';
@@ -43,7 +43,7 @@ const maskContact = (contact: string | undefined) => {
   let maskedCount = 0;
   const digitsToMask = digitCount - 4;
   
-  return contact.replace(/\d/g, (match) => {
+  return contact.replaceAll(/\d/g, (match) => {
     if (maskedCount < digitsToMask) {
       maskedCount++;
       return '*';
@@ -53,7 +53,7 @@ const maskContact = (contact: string | undefined) => {
 };
 
 interface PartnerDashboardProps {
-  onLogout: () => void;
+  readonly onLogout: () => void;
 }
 
 export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
@@ -64,7 +64,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
   const [projects, setProjects] = useState<any[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [newLeadToast, setNewLeadToast] = useState<any>(null);
+  const [newLeadToast] = useState<any>(null);
   const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
   const [earnings, setEarnings] = useState<any>({ totalEarningValue: '₹0', totalBookingsMonth: 0, bookings: [] });
   const [listedPlots, setListedPlots] = useState<any[]>([]);
@@ -262,16 +262,15 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
                       {firestoreNotifications.length > 0 ? (
                         <div className="divide-y divide-slate-50">
                           {firestoreNotifications.map((notification) => {
-                            const Icon = notification.type === 'alert' ? AlertTriangle :
-                                         notification.type === 'success' ? CheckCircle2 : Megaphone;
-                            const colorClass = notification.type === 'alert' ? 'bg-amber-100 text-amber-600' :
-                                               notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' :
-                                               'bg-indigo-100 text-indigo-600';
+                            const getNotifIcon = () => { if (notification.type === 'alert') return AlertTriangle; if (notification.type === 'success') return CheckCircle2; return Megaphone; };
+                            const Icon = getNotifIcon();
+                            const getColorClass = () => { if (notification.type === 'alert') return 'bg-amber-100 text-amber-600'; if (notification.type === 'success') return 'bg-emerald-100 text-emerald-600'; return 'bg-indigo-100 text-indigo-600'; };
+                            const colorClass = getColorClass();
                             return (
                               <div 
                                 key={notification.id} 
                                 className={`p-4 flex gap-3 hover:bg-slate-50 transition-colors cursor-pointer ${
-                                  !notification.read ? 'bg-indigo-50/30' : ''
+                                  notification.read ? '' : 'bg-indigo-50/30'
                                 }`}
                               >
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
@@ -354,9 +353,7 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
 
 // Sub-components for each view
 
-import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
-
-function PropertyTable({ data, columns, onRowClick, loading = false }: { data: any[], columns: any[], onRowClick?: (row: any) => void, loading?: boolean }) {
+function PropertyTable({ data, columns, onRowClick, loading = false }: { readonly data: any[], readonly columns: any[], readonly onRowClick?: (row: any) => void, readonly loading?: boolean }) {
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const sortedData = React.useMemo(() => {
@@ -417,8 +414,11 @@ function PropertyTable({ data, columns, onRowClick, loading = false }: { data: a
             {sortedData.map((row, i) => (
               <tr 
                 key={row.id || i} 
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
                 className={`hover:bg-slate-50 transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onRowClick && onRowClick(row)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onRowClick && onRowClick(row)}
               >
                 {columns.map((col) => (
                   <td key={col.key} className="p-4 text-sm text-slate-700">

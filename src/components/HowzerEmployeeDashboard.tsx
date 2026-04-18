@@ -1,22 +1,17 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
   Building2, 
-  TrendingUp, 
   Users, 
-  DollarSign,
   LogOut,
   Activity,
   UserPlus,
-  Construction,
   ArrowRight,
   Clock,
   CheckCircle2,
   XCircle,
   Edit2,
   MapPin,
-  Camera,
-  Phone,
   Trash2,
   Eye,
 } from 'lucide-react';
@@ -32,8 +27,8 @@ import CreateProjectModal from './CreateProjectModal';
 import AssignedLeadsTable from './AssignedLeadsTable';
 
 interface HowzerEmployeeDashboardProps {
-  onLogout: () => void;
-  userEmail?: string;
+  readonly onLogout: () => void;
+  readonly userEmail?: string;
 }
 
 export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: HowzerEmployeeDashboardProps) {
@@ -51,7 +46,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   const [myOnboardedProjects, setMyOnboardedProjects] = useState<any[]>([]);
   
   // Attendance State
-  const [attendance, setAttendance] = useState<any | null>(null);
+  const [attendance, setAttendance] = useState<any>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
   
@@ -89,7 +84,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
         subId: p.uniqueId,
         type: 'Project',
         date: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
-        status: isPending ? 'Pending' : (p.status === 'ACTIVE' ? 'Approved' : 'Rejected'),
+        status: (() => { if (isPending) return 'Pending'; return p.status === 'ACTIVE' ? 'Approved' : 'Rejected'; })(),
         rawProject: p,
         canEdit: isPending,
         canDelete: isPending,
@@ -207,17 +202,17 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                setAttendanceType(!attendance ? 'in' : 'out');
+                setAttendanceType(attendance ? 'out' : 'in');
                 setIsAttendanceModalOpen(true);
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors ${
-                !attendance 
-                  ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200' 
-                  : 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200'
+                attendance 
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200'
+                  : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
               }`}
             >
               <Clock className="w-4 h-4" />
-              {!attendance ? 'Punch In' : 'Punch Out'}
+              {attendance ? 'Punch Out' : 'Punch In'}
             </motion.button>
           )}
           {attendance?.status === 'Completed' && (
@@ -447,11 +442,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
                         <td className="p-4 text-slate-600">{row.date}</td>
                         <td className="p-4">
                           <div>
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                              row.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                              row.status === 'Rejected'  ? 'bg-red-50 text-red-700 border-red-200' :
-                              'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${(() => { if (row.status === 'Approved') return 'bg-emerald-50 text-emerald-700 border-emerald-200'; if (row.status === 'Rejected') return 'bg-red-50 text-red-700 border-red-200'; return 'bg-amber-50 text-amber-700 border-amber-200'; })()}`}>
                               {row.status === 'Approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
                               {row.status === 'Rejected'  && <XCircle className="w-3.5 h-3.5" />}
                               {row.status === 'Pending'   && <Clock className="w-3.5 h-3.5" />}
@@ -669,18 +660,16 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
       )}
       {viewingProject && (
         <div
-          role="presentation"
+          aria-hidden="true"
           className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
           onClick={() => setViewingProject(null)}
           onKeyDown={e => e.key === 'Escape' && setViewingProject(null)}
         >
-          <div
-            role="dialog"
-            aria-modal="true"
+          <dialog
+            open
             aria-label="Project Details"
-            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 overflow-y-auto max-h-[80vh]"
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 overflow-y-auto max-h-[80vh] m-0"
             onClick={e => e.stopPropagation()}
-            onKeyDown={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-slate-900">Project Details</h2>
@@ -705,7 +694,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
                 </div>
               ) : null)}
             </div>
-          </div>
+          </dialog>
         </div>
       )}
       {projectToastMsg && (
