@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { User, Clock, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Clock, X, Loader2, CheckCircle2, Phone } from 'lucide-react';
 import { updateProfile } from 'firebase/auth';
 import { auth } from '../firebase';
 import { updateClientProfile } from '../hooks/useClientProfile';
@@ -12,6 +12,7 @@ interface ClientProfileEditModalProps {
   uid: string;
   currentName: string;
   currentContactTime: string;
+  phone?: string;
   onSave: (name: string) => void;
   onClose: () => void;
 }
@@ -20,6 +21,7 @@ export default function ClientProfileEditModal({
   uid,
   currentName,
   currentContactTime,
+  phone,
   onSave,
   onClose,
 }: Readonly<ClientProfileEditModalProps>) {
@@ -103,6 +105,25 @@ export default function ClientProfileEditModal({
             <>
               {error && (
                 <p data-testid={TEST_IDS.PROFILE_EDIT.ERROR_MSG} className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
+              )}
+
+              {/* Mobile Number (readonly) */}
+              {phone && (
+                <div>
+                  <label htmlFor="edit-phone" className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                    Mobile Number
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      id="edit-phone"
+                      type="text"
+                      value={phone}
+                      readOnly
+                      className="w-full bg-slate-100 border border-slate-200 rounded-xl py-2.5 pl-9 pr-3 text-sm text-slate-500 cursor-not-allowed select-none"
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Full Name */}
