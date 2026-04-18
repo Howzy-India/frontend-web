@@ -1374,73 +1374,193 @@ const StatCard = React.memo(function StatCard({ title, value, trend, icon: Icon,
 });
 
 const PilotManagement = React.memo(function PilotManagement() {
+  const [partners, setPartners] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const filteredPartners = React.useMemo(() => {
-    return PARTNERS_DATA.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.franchise.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [searchTerm]);
-  
+  const [editPartner, setEditPartner] = React.useState<any | null>(null);
+  const [editName, setEditName] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [toastMsg, setToastMsg] = React.useState('');
+
+  const loadPartners = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.getPartners();
+      setPartners(data.partners ?? []);
+    } catch {
+      setToastMsg('Failed to load partners.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => { loadPartners(); }, [loadPartners]);
+
+  const filteredPartners = React.useMemo(() =>
+    partners.filter(p =>
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.phone?.includes(searchTerm) ||
+      p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.location?.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [partners, searchTerm]);
+
   const { currentData: paginatedPartners, currentPage, maxPage, next, prev } = usePagination(filteredPartners, 10);
+
+  const handleEdit = (p: any) => { setEditPartner(p); setEditName(p.name); };
+
+  const handleSaveEdit = async () => {
+    if (!editPartner) return;
+    setSaving(true);
+    try {
+      await api.updatePartner(editPartner.uid, { name: editName });
+      setToastMsg('Partner updated.');
+      setEditPartner(null);
+      loadPartners();
+    } catch {
+      setToastMsg('Failed to update partner.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleBlock = async (p: any) => {
+    const newStatus = p.status === 'disabled' ? 'active' : 'disabled';
+    try {
+      await api.updatePartner(p.uid, { status: newStatus });
+      setToastMsg(`Partner ${newStatus === 'disabled' ? 'blocked' : 'unblocked'}.`);
+      loadPartners();
+    } catch {
+      setToastMsg('Failed to update partner status.');
+    }
+  };
+
+  const handleDelete = async (p: any) => {
+    if (!window.confirm(`Delete partner "${p.name}"? This cannot be undone.`)) return;
+    try {
+      await api.deletePartner(p.uid);
+      setToastMsg('Partner deleted.');
+      loadPartners();
+    } catch {
+      setToastMsg('Failed to delete partner.');
+    }
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+      {toastMsg && (
+        <div className="fixed top-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-2xl shadow-lg text-sm font-medium">
+          {toastMsg}
+          <button onClick={() => setToastMsg('')} className="ml-4 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editPartner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-bold text-slate-900 text-lg">Edit Partner</h3>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Name</label>
+              <input
+                className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setEditPartner(null)} className="px-4 py-2 text-sm text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
+              <button onClick={handleSaveEdit} disabled={saving} className="px-4 py-2 text-sm text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h3 className="text-xl font-bold text-slate-900">Partner Directory</h3>
-          <p className="text-sm text-slate-500">Total 1,240 partners across all Howzers</p>
+          <p className="text-sm text-slate-500">{partners.length} partner{partners.length !== 1 ? 's' : ''} registered</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Search partners..." className="w-full bg-slate-50 border-none rounded-xl py-2 pl-10 pr-4 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-          <button className="p-2 bg-slate-50 rounded-xl text-slate-400 hover:text-slate-600 transition-colors">
-            <Filter className="w-5 h-5" />
-          </button>
+        <div className="relative flex-1 md:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Search by name, phone, location…" className="w-full bg-slate-50 border-none rounded-xl py-2 pl-10 pr-4 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-              <th className="px-8 py-4">Partner Name</th>
-              <th className="px-8 py-4">Howzer</th>
-              <th className="px-8 py-4">Status</th>
-              <th className="px-8 py-4">Total Deals</th>
-              <th className="px-8 py-4">Earnings</th>
-              <th className="px-8 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {paginatedPartners.map((agent, i) => (
-              <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                      {agent.name.charAt(0)}
-                    </div>
-                    <span className="font-bold text-slate-900">{agent.name}</span>
-                  </div>
-                </td>
-                <td className="px-8 py-5 text-sm text-slate-500 font-medium">{agent.franchise}</td>
-                <td className="px-8 py-5">
-                  <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
-                    agent.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
-                  }`}>
-                    {agent.status}
-                  </span>
-                </td>
-                <td className="px-8 py-5 text-sm font-bold text-slate-900">{agent.deals}</td>
-                <td className="px-8 py-5 text-sm font-mono font-bold text-emerald-600">{agent.earnings}</td>
-                <td className="px-8 py-5 text-right">
-                  <button className="p-2 text-slate-300 hover:text-indigo-600 transition-colors">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </td>
+
+      {loading ? (
+        <div className="p-12 text-center text-slate-400 text-sm">Loading partners…</div>
+      ) : filteredPartners.length === 0 ? (
+        <div className="p-12 text-center text-slate-400 text-sm">No partners found.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
+                <th className="px-8 py-4">Partner</th>
+                <th className="px-8 py-4">Phone</th>
+                <th className="px-8 py-4">Partner ID</th>
+                <th className="px-8 py-4">Location</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {paginatedPartners.map((p: any) => (
+                <tr key={p.uid} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm">
+                        {(p.name || 'P').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{p.name || '—'}</p>
+                        <p className="text-xs text-slate-400">{p.email || '—'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 text-sm text-slate-600 font-medium">{p.phone || '—'}</td>
+                  <td className="px-8 py-5 text-xs font-mono text-slate-500">{p.partnerId || '—'}</td>
+                  <td className="px-8 py-5 text-sm text-slate-500">{p.location || '—'}</td>
+                  <td className="px-8 py-5">
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
+                      p.status === 'active' ? 'bg-emerald-50 text-emerald-600'
+                      : p.status === 'disabled' ? 'bg-red-50 text-red-500'
+                      : 'bg-amber-50 text-amber-600'
+                    }`}>
+                      {p.status === 'active' ? 'Active' : p.status === 'disabled' ? 'Blocked' : p.status ?? 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-8 py-5 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEdit(p)}
+                        className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100"
+                        title="Edit"
+                      >Edit</button>
+                      <button
+                        onClick={() => handleToggleBlock(p)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg ${
+                          p.status === 'disabled'
+                            ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                            : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                        }`}
+                        title={p.status === 'disabled' ? 'Unblock' : 'Block'}
+                      >{p.status === 'disabled' ? 'Unblock' : 'Block'}</button>
+                      <button
+                        onClick={() => handleDelete(p)}
+                        className="px-3 py-1.5 text-xs font-medium text-red-500 bg-red-50 rounded-lg hover:bg-red-100"
+                        title="Delete"
+                      >Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {maxPage > 1 && (
         <div className="p-4 border-t border-slate-100 flex items-center justify-between">
           <span className="text-sm text-slate-500">Page {currentPage} of {maxPage}</span>
