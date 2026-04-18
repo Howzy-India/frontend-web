@@ -164,6 +164,24 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   const showBuilderOnboarding = userRole === 'howzer_sourcing';
   const showPartnerOnboarding = userRole === 'howzer_sales';
 
+  const handleOnboardingSubmit = async (type: string, name: string, data: any) => {
+    try {
+      const submissionData = { type, name, email: userEmail || 'unknown@example.com', details: data };
+      const res = await api.createSubmission(submissionData);
+      setMySubmissions(prev => [{
+        id: res.id,
+        type,
+        name,
+        email: userEmail || 'unknown@example.com',
+        status: 'Pending',
+        date: new Date().toISOString().split('T')[0],
+        details: data
+      }, ...prev]);
+    } catch (error) {
+      console.error('Failed to create submission:', error);
+    }
+  };
+
   const handleStatusUpdate = async (id: string, status: string) => {
     try {
       await api.updatePartnerEnquiryStatus(id, status);
@@ -521,106 +539,22 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
       <BuilderOnboardingModal 
         isOpen={isBuilderModalOpen} 
         onClose={() => setIsBuilderModalOpen(false)} 
-        onSubmit={async (data) => {
-          try {
-            const submissionData = {
-              type: 'Builder',
-              name: data.builderName,
-              email: userEmail || 'unknown@example.com',
-              details: data
-            };
-            const res = await api.createSubmission(submissionData);
-            setMySubmissions(prev => [{
-              id: res.id,
-              type: 'Builder',
-              name: data.builderName,
-              email: userEmail || 'unknown@example.com',
-              status: 'Pending',
-              date: new Date().toISOString().split('T')[0],
-              details: data
-            }, ...prev]);
-          } catch (error) {
-            console.error('Failed to create submission:', error);
-          }
-        }}
+        onSubmit={(data) => handleOnboardingSubmit('Builder', data.builderName, data)}
       />
       <PartnerOnboardingModal 
         isOpen={isPartnerModalOpen} 
         onClose={() => setIsPartnerModalOpen(false)} 
-        onSubmit={async (data) => {
-          try {
-            const submissionData = {
-              type: 'Partner',
-              name: data.partnerName,
-              email: userEmail || 'unknown@example.com',
-              details: data
-            };
-            const res = await api.createSubmission(submissionData);
-            setMySubmissions(prev => [{
-              id: res.id,
-              type: 'Partner',
-              name: data.partnerName,
-              email: userEmail || 'unknown@example.com',
-              status: 'Pending',
-              date: new Date().toISOString().split('T')[0],
-              details: data
-            }, ...prev]);
-          } catch (error) {
-            console.error('Failed to create submission:', error);
-          }
-        }}
+        onSubmit={(data) => handleOnboardingSubmit('Partner', data.partnerName, data)}
       />
       <FarmLandOnboardingModal
         isOpen={isFarmLandModalOpen}
         onClose={() => setIsFarmLandModalOpen(false)}
-        onSubmit={async (data) => {
-          try {
-            const submissionData = {
-              type: 'Farm Land',
-              name: data.farmLandName,
-              email: userEmail || 'unknown@example.com',
-              details: data
-            };
-            const res = await api.createSubmission(submissionData);
-            setMySubmissions(prev => [{
-              id: res.id,
-              type: 'Farm Land',
-              name: data.farmLandName,
-              email: userEmail || 'unknown@example.com',
-              status: 'Pending',
-              date: new Date().toISOString().split('T')[0],
-              details: data
-            }, ...prev]);
-          } catch (error) {
-            console.error('Failed to create submission:', error);
-          }
-        }}
+        onSubmit={(data) => handleOnboardingSubmit('Farm Land', data.farmLandName, data)}
       />
       <PlotsOnboardingModal
         isOpen={isPlotsModalOpen}
         onClose={() => setIsPlotsModalOpen(false)}
-        onSubmit={async (data) => {
-          try {
-            const submissionData = {
-              type: 'Plot',
-              name: data.projectName,
-              email: userEmail || 'unknown@example.com',
-              details: data
-            };
-            const res = await api.createSubmission(submissionData);
-            setMySubmissions(prev => [{
-              id: res.id,
-              type: 'Plot',
-              name: data.projectName,
-              email: userEmail || 'unknown@example.com',
-              status: 'Pending',
-              date: new Date().toISOString().split('T')[0],
-              details: data
-            }, ...prev]);
-          } catch (error) {
-            console.error('Failed to create submission:', error);
-          }
-        }}
+        onSubmit={(data) => handleOnboardingSubmit('Plot', data.projectName, data)}
       />
       <AttendanceModal
         isOpen={isAttendanceModalOpen}
