@@ -230,8 +230,7 @@ export const api = {
   trackClientLogin: (data: any) => post<any>('/client/login-track', data, false),
   trackClientLogout: (id: string) => post<any>('/client/logout-track', { id }, false),
 
-  // ── Pilot / Partner ───────────────────────────────────────────────
-  getPilotAssignedEnquiries: () => get<any>('/pilot/assigned-enquiries'),
+  // ── Partner ───────────────────────────────────────────────────────
   getPartnerAssignedEnquiries: () => get<any>('/partner/assigned-enquiries'),
 
   // ── Attendance ────────────────────────────────────────────────────

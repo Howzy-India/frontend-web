@@ -309,7 +309,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
 
   const handleBroadcast = React.useCallback(async (notification: any) => {
     await addDoc(collection(db, 'notifications'), {
-      room: 'pilot',
+      room: 'partner',
       type: 'broadcast',
       message: notification.message,
       read: false,
@@ -333,7 +333,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'bulk-property-upload': return <BulkPropertyUpload />;
       case 'client-listings': return <ClientListingsVerification />;
       case 'resale': return <ResalePropertiesAdmin userRole={userRole} />;
-      case 'agents': return <PilotManagement />;
+      case 'agents': return <PartnerManagement />;
       case 'admin-users': return <AdminUsersManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'employees': return <EmployeesManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'attendance': return <AttendanceTrackingView />;
@@ -1117,7 +1117,7 @@ const MessagesAndAlertsView = React.memo(function MessagesAndAlertsView({ onBroa
           </div>
           <div>
             <h3 className="text-xl font-bold text-slate-900">Broadcast to All Partners</h3>
-            <p className="text-sm text-slate-500">Send a platform-wide notification to all registered pilots instantly.</p>
+            <p className="text-sm text-slate-500">Send a platform-wide notification to all registered partners instantly.</p>
           </div>
         </div>
 
@@ -1139,7 +1139,7 @@ const MessagesAndAlertsView = React.memo(function MessagesAndAlertsView({ onBroa
               rows={4}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter the detailed message for pilots..."
+              placeholder="Enter the detailed message for partners..."
               className="w-full bg-slate-50 border-slate-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none"
             />
           </div>
@@ -1188,7 +1188,7 @@ const MessagesAndAlertsView = React.memo(function MessagesAndAlertsView({ onBroa
                   className="text-emerald-600 text-xs font-bold mt-4 flex items-center gap-2"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  Broadcast sent successfully to all active pilots!
+                  Broadcast sent successfully to all active partners!
                 </motion.p>
               )}
             </AnimatePresence>
@@ -1200,8 +1200,8 @@ const MessagesAndAlertsView = React.memo(function MessagesAndAlertsView({ onBroa
         <h3 className="text-lg font-bold text-slate-900 mb-6">Recent Broadcast History</h3>
         <div className="space-y-4">
           {[
-            { title: "System Maintenance", time: "2 days ago", reach: "1,240 pilots", type: "alert" },
-            { title: "New Commission Structure", time: "1 week ago", reach: "1,180 pilots", type: "success" },
+            { title: "System Maintenance", time: "2 days ago", reach: "1,240 partners", type: "alert" },
+            { title: "New Commission Structure", time: "1 week ago", reach: "1,180 partners", type: "success" },
             { title: "Welcome to Howzy Partner", time: "2 weeks ago", reach: "1,050 partners", type: "info" },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
@@ -1373,7 +1373,7 @@ const StatCard = React.memo(function StatCard({ title, value, trend, icon: Icon,
   );
 });
 
-const PilotManagement = React.memo(function PilotManagement() {
+const PartnerManagement = React.memo(function PartnerManagement() {
   const [partners, setPartners] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1935,7 +1935,7 @@ const GlobalLeadsView = React.memo(function GlobalLeadsView({ leads }: { leads: 
           <thead>
             <tr className="bg-slate-50/50 text-[10px] uppercase font-bold text-slate-400 tracking-widest">
               <th className="px-8 py-4">Lead Name</th>
-              <th className="px-8 py-4">Assigned Pilot</th>
+              <th className="px-8 py-4">Assigned Partner</th>
               <th className="px-8 py-4">Partner</th>
               <th className="px-8 py-4">Stage</th>
               <th className="px-8 py-4 text-right">Actions</th>
@@ -2530,7 +2530,7 @@ const SystemSettings = React.memo(function SystemSettings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-slate-900">Lead Auto-Assignment</p>
-              <p className="text-xs text-slate-500">Use AI to assign leads to best performing pilots</p>
+              <p className="text-xs text-slate-500">Use AI to assign leads to best performing partners</p>
             </div>
             <button className="w-12 h-6 bg-indigo-600 rounded-full relative">
               <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
