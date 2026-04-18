@@ -205,10 +205,10 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-lg md:shadow-none
+        fixed md:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out shadow-lg md:shadow-none flex flex-col h-full
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
-        <div className="p-6">
+        <div className="p-6 pb-2">
           <div className="flex items-center mb-8">
             <Logo className="h-8" animated={true} />
             <motion.span 
@@ -220,32 +220,32 @@ export default function PartnerDashboard({ onLogout }: PartnerDashboardProps) {
               Partner
             </motion.span>
           </div>
-
-          <nav className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <motion.button
-                  whileHover={{ scale: 1.02, x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    isActive 
-                      ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold' 
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : ''}`} />
-                  <span>{tab.label}</span>
-                </motion.button>
-              );
-            })}
-          </nav>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-slate-200">
+        <nav className="flex-1 overflow-y-auto px-6 space-y-2 pb-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <motion.button
+                whileHover={{ scale: 1.02, x: 4 }}
+                whileTap={{ scale: 0.98 }}
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  isActive 
+                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-100 font-semibold' 
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                }`}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : ''}`} />
+                <span>{tab.label}</span>
+              </motion.button>
+            );
+          })}
+        </nav>
+
+        <div className="p-6 pt-2 border-t border-slate-200">
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
