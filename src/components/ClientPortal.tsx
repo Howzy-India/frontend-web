@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
-import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot, Upload } from 'lucide-react';
+import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot, Upload, Menu, ChevronRight } from 'lucide-react';
+
+function WhatsAppIcon({ className = 'w-5 h-5' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    </svg>
+  );
+}
 import Logo from './Logo';
 import { api } from '../services/api';
 import { TEST_IDS } from '../constants/testIds';
@@ -66,6 +74,40 @@ function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: a
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function formatBudget(val: number) {
+  if (val >= 10000000) return `₹${(val / 10000000).toFixed(val % 10000000 === 0 ? 0 : 1)} Cr`;
+  return `₹${(val / 100000).toFixed(0)} Lacs`;
+}
+
+function BudgetRangeSlider({ minVal, maxVal, onChange }: {
+  minVal: number; maxVal: number;
+  onChange: (min: number, max: number) => void;
+}) {
+  const MIN = 2500000, MAX = 250000000, STEP = 500000;
+  const pctLeft = ((minVal - MIN) / (MAX - MIN)) * 100;
+  const pctRight = ((maxVal - MIN) / (MAX - MIN)) * 100;
+
+  return (
+    <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-200 bg-indigo-50/50 min-w-[220px] sm:min-w-[260px]">
+      <span className="text-xs font-bold text-slate-700 whitespace-nowrap">Budget</span>
+      <span className="text-xs font-semibold text-indigo-700 whitespace-nowrap">{formatBudget(minVal)}</span>
+      <div className="relative flex-1 h-5">
+        <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-1 bg-indigo-100 rounded-full" />
+        <div className="absolute top-1/2 -translate-y-1/2 h-1 bg-indigo-600 rounded-full" style={{ left: `${pctLeft}%`, right: `${100 - pctRight}%` }} />
+        <input type="range" min={MIN} max={MAX} step={STEP} value={minVal}
+          onChange={e => { const v = Math.min(Number(e.target.value), maxVal - STEP); onChange(v, maxVal); }}
+          className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow"
+        />
+        <input type="range" min={MIN} max={MAX} step={STEP} value={maxVal}
+          onChange={e => { const v = Math.max(Number(e.target.value), minVal + STEP); onChange(minVal, v); }}
+          className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow"
+        />
+      </div>
+      <span className="text-xs font-semibold text-indigo-700 whitespace-nowrap">{formatBudget(maxVal)}</span>
     </div>
   );
 }
@@ -212,6 +254,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     location: '',
     bhk: '',
     priceRange: '',
+    priceMin: 2500000,
+    priceMax: 250000000,
     possession: '',
     gated: '',
     age: '',
@@ -228,10 +272,10 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [openFilter, setOpenFilter] = useState<string | null>(null);
 
   const propertyCategories = [
-    { id: 'Apartments', title: 'Properties', subtitle: 'Find apartments that match your needs', icon: Building2, color: 'blue' },
+    { id: 'Apartments', title: 'New Projects', subtitle: 'Find apartments that match your needs', icon: Building2, color: 'blue' },
     { id: 'Villas', title: 'Villas', subtitle: 'Luxury independent houses and villas', icon: Home, color: 'emerald' },
-    { id: 'Resale', title: 'Resale', subtitle: 'Pre-owned properties ready to move', icon: RefreshCw, color: 'amber' },
-    { id: 'Plots', title: 'Plots / Land', subtitle: 'Open plots for your dream home', icon: Map, color: 'indigo' },
+    { id: 'Resale', title: 'Resale Homes', subtitle: 'Pre-owned properties ready to move', icon: RefreshCw, color: 'amber' },
+    { id: 'Plots', title: 'Open Plots', subtitle: 'Open plots for your dream home', icon: Map, color: 'indigo' },
     { id: 'Commercial', title: 'Commercial', subtitle: 'Office spaces, shops, and warehouses', icon: Briefcase, color: 'purple' },
     { id: 'Farm Lands', title: 'Farm Lands', subtitle: 'Agricultural and farm lands', icon: Trees, color: 'green' }
   ];
@@ -274,6 +318,52 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   
   const [isFarmLandModalOpen, setIsFarmLandModalOpen] = useState(false);
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
+
+  // City selector
+  const [selectedCity, setSelectedCity] = useState('Hyderabad');
+  const CITIES = ['Hyderabad', 'Bangalore', 'Mumbai', 'Pune', 'Chennai', 'Delhi NCR'];
+  const [showComingSoonBanner, setShowComingSoonBanner] = useState(false);
+
+  // Sticky filter detection
+  const [isFilterStuck, setIsFilterStuck] = useState(false);
+  const filterSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sentinel = filterSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsFilterStuck(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '0px 0px 0px 0px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [activeTab]);
+
+  // Hamburger menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileSubMenu, setMobileSubMenu] = useState<string | null>(null);
+
+  const navigateFromMenu = (section: 'Services' | 'About') => {
+    setIsMobileMenuOpen(false);
+    setMobileSubMenu(null);
+    setActiveTab(section);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToPropertyCategory = (category: string) => {
+    setIsMobileMenuOpen(false);
+    setMobileSubMenu(null);
+    setActiveTab('Projects');
+    const catMap: Record<string, any> = {
+      'New Projects': 'Apartments',
+      'Villas': 'Villas',
+      'Resale Homes': 'Resale',
+      'Open Plots': 'Plots',
+      'Farm Lands': 'Farm Lands',
+      'Commercial': 'Commercial',
+    };
+    setProjectCategory(catMap[category] || 'All');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Close notifications panel on outside click
   useEffect(() => {
@@ -574,12 +664,17 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     
     if (activeConfigCat === 'Apartments') {
       if (adminConfig.Apartments.enableBHK && filters.bhk && p.details?.bhk !== filters.bhk) matchesFilters = false;
-      if (adminConfig.Apartments.enablePrice && filters.priceRange) {
-        if (filters.priceRange === '0-50L' && parseInt(p.details?.price) > 5000000) matchesFilters = false;
+      if (adminConfig.Apartments.enablePrice && (filters.priceMin !== 2500000 || filters.priceMax !== 250000000)) {
+        const price = parseInt(p.details?.price) || 0;
+        if (price < filters.priceMin || price > filters.priceMax) matchesFilters = false;
       }
       if (adminConfig.Apartments.enablePossession && filters.possession && p.details?.possession !== filters.possession) matchesFilters = false;
     } else if (activeConfigCat === 'Villas') {
       if (adminConfig.Villas.enableBHK && filters.bhk && p.details?.bhk !== filters.bhk) matchesFilters = false;
+      if (adminConfig.Villas.enablePrice && (filters.priceMin !== 2500000 || filters.priceMax !== 250000000)) {
+        const price = parseInt(p.details?.price) || 0;
+        if (price < filters.priceMin || price > filters.priceMax) matchesFilters = false;
+      }
       if (adminConfig.Villas.enableGated && filters.gated && p.details?.gated !== filters.gated) matchesFilters = false;
     } else if (activeConfigCat === 'Resale') {
       if (adminConfig.Resale.enableAge && filters.age && p.details?.age !== filters.age) matchesFilters = false;
@@ -601,47 +696,145 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   return (
     <React.Fragment>
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* Top Navigation */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        {/* Top Bar */}
-        <div className="px-4 md:px-6 py-2 flex justify-between items-center border-b border-slate-100">
-          <div className="flex items-center gap-2 md:gap-4">
-            <Logo className="h-8" animated={true} />
-            <select className="bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 sm:p-2 w-24 sm:w-auto">
-              <option>Hyderabad</option>
-              <option>Bangalore</option>
-              <option>Pune</option>
-              <option>Noida</option>
-              <option>Mumbai</option>
-            </select>
-          </div>
-          
-          <div className="hidden md:flex flex-1 max-w-xl mx-8">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="w-4 h-4 text-slate-400" />
+      {/* Sticky nav wrapper — banner + header stick together (not in projects view) */}
+      <div className={`${activeTab !== 'Projects' ? 'sticky top-0' : ''} z-50`}>
+        {/* Coming Soon Banner */}
+        <AnimatePresence>
+          {showComingSoonBanner && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="text-lg shrink-0">🚀</span>
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-semibold leading-tight">
+                      We're launching in <span className="underline decoration-dotted">{selectedCity}</span> soon!
+                    </p>
+                    <p className="text-violet-200 text-xs mt-0.5">Currently serving Hyderabad. Be the first to know when we expand.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowComingSoonBanner(false); setSelectedCity('Hyderabad'); setFilters(prev => ({ ...prev, location: '' })); }}
+                  className="shrink-0 p-1.5 rounded-lg text-violet-200 hover:text-white hover:bg-white/20 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <input 
-                type="text" 
-                className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2" 
-                placeholder="Search properties, locations, or projects..." 
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (activeTab !== 'Projects') setActiveTab('Projects');
-                }}
-              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Top Navigation */}
+        <header className="bg-white border-b border-slate-200 shadow-sm">
+        {/* Top Bar */}
+        <div className="px-4 md:px-6 py-3 flex justify-between items-center">
+          {/* Left: Logo + City selector */}
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('Home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="shrink-0 focus:outline-none"
+              aria-label="Go to home"
+            >
+              <Logo className="h-8" animated={true} />
+            </button>
+            {/* City selector pill */}
+            <div className="relative">
+              <div className="flex items-center gap-1 pl-2.5 pr-1.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:border-indigo-300 hover:bg-indigo-50 transition-colors cursor-pointer group">
+                <MapPin className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <select
+                  value={selectedCity}
+                  onChange={e => {
+                    const city = e.target.value;
+                    setSelectedCity(city);
+                    if (city && city !== 'Hyderabad') {
+                      setShowComingSoonBanner(true);
+                      setFilters(prev => ({ ...prev, location: '' }));
+                    } else {
+                      setShowComingSoonBanner(false);
+                      setFilters(prev => ({ ...prev, location: city }));
+                      if (city) setActiveTab('Projects');
+                    }
+                  }}
+                  className="text-xs font-semibold text-slate-700 bg-transparent border-none outline-none cursor-pointer appearance-none pr-4 max-w-[90px] md:max-w-[120px]"
+                >
+                  {CITIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3 h-3 text-slate-400 shrink-0 pointer-events-none absolute right-1.5" />
+              </div>
             </div>
           </div>
 
+          {/* Center: Search bar (only visible when logged in, md+) */}
+          {userEmail && (
+            <div className="hidden md:flex flex-1 max-w-xl mx-8">
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <Search className="w-4 h-4 text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2"
+                  placeholder="Search properties, locations, or projects..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (activeTab !== 'Projects') setActiveTab('Projects');
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Right: Get in touch + Auth + Hamburger */}
           <div className="flex items-center gap-2 md:gap-4">
-            <button onClick={() => setActiveTab("About")} className="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors hidden sm:block">
-              Contact Us
-            </button>
+            {/* Get in touch — WhatsApp */}
+            <a
+              href="https://wa.me/919885500336"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 border border-emerald-200 hover:border-emerald-400 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition-colors"
+            >
+              <WhatsAppIcon className="w-4 h-4" />
+              Get in touch
+            </a>
+
+            {/* Buy / Sell toggle */}
+            <div className="hidden sm:flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 gap-0.5">
+              <button
+                onClick={() => setActiveTab('Projects')}
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === 'Projects'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Buy
+              </button>
+              <a
+                href="https://wa.me/919885500336?text=Hi%2C%20I%20want%20to%20list%20my%20property%20on%20Howzy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 text-sm font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-700 hover:bg-white"
+              >
+                Sell
+              </a>
+            </div>
+
             {userEmail ? (
+              /* Logged-in: bell + avatar + standalone hamburger */
               <div className="flex items-center gap-2 md:gap-3">
                 <div ref={notifRef} className="relative">
-                  <button 
+                  <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     data-testid={TEST_IDS.PORTAL.NOTIFICATIONS_BELL}
                     className="p-2 text-slate-500 hover:text-indigo-600 transition-colors relative"
@@ -654,7 +847,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
 
                   <AnimatePresence>
                     {showNotifications && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -671,15 +864,15 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                           {notifications.length > 0 ? (
                             <div className="divide-y divide-slate-100">
                               {notifications.map((notification) => (
-                                <div 
-                                  key={notification.id} 
+                                <div
+                                  key={notification.id}
                                   className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${notification.unread ? 'bg-indigo-50/30' : ''}`}
                                   onClick={() => {
                                     setNotifications(notifications.map(n => n.id === notification.id ? { ...n, unread: false } : n));
                                   }}
                                 >
                                   <div className="flex gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 text-indigo-600`}>
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 text-indigo-600">
                                       <Bell className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -702,7 +895,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                         </div>
                         {notifications.length > 0 && (
                           <div className="p-3 border-t border-slate-100 text-center bg-slate-50/50">
-                            <button 
+                            <button
                               onClick={() => setNotifications(notifications.map(n => ({ ...n, unread: false })))}
                               data-testid={TEST_IDS.PORTAL.NOTIFICATIONS_MARK_ALL_READ}
                               className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
@@ -716,55 +909,247 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                   </AnimatePresence>
                 </div>
                 <AvatarDropdown
-                    userName={userName}
-                    onEditProfile={() => setIsProfileEditOpen(true)}
-                    onLogout={onLogout}
-                  />
+                  userName={userName}
+                  onEditProfile={() => setIsProfileEditOpen(true)}
+                  onLogout={onLogout}
+                />
+                {/* Hamburger for logged-in users */}
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(true); }}
+                  className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+                  aria-label="Open menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
               </div>
             ) : (
-              <button 
-                onClick={onLoginClick}
-                data-testid={TEST_IDS.PORTAL.LOGIN_BTN}
-                className="text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors"
-              >
-                Login
-              </button>
+              /* Logged-out: combined Login | ☰ pill */
+              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <button
+                  type="button"
+                  data-testid={TEST_IDS.PORTAL.LOGIN_BTN}
+                  onClick={onLoginClick}
+                  className="px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                  Login
+                </button>
+                <div className="w-px h-6 bg-slate-200" />
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(true); }}
+                  className="px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors"
+                  aria-label="Open menu"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Navigation Menu */}
-        <div className="px-4 md:px-6 py-2 flex items-center gap-4 md:gap-6 overflow-x-auto scrollbar-hide">
-          {['Home', 'Projects', 'Services', 'About'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab as any);
-                if (tab === 'Home') setLandingCategory('All');
-              }}
-              className={`text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === tab 
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 pb-1' 
-                  : 'text-slate-600 hover:text-indigo-600 pb-1'
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-          {userEmail && (
-            <button
-              onClick={() => setActiveTab('Dashboard')}
-              className={`text-sm font-bold whitespace-nowrap transition-colors ${
-                activeTab === 'Dashboard' 
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 pb-1' 
-                  : 'text-slate-600 hover:text-indigo-600 pb-1'
-              }`}
-            >
-              My Dashboard
-            </button>
-          )}
-        </div>
       </header>
+      </div>{/* end sticky nav wrapper */}
+
+      {/* Hamburger Menu Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/50 z-[60] backdrop-blur-sm"
+              onClick={() => { setIsMobileMenuOpen(false); setMobileSubMenu(null); }}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 w-72 bg-white z-[70] flex flex-col shadow-2xl"
+            >
+              {/* Drawer Header */}
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); setMobileSubMenu(null); setActiveTab('Home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  className="focus:outline-none"
+                  aria-label="Go to home"
+                >
+                  <Logo className="h-8" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsMobileMenuOpen(false); setMobileSubMenu(null); }}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Drawer Body */}
+              <div className="flex-1 overflow-y-auto">
+
+                {/* User status card — shown only when logged in */}
+                {userEmail && (
+                  <div className="mx-4 my-4 p-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {userName ? userName.charAt(0).toUpperCase() : userEmail.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate">{userName || 'My Account'}</p>
+                      <p className="text-xs text-slate-500 truncate">{userEmail}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* All Properties — collapsible when logged in, always expanded when logged out */}
+                <div className="border-b border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!userEmail) {
+                        setIsMobileMenuOpen(false); setActiveTab('Projects'); setProjectCategory('All'); setFilters(prev => ({ ...prev, trendingArea: '' })); window.scrollTo({ top: 0, behavior: 'smooth' });
+                      } else {
+                        setMobileSubMenu(prev => prev === 'properties' ? null : 'properties');
+                      }
+                    }}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+                  >
+                    <Building2 className="w-4 h-4 text-indigo-500" />
+                    <span className="flex-1 text-left">All Properties</span>
+                    {userEmail && <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mobileSubMenu === 'properties' ? 'rotate-180' : ''}`} />}
+                  </button>
+                  <div className={`bg-slate-50 ${userEmail && mobileSubMenu !== 'properties' ? 'hidden' : ''}`}>
+                    {[
+                      { label: 'New Projects', icon: Building2 },
+                      { label: 'Villas', icon: Home },
+                      { label: 'Resale Homes', icon: RefreshCw },
+                      { label: 'Open Plots', icon: Map },
+                      { label: 'Farm Lands', icon: Trees },
+                      { label: 'Commercial', icon: Briefcase },
+                    ].map(({ label, icon: Icon }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => navigateToPropertyCategory(label)}
+                        className="w-full flex items-center gap-3 px-8 py-3 text-sm text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Services */}
+                <button
+                  type="button"
+                  onClick={() => navigateFromMenu('Services')}
+                  className="w-full flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors border-b border-slate-100"
+                >
+                  <Briefcase className="w-4 h-4 text-indigo-500" />
+                  Services
+                </button>
+
+                {/* About */}
+                <button
+                  type="button"
+                  onClick={() => navigateFromMenu('About')}
+                  className="w-full flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors border-b border-slate-100"
+                >
+                  <Shield className="w-4 h-4 text-indigo-500" />
+                  About
+                </button>
+
+                {/* My Account — collapsible when logged in */}
+                {userEmail && (
+                  <div className="border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setMobileSubMenu(prev => prev === 'account' ? null : 'account')}
+                      className="w-full flex items-center gap-3 px-5 py-4 text-sm font-bold text-slate-800 hover:bg-slate-50 transition-colors"
+                    >
+                      <User className="w-4 h-4 text-indigo-500" />
+                      <span className="flex-1 text-left">My Account</span>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${mobileSubMenu === 'account' ? 'rotate-180' : ''}`} />
+                    </button>
+                    {mobileSubMenu === 'account' && (
+                      <div className="bg-slate-50">
+                        <button
+                          type="button"
+                          onClick={() => { setIsMobileMenuOpen(false); setActiveTab('Dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          className="w-full flex items-center gap-3 px-8 py-3 text-sm text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        >
+                          <BarChart3 className="w-3.5 h-3.5" />
+                          My Dashboard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsMobileMenuOpen(false); setIsProfileEditOpen(true); }}
+                          className="w-full flex items-center gap-3 px-8 py-3 text-sm text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        >
+                          <User className="w-3.5 h-3.5" />
+                          My Profile
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Logout — inside body, only when logged in */}
+                {userEmail && (
+                  <button
+                    type="button"
+                    onClick={() => { setIsMobileMenuOpen(false); onLogout(); }}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors border-b border-slate-100"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                )}
+              </div>
+
+              {/* Drawer Footer — social media */}
+              <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/60">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 text-center mb-3">Follow us</p>
+                <div className="flex items-center justify-center gap-3">
+                  {/* LinkedIn */}
+                  <a href="https://www.linkedin.com/company/howzy" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
+                    className="group flex flex-col items-center gap-1.5">
+                    <span className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-indigo-300 group-hover:text-indigo-600 group-hover:shadow-sm transition-all">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="4"/><path fill="white" d="M7 10h2v7H7v-7zm1-3a1.1 1.1 0 1 1 0 2.2A1.1 1.1 0 0 1 8 7zm4 3h1.9v1h.02C14.27 10.4 15.1 10 16 10c2.1 0 2.5 1.4 2.5 3.1V17H16.5v-3.5c0-.8-.01-1.9-1.15-1.9-1.16 0-1.34.9-1.34 1.84V17H12v-7z"/></svg>
+                    </span>
+                    <span className="text-[10px] text-slate-400 group-hover:text-slate-600 transition-colors">LinkedIn</span>
+                  </a>
+                  {/* Instagram */}
+                  <a href="https://www.instagram.com/howzy.in" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                    className="group flex flex-col items-center gap-1.5">
+                    <span className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-pink-300 group-hover:text-pink-500 group-hover:shadow-sm transition-all">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                        <rect width="18" height="18" x="3" y="3" rx="5" ry="5"/>
+                        <circle cx="12" cy="12" r="4"/>
+                        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/>
+                      </svg>
+                    </span>
+                    <span className="text-[10px] text-slate-400 group-hover:text-slate-600 transition-colors">Instagram</span>
+                  </a>
+                  {/* YouTube */}
+                  <a href="https://www.youtube.com/@howzy" target="_blank" rel="noopener noreferrer" aria-label="YouTube"
+                    className="group flex flex-col items-center gap-1.5">
+                    <span className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:border-red-300 group-hover:text-red-500 group-hover:shadow-sm transition-all">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </span>
+                    <span className="text-[10px] text-slate-400 group-hover:text-slate-600 transition-colors">YouTube</span>
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full space-y-8">
@@ -772,7 +1157,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
         {activeTab === 'Home' && (
           <div className="space-y-12 md:space-y-16 pb-12">
             {/* Category Selector */}
-            <div className="sticky top-[86px] z-40 -mx-4 px-4 md:-mx-10 md:px-10">
+            <div className="-mx-4 px-4 md:-mx-10 md:px-10">
               <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/70 shadow-sm px-4 md:px-8">
                 <div className="flex gap-2 md:gap-6 overflow-x-auto py-4 scrollbar-hide md:justify-center">
                   {[
@@ -1104,29 +1489,16 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                   ))}
                 </div>
 
-                {/* Category Specific Filters */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                      <Filter className="w-4 h-4 text-indigo-600" /> Filters
-                    </h3>
-                    <button 
-                      onClick={() => {
-                        setSearchTerm('');
-                        setProjectCategory('All');
-                        setFilters({
-                          location: '', bhk: '', priceRange: '', possession: '', gated: '', age: '', 
-                          furnishing: '', ownership: '', size: '', approval: '', corner: '', 
-                          type: '', transaction: '', area: '', trendingArea: ''
-                        });
-                      }}
-                      className="text-sm text-indigo-600 font-medium hover:underline"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-3">
+                {/* Sentinel for stuck detection */}
+                <div ref={filterSentinelRef} className="h-0" />
+
+                {/* Sticky Filters */}
+                <div className={`sticky top-0 z-40 transition-all duration-200 ${isFilterStuck ? '-ml-[calc(50vw-50%)] -mr-[calc(50vw-50%)] px-[calc(50vw-50%)] bg-white border-b border-slate-200 shadow-sm' : 'bg-white rounded-xl border border-slate-200'}`}>
+                  <div className="max-w-7xl mx-auto px-4 md:px-10 py-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm shrink-0">
+                        <Filter className="w-4 h-4 text-indigo-600" /> Filters
+                      </h3>
                     {/* Common Search */}
                     <div className="relative shrink-0 w-full sm:w-auto">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1173,21 +1545,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                             onToggle={() => setOpenFilter(openFilter === 'apt-bhk' ? null : 'apt-bhk')}
                           />
                         )}
-                        {adminConfig.Apartments.enablePrice && (
-                          <FilterDropdown
-                            label="Budget Range"
-                            value={filters.priceRange}
-                            options={[
-                              { value: '0-50L', label: 'Under 50 Lacs' },
-                              { value: '50L-1Cr', label: '50 Lacs - 1 Cr' },
-                              { value: '1Cr-3Cr', label: '1 Cr - 3 Cr' },
-                              { value: '3Cr+', label: 'Above 3 Cr' },
-                            ]}
-                            onChange={(val: string) => setFilters({...filters, priceRange: val})}
-                            isOpen={openFilter === 'apt-price'}
-                            onToggle={() => setOpenFilter(openFilter === 'apt-price' ? null : 'apt-price')}
-                          />
-                        )}
+
                         {adminConfig.Apartments.enablePossession && (
                           <FilterDropdown
                             label="Possession"
@@ -1199,6 +1557,12 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                             onChange={(val: string) => setFilters({...filters, possession: val})}
                             isOpen={openFilter === 'apt-possession'}
                             onToggle={() => setOpenFilter(openFilter === 'apt-possession' ? null : 'apt-possession')}
+                          />
+                        )}
+                        {adminConfig.Apartments.enablePrice && (
+                          <BudgetRangeSlider
+                            minVal={filters.priceMin} maxVal={filters.priceMax}
+                            onChange={(min, max) => setFilters({...filters, priceMin: min, priceMax: max})}
                           />
                         )}
                       </>
@@ -1220,18 +1584,11 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                             onToggle={() => setOpenFilter(openFilter === 'villa-bhk' ? null : 'villa-bhk')}
                           />
                         )}
+
                         {adminConfig.Villas.enablePrice && (
-                          <FilterDropdown
-                            label="Budget Range"
-                            value={filters.priceRange}
-                            options={[
-                              { value: '1Cr-3Cr', label: '1 Cr - 3 Cr' },
-                              { value: '3Cr-5Cr', label: '3 Cr - 5 Cr' },
-                              { value: '5Cr+', label: 'Above 5 Cr' },
-                            ]}
-                            onChange={(val: string) => setFilters({...filters, priceRange: val})}
-                            isOpen={openFilter === 'villa-price'}
-                            onToggle={() => setOpenFilter(openFilter === 'villa-price' ? null : 'villa-price')}
+                          <BudgetRangeSlider
+                            minVal={filters.priceMin} maxVal={filters.priceMax}
+                            onChange={(min, max) => setFilters({...filters, priceMin: min, priceMax: max})}
                           />
                         )}
                         {adminConfig.Villas.enableGated && (
@@ -1407,25 +1764,32 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                             onToggle={() => setOpenFilter(openFilter === 'farm-size' ? null : 'farm-size')}
                           />
                         )}
+
                         {adminConfig.FarmLands?.enablePrice && (
-                          <FilterDropdown
-                            label="Budget Range"
-                            value={filters.priceRange}
-                            options={[
-                              { value: '0-50L', label: 'Under 50 Lacs' },
-                              { value: '50L-1Cr', label: '50 Lacs - 1 Cr' },
-                              { value: '1Cr-3Cr', label: '1 Cr - 3 Cr' },
-                              { value: '3Cr+', label: 'Above 3 Cr' },
-                            ]}
-                            onChange={(val: string) => setFilters({...filters, priceRange: val})}
-                            isOpen={openFilter === 'farm-price'}
-                            onToggle={() => setOpenFilter(openFilter === 'farm-price' ? null : 'farm-price')}
+                          <BudgetRangeSlider
+                            minVal={filters.priceMin} maxVal={filters.priceMax}
+                            onChange={(min, max) => setFilters({...filters, priceMin: min, priceMax: max})}
                           />
                         )}
                       </>
                     )}
-                  </div>
-                </div>
+                      <button 
+                        onClick={() => {
+                          setSearchTerm('');
+                          setProjectCategory('All');
+                          setFilters({
+                            location: '', bhk: '', priceRange: '', priceMin: 2500000, priceMax: 250000000, possession: '', gated: '', age: '', 
+                            furnishing: '', ownership: '', size: '', approval: '', corner: '', 
+                            type: '', transaction: '', area: '', trendingArea: ''
+                          });
+                        }}
+                        className="text-sm text-indigo-600 font-medium hover:underline ml-auto shrink-0"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>{/* end sticky white card inner */}
+                </div>{/* end sticky bar */}
 
                 {/* Trending Locations */}
                 <div className="mb-6">
