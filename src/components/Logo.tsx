@@ -21,7 +21,7 @@ export default function Logo({ className = "h-10", dark = false, animated = fals
   } : {};
 
   const skylineColor = dark ? '#64748b' : '#94a3b8';
-  const windowColor = dark ? '#1e293b' : '#1e293b';
+  const windowColor = '#1e293b';
 
   return (
     <div className={`flex items-center ${className}`}>
@@ -69,7 +69,7 @@ export default function Logo({ className = "h-10", dark = false, animated = fals
       <motion.div
         className="overflow-hidden flex items-baseline whitespace-nowrap"
         {...textAnimation}
-        style={!animated ? { marginLeft: '6px' } : undefined}
+        style={animated ? undefined : { marginLeft: '6px' }}
       >
         <span className={`text-2xl font-black tracking-tight ${dark ? 'text-white' : 'text-slate-900'}`}>howzy</span>
         <span className="text-xs font-bold text-violet-500 ml-0.5">.in</span>
