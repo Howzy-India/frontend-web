@@ -124,7 +124,7 @@ export default function App() {
   const pageTransition: any = { type: 'tween', ease: 'anticipate', duration: 0.4 };
 
   return (
-    <div data-testid={TEST_IDS.APP.CONTAINER} className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30 overflow-x-hidden">
+    <div data-testid={TEST_IDS.APP.CONTAINER} className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50 text-slate-900 selection:bg-indigo-500/30" style={{ overflowX: 'clip' }}>
       {showLogoutBanner && (
         <div data-testid={TEST_IDS.APP.LOGOUT_BANNER} className="fixed z-[9999] flex items-center gap-3 bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-semibold
           bottom-6 left-1/2 -translate-x-1/2
