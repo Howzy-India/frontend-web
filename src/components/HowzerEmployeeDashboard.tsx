@@ -4,6 +4,7 @@ import {
   Building2, 
   Users, 
   LogOut,
+  Menu,
   Activity,
   UserPlus,
   ArrowRight,
@@ -49,6 +50,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   const [attendance, setAttendance] = useState<any>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Tabs State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'assigned-leads'>('dashboard');
@@ -195,8 +197,8 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   return (
     <div className="min-h-screen bg-transparent text-slate-900 flex flex-col">
       {/* Top Navigation */}
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center w-full sm:w-auto min-w-0">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center min-w-0">
           <Logo className="h-8" animated={true} />
           <motion.span 
             initial={{ opacity: 0 }}
@@ -212,8 +214,63 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
             </span>
           )}
         </div>
-        
-        <div className="w-full sm:w-auto flex items-center justify-end gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Mobile action menu */}
+          <div className="sm:hidden relative">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(v => !v)}
+              className="p-2.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition-colors"
+              aria-label="Open actions menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {isMobileMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-slate-200 bg-white shadow-xl p-2 z-50">
+                {(!attendance || attendance.status === 'Working') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttendanceType(attendance ? 'out' : 'in');
+                      setIsAttendanceModalOpen(true);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                      attendance
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" />
+                    {attendance ? 'Punch Out' : 'Punch In'}
+                  </button>
+                )}
+
+                {attendance?.status === 'Completed' && (
+                  <div className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Shift Completed
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-50 hover:text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-4">
           {/* Attendance Button */}
           {(!attendance || attendance.status === 'Working') && (
             <motion.button
@@ -249,6 +306,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
             <LogOut className="w-4 h-4" />
             Logout
           </motion.button>
+          </div>
         </div>
       </header>
 
