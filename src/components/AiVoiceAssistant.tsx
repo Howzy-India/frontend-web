@@ -219,7 +219,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={toggleAssistant}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-50 transition-colors ${
+        className={`fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 -translate-x-1/2 sm:bottom-6 sm:right-6 sm:left-auto sm:translate-x-0 w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-50 transition-colors ${
           isOpen ? 'bg-slate-800 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
         }`}
       >
@@ -233,7 +233,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50"
+            className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-1/2 -translate-x-1/2 w-[calc(100vw-1.5rem)] max-w-sm sm:bottom-24 sm:right-6 sm:left-auto sm:translate-x-0 sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-50"
           >
             <div className="p-4 bg-slate-900 text-white flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center">
