@@ -39,8 +39,10 @@ const MAX_PHOTOS = 100;
 
 // ── Types ────────────────────────────────────────────────────────────
 interface ConfigRow { bhkCount: string; minSft: string; maxSft: string; unitCount: string; }
-interface MediaFile  { file: File | null; uploadedUrl: string; uploading: boolean; error: string; }
-const emptyMedia = (): MediaFile => ({ file: null, uploadedUrl: '', uploading: false, error: '' });
+interface MediaFile  { file: File | null; fileKey: string; uploadedUrl: string; uploading: boolean; error: string; }
+const emptyMedia = (): MediaFile => ({ file: null, fileKey: '', uploadedUrl: '', uploading: false, error: '' });
+
+const getFileKey = (file: File): string => `${file.name}:${file.size}:${file.type}`;
 
 interface FormState {
   name: string; developerName: string; reraNumber: string;
@@ -167,6 +169,9 @@ function MultiPhotoUpload({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadedCount = photos.filter(m => m.uploadedUrl).length;
+  const visiblePhotos = photos
+    .map((photo, originalIndex) => ({ photo, originalIndex }))
+    .filter(({ photo }) => photo.uploadedUrl || photo.uploading || photo.file);
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -198,7 +203,7 @@ function MultiPhotoUpload({
           e.target.value = '';
         }}
       />
-      {photos.length === 0 || !photos.some(m => m.uploadedUrl || m.uploading || m.file) ? (
+      {visiblePhotos.length === 0 ? (
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -209,21 +214,21 @@ function MultiPhotoUpload({
         </button>
       ) : (
         <div className="grid grid-cols-3 gap-2">
-          {photos.filter(m => m.uploadedUrl || m.uploading || m.file).map((m, i) => (
-            <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 aspect-video flex items-center justify-center">
-              {m.uploadedUrl ? (
-                <img src={m.uploadedUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-              ) : m.uploading ? (
+          {visiblePhotos.map(({ photo, originalIndex }, i) => (
+            <div key={photo.fileKey || photo.uploadedUrl || `photo-${originalIndex}`} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 aspect-video flex items-center justify-center">
+              {photo.uploadedUrl ? (
+                <img src={photo.uploadedUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+              ) : photo.uploading ? (
                 <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
               ) : (
-                <span className="text-[11px] text-slate-500 truncate px-2">{m.file?.name}</span>
+                <span className="text-[11px] text-slate-500 truncate px-2">{photo.file?.name}</span>
               )}
-              {m.error && (
-                <span className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[10px] px-1.5 py-0.5 text-center">{m.error}</span>
+              {photo.error && (
+                <span className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[10px] px-1.5 py-0.5 text-center">{photo.error}</span>
               )}
               <button
                 type="button"
-                onClick={() => onRemove(i)}
+                onClick={() => onRemove(originalIndex)}
                 className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3" />
@@ -265,7 +270,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
   React.useEffect(() => {
     if (!initialData || !projectId) return;
     const toMedia = (url?: string): MediaFile =>
-      url ? { file: null, uploadedUrl: url, uploading: false, error: '' } : emptyMedia();
+      url ? { file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '' } : emptyMedia();
     setForm(prev => ({
       ...prev,
       name: initialData.name ?? '',
@@ -300,7 +305,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
           }))
         : [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
       photoFiles: (initialData.photos ?? []).length > 0
-        ? (initialData.photos as string[]).map(url => ({ file: null, uploadedUrl: url, uploading: false, error: '' }))
+        ? (initialData.photos as string[]).map(url => ({ file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '' }))
         : [emptyMedia()],
       videoLink3D: initialData.videoLink3D ?? '',
       brochureFile: toMedia(initialData.brochureLink),
@@ -337,16 +342,21 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
 
   // ── Photo file helpers ────────────────────────────────────────────
   const setPhotos = (fn: (p: MediaFile[]) => MediaFile[]) => setForm(p => ({ ...p, photoFiles: fn(p.photoFiles) }));
-  const updatePhoto = (i: number, partial: Partial<MediaFile>) =>
-    setPhotos(prev => prev.map((m, idx) => idx === i ? { ...m, ...partial } : m));
+  const updatePhotoByKey = (fileKey: string, partial: Partial<MediaFile>) =>
+    setPhotos(prev => prev.map(m => m.fileKey === fileKey ? { ...m, ...partial } : m));
 
-  const handleUploadPhoto = async (i: number, file: File) => {
-    updatePhoto(i, { file, uploading: true, error: '' });
+  const uploadingPhotoKeys = React.useRef<Set<string>>(new Set());
+
+  const handleUploadPhoto = async (file: File, fileKey: string) => {
     try {
       // Scope photos to this project's folder; timestamp avoids name collisions
       const url = await uploadToStorage(file, `projects/${uploadFolder.current}/photos/${Date.now()}_${file.name}`);
-      updatePhoto(i, { uploadedUrl: url, uploading: false });
-    } catch { updatePhoto(i, { uploading: false, error: 'Upload failed' }); }
+      updatePhotoByKey(fileKey, { uploadedUrl: url, uploading: false });
+    } catch {
+      updatePhotoByKey(fileKey, { uploading: false, error: 'Upload failed' });
+    } finally {
+      uploadingPhotoKeys.current.delete(fileKey);
+    }
   };
 
   // ── Single-file helpers ────────────────────────────────────────────
@@ -472,7 +482,8 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
       .map(c => ({ bhkCount: Number(c.bhkCount), minSft: Number(c.minSft), maxSft: Number(c.maxSft), unitCount: Number(c.unitCount) }));
     const photos = form.photoFiles
       .filter(m => m.uploadedUrl)
-      .map(m => m.uploadedUrl);
+      .map(m => m.uploadedUrl)
+      .filter((url, idx, arr) => arr.indexOf(url) === idx);
     return {
       name: form.name.trim(), developerName: form.developerName.trim(),
       reraNumber: str(form.reraNumber),
@@ -777,15 +788,37 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                   uploadFolder={uploadFolder.current}
                   error={errors.photoFiles}
                   onAdd={(newFiles) => {
-                    const existing = form.photoFiles.filter(m => m.uploadedUrl || m.uploading || m.file);
-                    const slots = MAX_PHOTOS - existing.length;
-                    const toAdd = newFiles.slice(0, slots);
-                    const startIdx = existing.length;
-                    setPhotos(() => [
-                      ...existing,
-                      ...toAdd.map(f => ({ file: f, uploadedUrl: '', uploading: false, error: '' })),
-                    ]);
-                    toAdd.forEach((file, relIdx) => handleUploadPhoto(startIdx + relIdx, file));
+                    const pendingUploads: Array<{ file: File; fileKey: string }> = [];
+
+                    setPhotos(prev => {
+                      const existing = prev.filter(m => m.uploadedUrl || m.uploading || m.file);
+                      const existingKeys = new Set(existing.map(m => m.fileKey).filter(Boolean));
+                      const slots = Math.max(0, MAX_PHOTOS - existing.length);
+
+                      for (const file of newFiles) {
+                        if (pendingUploads.length >= slots) break;
+                        const fileKey = getFileKey(file);
+                        if (existingKeys.has(fileKey) || uploadingPhotoKeys.current.has(fileKey)) continue;
+                        existingKeys.add(fileKey);
+                        uploadingPhotoKeys.current.add(fileKey);
+                        pendingUploads.push({ file, fileKey });
+                      }
+
+                      return [
+                        ...existing,
+                        ...pendingUploads.map(({ file, fileKey }) => ({
+                          file,
+                          fileKey,
+                          uploadedUrl: '',
+                          uploading: true,
+                          error: '',
+                        })),
+                      ];
+                    });
+
+                    for (const { file, fileKey } of pendingUploads) {
+                      void handleUploadPhoto(file, fileKey);
+                    }
                   }}
                   onRemove={(i) => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
                 />
