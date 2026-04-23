@@ -195,8 +195,8 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   return (
     <div className="min-h-screen bg-transparent text-slate-900 flex flex-col">
       {/* Top Navigation */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center w-full sm:w-auto min-w-0">
           <Logo className="h-8" animated={true} />
           <motion.span 
             initial={{ opacity: 0 }}
@@ -213,7 +213,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
           )}
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="w-full sm:w-auto flex items-center justify-end gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
           {/* Attendance Button */}
           {(!attendance || attendance.status === 'Working') && (
             <motion.button
@@ -223,7 +223,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
                 setAttendanceType(attendance ? 'out' : 'in');
                 setIsAttendanceModalOpen(true);
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors whitespace-nowrap min-w-0 sm:min-w-[128px] ${
                 attendance 
                   ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200'
                   : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
@@ -234,7 +234,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
             </motion.button>
           )}
           {attendance?.status === 'Completed' && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-500 border border-slate-200">
+            <div className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-bold bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap min-w-0 sm:min-w-[128px]">
               <CheckCircle2 className="w-4 h-4" />
               Shift Completed
             </div>
@@ -244,7 +244,7 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onLogout}
-            className="flex items-center gap-2 text-slate-600 hover:text-red-600 transition-colors bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-100 px-4 py-2 rounded-lg text-sm font-medium"
+            className="flex items-center justify-center gap-2 text-slate-600 hover:text-red-600 transition-colors bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-100 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap min-w-0 sm:min-w-[104px]"
           >
             <LogOut className="w-4 h-4" />
             Logout
