@@ -198,6 +198,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [landingCategory, setLandingCategory] = useState<'All' | 'Resale' | 'Projects' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [dashboardTab, setDashboardTab] = useState<'My Listings' | 'My Enquiries' | 'My Saved Projects'>('My Saved Projects');
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Admin Configuration State
   const [adminConfig, setAdminConfig] = useState({
@@ -1152,7 +1153,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full space-y-8">
+      <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full space-y-8 pb-32 md:pb-8">
         
         {activeTab === 'Home' && (
           <div className="space-y-12 md:space-y-16 pb-12">
@@ -2300,6 +2301,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           else if (item === 'Contact' || item === 'Privacy Policy' || item === 'Terms & Conditions' || item === 'FAQs') setActiveTab("About");
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        onAIClick={() => setIsAIOpen(!isAIOpen)}
       />
 
       {/* Property Details Modal */}

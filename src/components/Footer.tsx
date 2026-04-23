@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Instagram, Linkedin, Youtube, Facebook, MessageCircle, Phone, Mail, MapPin, Clock, ChevronDown, Building2, Home, Map, Briefcase, Trees, ArrowRight } from 'lucide-react';
+import { Instagram, Linkedin, Youtube, Facebook, MessageCircle, Phone, Mail, MapPin, Clock, ChevronDown, Building2, Home, Map, Briefcase, Trees, ArrowRight, Bot } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface FooterProps {
@@ -9,9 +9,10 @@ interface FooterProps {
   onLocationClick?: (loc: string) => void;
   onServiceClick?: (service: string) => void;
   onCompanyClick?: (item: string) => void;
+  onAIClick?: () => void;
 }
 
-const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick, onServiceClick, onCompanyClick }: FooterProps) => {
+const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick, onServiceClick, onCompanyClick, onAIClick }: FooterProps) => {
   // Mobile accordion state
   const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -129,19 +130,34 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
 
       {/* Mobile Sticky Bottom Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex justify-around items-center py-3 px-4 z-40 pb-4">
-        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600">
+        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
           <Home className="w-5 h-5" />
           <span className="text-[10px] font-medium">Home</span>
         </button>
-        <button onClick={() => onProjectFilterClick?.('All')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600">
+        <button onClick={() => onProjectFilterClick?.('All')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
           <Map className="w-5 h-5" />
           <span className="text-[10px] font-medium">Explore</span>
         </button>
-        <button onClick={() => onServiceClick?.('Consultation')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600">
+        <motion.button 
+          onClick={onAIClick}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex flex-col items-center gap-1 text-indigo-600 hover:text-indigo-700 transition-colors"
+        >
+          <motion.div
+            className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Bot className="w-4 h-4" />
+          </motion.div>
+          <span className="text-[10px] font-medium">AI</span>
+        </motion.button>
+        <button onClick={() => onServiceClick?.('Consultation')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
           <MessageCircle className="w-5 h-5" />
           <span className="text-[10px] font-medium">Consult</span>
         </button>
-        <button onClick={() => onCompanyClick?.('About HOWZY')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600">
+        <button onClick={() => onCompanyClick?.('About HOWZY')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
           <Mail className="w-5 h-5" />
           <span className="text-[10px] font-medium">Contact</span>
         </button>

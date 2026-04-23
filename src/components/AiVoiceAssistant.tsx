@@ -214,7 +214,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
 
   return (
     <>
-      {/* Floating Button */}
+      {/* AI Button - Works as navigation item and floating button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -222,6 +222,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
         className={`fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 -translate-x-1/2 sm:bottom-6 sm:right-6 sm:left-auto sm:translate-x-0 w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-50 transition-colors ${
           isOpen ? 'bg-slate-800 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
         }`}
+        aria-label="Open AI Assistant"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Bot className="w-6 h-6" />}
       </motion.button>
