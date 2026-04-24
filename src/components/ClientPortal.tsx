@@ -199,6 +199,22 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [dashboardTab, setDashboardTab] = useState<'My Listings' | 'My Enquiries' | 'My Saved Projects'>('My Saved Projects');
   const [isAIOpen, setIsAIOpen] = useState(0);
+  // Hold-to-talk signals for the AI button (header + footer). Incrementing
+  // holdStart / holdEnd lets ClientChatWidget drive push-to-talk recording.
+  const [aiHoldStart, setAiHoldStart] = useState(0);
+  const [aiHoldEnd, setAiHoldEnd] = useState(0);
+  const aiPressActive = useRef(false);
+  const onAIPressStart = useCallback(() => {
+    if (aiPressActive.current) return;
+    aiPressActive.current = true;
+    setIsAIOpen((n) => n + 1); // ensure the voice bar is visible
+    setAiHoldStart((n) => n + 1);
+  }, []);
+  const onAIPressEnd = useCallback(() => {
+    if (!aiPressActive.current) return;
+    aiPressActive.current = false;
+    setAiHoldEnd((n) => n + 1);
+  }, []);
 
   // Admin Configuration State
   const [adminConfig, setAdminConfig] = useState({
@@ -923,12 +939,18 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                {/* AI chat trigger — desktop only, sits alongside the menu toggle */}
+                {/* AI chat trigger — desktop only, sits alongside the menu toggle.
+                    Hold to record, release to send. */}
                 <button
                   type="button"
-                  onClick={() => setIsAIOpen((n) => n + 1)}
-                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors"
-                  aria-label="Open Howzy AI assistant"
+                  onPointerDown={(e) => { e.preventDefault(); onAIPressStart(); }}
+                  onPointerUp={onAIPressEnd}
+                  onPointerLeave={onAIPressEnd}
+                  onPointerCancel={onAIPressEnd}
+                  style={{ touchAction: 'none' }}
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors select-none"
+                  aria-label="Hold to talk to Howzy AI"
+                  title="Hold to talk"
                 >
                   <Bot className="w-4 h-4" />
                   <span className="text-xs font-bold tracking-wider">AI</span>
@@ -956,12 +978,18 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                     <Menu className="w-5 h-5" />
                   </button>
                 </div>
-                {/* AI chat trigger — desktop only, sits alongside the menu toggle */}
+                {/* AI chat trigger — desktop only, sits alongside the menu toggle.
+                    Hold to record, release to send. */}
                 <button
                   type="button"
-                  onClick={() => setIsAIOpen((n) => n + 1)}
-                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors"
-                  aria-label="Open Howzy AI assistant"
+                  onPointerDown={(e) => { e.preventDefault(); onAIPressStart(); }}
+                  onPointerUp={onAIPressEnd}
+                  onPointerLeave={onAIPressEnd}
+                  onPointerCancel={onAIPressEnd}
+                  style={{ touchAction: 'none' }}
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors select-none"
+                  aria-label="Hold to talk to Howzy AI"
+                  title="Hold to talk"
                 >
                   <Bot className="w-4 h-4" />
                   <span className="text-xs font-bold tracking-wider">AI</span>
@@ -2337,6 +2365,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onAIClick={() => setIsAIOpen((n) => n + 1)}
+        onAIPressStart={onAIPressStart}
+        onAIPressEnd={onAIPressEnd}
       />
 
       {/* Property Details Modal */}
@@ -2900,7 +2930,14 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
       )}
       <ErrorBoundary>
         {(!userRole || userRole === 'client') && (
-          <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} openSignal={isAIOpen} />
+          <ClientChatWidget
+            uid={uid}
+            userEmail={userEmail}
+            onLoginClick={onLoginClick}
+            openSignal={isAIOpen}
+            holdStartSignal={aiHoldStart}
+            holdEndSignal={aiHoldEnd}
+          />
         )}
       </ErrorBoundary>
   </React.Fragment>

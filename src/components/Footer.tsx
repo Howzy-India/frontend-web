@@ -10,9 +10,13 @@ interface FooterProps {
   onServiceClick?: (service: string) => void;
   onCompanyClick?: (item: string) => void;
   onAIClick?: () => void;
+  /** Fired when the user presses down on the AI button (push-to-talk start). */
+  onAIPressStart?: () => void;
+  /** Fired when the user releases the AI button (push-to-talk end). */
+  onAIPressEnd?: () => void;
 }
 
-const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick, onServiceClick, onCompanyClick, onAIClick }: FooterProps) => {
+const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick, onServiceClick, onCompanyClick, onAIClick, onAIPressStart, onAIPressEnd }: FooterProps) => {
   // Mobile accordion state
   const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -140,14 +144,20 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
             <span className="text-[11px] font-medium">Explore</span>
           </button>
 
-          {/* Center elevated AI button */}
+          {/* Center elevated AI button — hold to talk, release to send. */}
           <div className="flex justify-center items-end h-full">
             <motion.button
-              onClick={onAIClick}
+              onClick={onAIPressStart ? undefined : onAIClick}
+              onPointerDown={(e) => { if (onAIPressStart) { e.preventDefault(); onAIPressStart(); } }}
+              onPointerUp={onAIPressEnd}
+              onPointerLeave={onAIPressEnd}
+              onPointerCancel={onAIPressEnd}
+              style={{ touchAction: 'none' }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="relative -top-5 flex flex-col items-center gap-1"
-              aria-label="AI Assistant"
+              className="relative -top-5 flex flex-col items-center gap-1 select-none"
+              aria-label="Hold to talk to Howzy AI"
+              title="Hold to talk"
             >
               <motion.div
                 className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 ring-4 ring-white"
