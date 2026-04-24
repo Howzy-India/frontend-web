@@ -16,7 +16,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bot, Loader2, Mic, Send, RefreshCw,
-  MapPin, Tag, Volume2, VolumeX, MessageSquare,
+  MapPin, Tag,
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -139,42 +139,10 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
 }
 
 /** Return welcome greeting — separate display text (clean) and speak text (pronounceable). */
-function getNativeGreeting(): { display: string; speakText: string; lang: string } {
-  const locale = navigator.language || 'en';
-  if (locale.startsWith('te'))
-    return {
-      display: 'Howzy.in కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?',
-      speakText: 'హౌజీ డాట్ ఇన్ కు స్వాగతం! నేను మీకు ఎలా సహాయం చేయగలను?',
-      lang: 'te-IN',
-    };
-  if (locale.startsWith('hi'))
-    return {
-      display: 'Howzy.in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?',
-      speakText: 'Howzy dot in में आपका स्वागत है! मैं आपकी कैसे मदद कर सकती हूँ?',
-      lang: 'hi-IN',
-    };
-  if (locale.startsWith('kn'))
-    return {
-      display: 'Howzy.in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
-      speakText: 'Howzy dot in ಗೆ ಸ್ವಾಗತ! ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?',
-      lang: 'kn-IN',
-    };
-  if (locale.startsWith('ta'))
-    return {
-      display: 'Howzy.in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?',
-      speakText: 'Howzy dot in-க்கு வரவேற்கிறோம்! நான் உங்களுக்கு எவ்வாறு உதவலாம்?',
-      lang: 'ta-IN',
-    };
-  return {
-    display: 'Welcome to Howzy.in! How can I help you today?',
-    speakText: 'Welcome to Howzy dot in! How can I help you today?',
-    lang: 'en-IN',
-  };
-}
+// getNativeGreeting removed — the assistant no longer auto-greets; it speaks
+// only in response to a user hold on the AI button.
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type VoicePhase = 'init' | 'greeting' | 'listening' | 'processing' | 'speaking' | 'idle';
 
 interface ChatMessage {
   role: 'user' | 'model';
@@ -236,7 +204,9 @@ export default function ClientChatWidget({
           • Mobile  → center AI button in the bottom nav
           Both call setIsAIOpen((n) => n + 1), which this widget watches via the openSignal prop. */}
 
-      {/* Full-screen voice overlay — primary interaction */}
+      {/* Headless voice pipeline — the AI button in the header / footer is the mic.
+          No persistent chat indicator: we just listen on hold, process on release,
+          and speak the reply. */}
       <AnimatePresence>
         {mode === 'voice' && (
           <VoiceOverlay
@@ -247,7 +217,6 @@ export default function ClientChatWidget({
             onSessionId={setSessionId}
             onMessages={setMessages}
             onTextFallback={() => setMode('text')}
-            onClose={handleClose}
           />
         )}
       </AnimatePresence>
@@ -281,7 +250,6 @@ function VoiceOverlay({
   onSessionId,
   onMessages,
   onTextFallback,
-  onClose,
 }: {
   sessionId: string | null;
   initialMessages: ChatMessage[];
@@ -290,28 +258,16 @@ function VoiceOverlay({
   onSessionId: (id: string) => void;
   onMessages: (msgs: ChatMessage[]) => void;
   onTextFallback: () => void;
-  onClose: () => void;
 }) {
-  const [phase, setPhase] = useState<VoicePhase>('init');
-  const [displayText, setDisplayText] = useState('');
-  const [transcript, setTranscript] = useState('');
-  const [isMuted, setIsMuted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   // Use refs to avoid stale closures inside async callbacks
   const mountedRef = useRef(true);
   const sessionRef = useRef<string | null>(sessionId);
   const messagesRef = useRef<ChatMessage[]>(initialMessages);
-  const isMutedRef = useRef(isMuted);
   const recRef = useRef<any>(null);
   const transcriptRef = useRef('');
   // True while a push-to-talk hold is in progress, so the onend handler can
   // send the transcript immediately on release (vs. restart listening).
   const pttActiveRef = useRef(false);
-
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -348,20 +304,13 @@ function VoiceOverlay({
 
   async function initSession() {
     try {
-      let sid = sessionRef.current;
-      if (!sid) {
-        const res = await api.createChatSession();
-        if (!mountedRef.current) return;
-        sid = res.session_id;
-        sessionRef.current = sid;
-        onSessionId(sid);
-      }
-      if (mountedRef.current) setPhase('idle');
+      if (sessionRef.current) return;
+      const res = await api.createChatSession();
+      if (!mountedRef.current) return;
+      sessionRef.current = res.session_id;
+      onSessionId(res.session_id);
     } catch {
-      if (mountedRef.current) {
-        setError('Could not start session.');
-        setPhase('idle');
-      }
+      // Session creation failed — silently ignore; next beginPTT will retry.
     }
   }
 
@@ -390,24 +339,16 @@ function VoiceOverlay({
     recRef.current = rec;
     transcriptRef.current = '';
     pttActiveRef.current = true;
-    setTranscript('');
-    setError(null);
-    setPhase('listening');
 
     rec.onresult = (e: any) => {
       const t = Array.from(e.results as any[]).map((r: any) => r[0].transcript).join('');
       transcriptRef.current = t;
-      if (mountedRef.current) setTranscript(t);
     };
     rec.onerror = (e: any) => {
       if (!mountedRef.current) return;
       pttActiveRef.current = false;
-      if (e.error === 'no-speech') {
-        setPhase('idle');
-        return;
-      }
+      if (e.error === 'no-speech') return;
       // Real recognition failure — escalate to text chat so user isn't stuck.
-      setPhase('idle');
       onTextFallback();
     };
     rec.onend = () => {
@@ -415,11 +356,7 @@ function VoiceOverlay({
       const wasActive = pttActiveRef.current;
       pttActiveRef.current = false;
       const text = transcriptRef.current.trim();
-      if (wasActive && text) {
-        void sendVoice(text, session);
-      } else {
-        setPhase('idle');
-      }
+      if (wasActive && text) void sendVoice(text, session);
     };
     try {
       rec.start();
@@ -440,130 +377,20 @@ function VoiceOverlay({
 
   async function sendVoice(text: string, sid: string) {
     if (!mountedRef.current) return;
-    setTranscript('');
     addMessage({ role: 'user', content: text, timestamp: new Date().toISOString() });
-    setPhase('processing');
-    setError(null);
     try {
       const res = await api.sendChatMessage(sid, text);
       if (!mountedRef.current) return;
       addMessage({ role: 'model', content: res.reply, timestamp: new Date().toISOString(), tool_results: res.tool_results });
-      setDisplayText(res.reply);
-      setPhase('speaking');
-      if (!isMutedRef.current) {
-        await speak(res.reply, detectLang(res.reply));
-      }
-      if (mountedRef.current) setPhase('idle');
-    } catch (err: any) {
-      if (!mountedRef.current) return;
-      let msg = 'Failed to get a response.';
-      try { const d = JSON.parse(err?.message); msg = d.error ?? msg; } catch { /* ignore */ }
-      setError(msg);
-      setPhase('idle');
+      await speak(res.reply, detectLang(res.reply));
+    } catch {
+      // Network / API error — silently ignore; user can try again by holding.
     }
   }
 
-  const isActive = phase === 'listening' || phase === 'speaking' || phase === 'greeting';
-
-  const phaseLabel = (() => {
-    if (phase === 'init') return 'Starting…';
-    if (phase === 'listening') return 'Listening — keep holding';
-    if (phase === 'processing') return 'Thinking…';
-    if (phase === 'speaking') return 'Speaking…';
-    return 'Hold the AI button to speak';
-  })();
-
-  // Compact voice bar — sits above the mobile footer (h-16 + safe-area) on mobile,
-  // and as a small pill on the bottom-right on desktop. No full-screen overlay.
-  return (
-    <motion.div
-      key="voice-bar"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-      className="fixed left-2 right-2 md:left-auto md:right-6 md:w-[380px] z-[90] select-none"
-      style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px) + 8px)' }}
-    >
-      <div className="md:!bottom-6 relative bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl shadow-indigo-500/10 px-3 py-2.5 flex items-center gap-3">
-        {/* Pulsing mic */}
-        <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-          {isActive && (
-            <motion.span
-              className="absolute inset-0 rounded-full bg-indigo-500/25"
-              animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
-            />
-          )}
-          <motion.button
-            type="button"
-            whileTap={{ scale: 0.92 }}
-            onPointerDown={(e) => { e.preventDefault(); beginPTT(); }}
-            onPointerUp={endPTT}
-            onPointerLeave={endPTT}
-            onPointerCancel={endPTT}
-            style={{ touchAction: 'none' }}
-            className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${
-              phase === 'idle' ? 'bg-indigo-400' : 'bg-gradient-to-br from-indigo-500 to-purple-500'
-            }`}
-            title={phase === 'idle' ? 'Hold to speak' : phaseLabel}
-            aria-label={phaseLabel}
-          >
-            {phase === 'processing'
-              ? <Loader2 className="w-5 h-5 animate-spin" />
-              : <Mic className="w-5 h-5" />}
-          </motion.button>
-        </div>
-
-        {/* Status + loading strip */}
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-slate-600 truncate">{phaseLabel}</p>
-          <div className="mt-1 h-1 rounded-full bg-slate-100 overflow-hidden">
-            <ProgressStripe active={isActive} processing={phase === 'processing'} />
-          </div>
-          {(transcript || displayText) && (
-            <p className="mt-1 text-[11px] text-slate-500 truncate italic">
-              {transcript ? `"${transcript}"` : displayText}
-            </p>
-          )}
-          {error && (
-            <p className="mt-1 text-[11px] text-red-500 truncate">{error}</p>
-          )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsMuted((m) => !m)}
-            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            title={isMuted ? 'Unmute' : 'Mute'}
-            aria-label={isMuted ? 'Unmute assistant' : 'Mute assistant'}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <button
-            type="button"
-            onClick={onTextFallback}
-            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-            title="Type instead"
-            aria-label="Open text chat"
-          >
-            <MessageSquare className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors"
-            title="Close"
-            aria-label="Close voice assistant"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
+  // Headless: the AI button (header + footer) is the only visible control.
+  // No compact bar, no overlay — just the voice pipeline.
+  return null;
 }
 
 // ─── Text Chat Panel ── fallback when user can't use voice ────────────────────
@@ -717,28 +544,6 @@ function TextChatPanel({
 }
 
 // ─── Shared Sub-components ───────────────────────────────────────────────────
-
-function ProgressStripe({ active, processing }: Readonly<{ active: boolean; processing: boolean }>) {
-  if (active) {
-    return (
-      <motion.div
-        className="h-full w-1/3 bg-gradient-to-r from-indigo-500 to-purple-500"
-        animate={{ x: ['-100%', '300%'] }}
-        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-    );
-  }
-  if (processing) {
-    return (
-      <motion.div
-        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-        animate={{ width: ['20%', '80%', '20%'] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-      />
-    );
-  }
-  return <div className="h-full w-0" />;
-}
 
 function PanelShell({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
