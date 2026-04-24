@@ -275,8 +275,24 @@ export const api = {
   delegateResaleProperty: (id: string, agentName: string, agentPhone: string) =>
     patch<any>(`/resale/${id}/delegate`, { agentName, agentPhone }),
 
-  textToSpeech: (text: string, languageCode = 'en-IN', voiceName?: string) =>
-    post<{ audioContent: string }>('/chat/tts', { text, languageCode, ...(voiceName ? { voiceName } : {}) }, false),
+  textToSpeech: (
+    text: string,
+    languageCode = 'en-IN',
+    voiceName?: string,
+    opts?: { ssml?: string; speakingRate?: number; pitch?: number },
+  ) =>
+    post<{ audioContent: string }>(
+      '/chat/tts',
+      {
+        text,
+        languageCode,
+        ...(voiceName ? { voiceName } : {}),
+        ...(opts?.ssml ? { ssml: opts.ssml } : {}),
+        ...(typeof opts?.speakingRate === 'number' ? { speakingRate: opts.speakingRate } : {}),
+        ...(typeof opts?.pitch === 'number' ? { pitch: opts.pitch } : {}),
+      },
+      false,
+    ),
 
   // ── AI Chat Agent ─────────────────────────────────────────────────
   createChatSession: () => post<{ session_id: string }>('/chat/sessions', {}, false),
