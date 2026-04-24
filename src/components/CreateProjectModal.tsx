@@ -401,7 +401,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
     if (!form.density)                 e.density         = 'Density is required.';
     if (!form.totalUnits.trim())       e.totalUnits      = 'Total units is required.';
     if (!form.availableUnits.trim())   e.availableUnits  = 'Available units is required.';
-    if (!form.sftCostingPerSqft.trim()) e.sftCostingPerSqft = 'SFT costing is required.';
+    // SFT Costing is optional — no validation.
 
     // Section 4 – BHK Configurations
     const hasValidConfig = form.configurations.some(c => c.bhkCount && c.minSft && c.maxSft && c.unitCount);
@@ -414,7 +414,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
     if (!form.videoLink3D.trim())      e.videoLink3D     = '3D / walkthrough video link is required.';
     else if (!/^https?:\/\//.test(form.videoLink3D.trim())) e.videoLink3D = 'Enter a valid URL (https://…)';
     if (!form.brochureFile.uploadedUrl) e.brochureFile   = 'Brochure is required.';
-    if (!form.agreementFile.uploadedUrl) e.agreementFile = 'Onboarding agreement is required.';
+    // Onboarding Agreement is optional — no validation.
 
     // Section 6 – Team & Contacts
     if (!form.projectManagerName.trim()) e.projectManagerName = 'Project Manager name is required.';
@@ -454,13 +454,9 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
       if (!form.leadRegistrationAppPassword.trim()) e.leadRegistrationAppPassword = 'App password is required.';
     }
 
-    // Commission
-    if (!form.commissionType) {
-      e.commissionType = 'Commission type is required.';
-    }
-    if (!form.commissionValue.trim()) {
-      e.commissionValue = 'Commission value is required.';
-    } else if (isNaN(Number(form.commissionValue)) || Number(form.commissionValue) < 0) {
+    // Commission — both type and value are optional. If a value is entered,
+    // it still has to be a non-negative number.
+    if (form.commissionValue.trim() && (isNaN(Number(form.commissionValue)) || Number(form.commissionValue) < 0)) {
       e.commissionValue = 'Enter a valid positive number.';
     }
 
@@ -728,7 +724,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                 </div>
               </div>
               <div>
-                <label className={lc()}>SFT Costing (₹/sqft) <span className="text-red-500">*</span>{errors.sftCostingPerSqft && <ErrTip msg={errors.sftCostingPerSqft} />}</label>
+                <label className={lc()}>SFT Costing (₹/sqft){errors.sftCostingPerSqft && <ErrTip msg={errors.sftCostingPerSqft} />}</label>
                 <input type="number" min="0" value={form.sftCostingPerSqft} onChange={e => set('sftCostingPerSqft', e.target.value)} className={errors.sftCostingPerSqft ? fcE() : fc()} placeholder="7500" />
               </div>
             </div>
@@ -848,14 +844,14 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                 onClear={() => updateSingle('brochureFile', { file: null, uploadedUrl: '', error: '' })} />
 
               <FileUploadField label="Onboarding Agreement" media={form.agreementFile} accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hint="PDF, DOC, DOCX"
-                required fieldError={errors.agreementFile}
+                fieldError={errors.agreementFile}
                 onFileChange={f => handleUploadSingle('agreementFile', f)}
                 onClear={() => updateSingle('agreementFile', { file: null, uploadedUrl: '', error: '' })} />
 
               {/* Commission */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={lc()}>Commission Type <span className="text-red-500">*</span>{errors.commissionType && <ErrTip msg={errors.commissionType} />}</label>
+                  <label className={lc()}>Commission Type{errors.commissionType && <ErrTip msg={errors.commissionType} />}</label>
                   <select value={form.commissionType} onChange={e => set('commissionType', e.target.value)} className={errors.commissionType ? fcE('bg-red-50/40') : fc('bg-white')}>
                     <option value="">Select…</option>
                     <option value="PerSqft">Per Sqft</option>
@@ -863,7 +859,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                   </select>
                 </div>
                 <div>
-                  <label className={lc()}>Commission Value <span className="text-red-500">*</span>{errors.commissionValue && <ErrTip msg={errors.commissionValue} />}</label>
+                  <label className={lc()}>Commission Value{errors.commissionValue && <ErrTip msg={errors.commissionValue} />}</label>
                   <div className="relative flex items-center">
                     <input
                       type="number" min="0" step="any"
