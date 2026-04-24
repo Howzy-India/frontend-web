@@ -209,18 +209,11 @@ export default function ClientChatWidget({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   // Open chat when parent increments openSignal.
-  // Prefer voice on browsers that actually support SpeechRecognition (mainly desktop Chrome/Edge).
-  // On iOS Safari / most mobile browsers, fall back straight to the text panel so the user
-  // isn't stuck on a voice overlay that can't listen.
+  // Always try the voice bar first — it is tiny and sits above the footer.
+  // If speech recognition isn't supported or errors out, the bar auto-escalates
+  // to the TextChatPanel (see VoiceOverlay's fallback logic).
   useEffect(() => {
-    if (openSignal && openSignal > 0) {
-      const isCoarsePointer =
-        typeof window !== 'undefined' &&
-        typeof window.matchMedia === 'function' &&
-        window.matchMedia('(pointer: coarse)').matches;
-      const voiceSupported = !!SpeechRec && !isCoarsePointer;
-      setMode(voiceSupported ? 'voice' : 'text');
-    }
+    if (openSignal && openSignal > 0) setMode('voice');
   }, [openSignal]);
 
   function handleClose() {
@@ -291,8 +284,6 @@ function VoiceOverlay({
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
-  const [activeVoiceId, setActiveVoiceId] = useState(getSelectedVoice().id);
 
   // Use refs to avoid stale closures inside async callbacks
   const mountedRef = useRef(true);
@@ -309,12 +300,18 @@ function VoiceOverlay({
 
   useEffect(() => {
     mountedRef.current = true;
+    // If the browser can't do speech recognition at all, go straight to text chat.
+    if (!SpeechRec) {
+      onTextFallback();
+      return () => { mountedRef.current = false; };
+    }
     init();
     return () => {
       mountedRef.current = false;
       recRef.current?.abort();
       stopSpeaking();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function addMessage(msg: ChatMessage) {
@@ -390,7 +387,10 @@ function VoiceOverlay({
       if (e.error === 'no-speech') {
         startListening();
       } else {
+        // Real recognition failure (not-allowed, audio-capture, service-not-allowed, network…)
+        // — fall back to the text chat popup so the user isn't stuck.
         setPhase('idle');
+        onTextFallback();
       }
     };
     rec.onend = () => {
@@ -430,163 +430,100 @@ function VoiceOverlay({
 
   const isActive = phase === 'listening' || phase === 'speaking' || phase === 'greeting';
 
+  const phaseLabel = (() => {
+    if (phase === 'init') return 'Starting…';
+    if (phase === 'greeting') return 'Greeting you…';
+    if (phase === 'listening') return 'Listening…';
+    if (phase === 'processing') return 'Thinking…';
+    if (phase === 'speaking') return 'Speaking…';
+    return 'Tap the mic to speak';
+  })();
+
+  // Compact voice bar — sits above the mobile footer (h-16 + safe-area) on mobile,
+  // and as a small pill on the bottom-right on desktop. No full-screen overlay.
   return (
     <motion.div
-      key="voice-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[300] flex flex-col items-center justify-center bg-indigo-950/95 backdrop-blur-md select-none"
+      key="voice-bar"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+      className="fixed left-2 right-2 md:left-auto md:right-6 md:w-[380px] z-[90] select-none"
+      style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px) + 8px)' }}
     >
-      {/* Pulsing rings */}
-      <div className="relative flex items-center justify-center mb-10">
-        {[0, 1, 2].map((i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full border-2 border-indigo-400/40"
-            animate={
-              isActive
-                ? { scale: [1, 2.4 + i * 0.2], opacity: [0.55, 0] }
-                : { scale: 1, opacity: 0.1 }
-            }
-            transition={
-              isActive
-                ? { duration: 1.8 + i * 0.2, delay: i * 0.45, repeat: Infinity, ease: 'easeOut' }
-                : { duration: 0.4 }
-            }
-            style={{ width: 80, height: 80 }}
-          />
-        ))}
-        {/* Central mic button — tap to re-speak when idle */}
-        <motion.div
-          className={`w-20 h-20 rounded-full flex items-center justify-center shadow-2xl cursor-pointer ${
-            phase === 'idle' ? 'bg-indigo-400' : 'bg-indigo-500'
-          }`}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => phase === 'idle' && startListening()}
-          title={phase === 'idle' ? 'Tap to speak' : undefined}
-        >
-          {phase === 'processing'
-            ? <Loader2 className="w-9 h-9 text-white animate-spin" />
-            : <Mic className="w-9 h-9 text-white" />
-          }
-        </motion.div>
-      </div>
-
-      {/* Last AI text */}
-      {displayText ? (
-        <p className="text-white text-lg font-semibold text-center px-10 leading-snug max-w-sm">
-          {displayText}
-        </p>
-      ) : phase === 'init' && (
-        <p className="text-indigo-300 text-base">Starting…</p>
-      )}
-
-      {/* Phase label */}
-      <p className="text-indigo-300 text-sm mt-3">
-        {phase === 'greeting' && 'Greeting you…'}
-        {phase === 'listening' && '🎙 Listening…'}
-        {phase === 'processing' && '✨ Thinking…'}
-        {phase === 'speaking' && '🔊 Speaking…'}
-        {phase === 'idle' && 'Tap the mic to speak'}
-      </p>
-
-      {/* Live transcript */}
-      {transcript && (
-        <p className="text-indigo-200 text-sm italic mt-2 px-10 text-center max-w-sm">
-          "{transcript}"
-        </p>
-      )}
-
-      {error && <p className="text-red-400 text-sm mt-3 px-8 text-center">{error}</p>}
-
-      {!SpeechRec && (
-        <p className="text-amber-400 text-sm mt-3 px-8 text-center">
-          ⚠ Voice not supported in this browser — use "Type instead" below.
-        </p>
-      )}
-
-      {/* Bottom controls */}
-      <div className="absolute bottom-10 flex items-center gap-8">
-        <button
-          onClick={() => setIsMuted((m) => !m)}
-          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
-        >
-          {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          <span className="text-xs">{isMuted ? 'Unmute' : 'Mute'}</span>
-        </button>
-
-        <button
-          onClick={() => setShowVoicePicker(true)}
-          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
-          title="Change voice"
-        >
-          <span className="text-xl leading-none">🎙</span>
-          <span className="text-xs">Voice</span>
-        </button>
-
-        <button
-          onClick={onTextFallback}
-          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
-        >
-          <MessageSquare className="w-5 h-5" />
-          <span className="text-xs">Type instead</span>
-        </button>
-
-        <button
-          onClick={onClose}
-          className="flex flex-col items-center gap-1.5 text-indigo-300 hover:text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-          <span className="text-xs">Close</span>
-        </button>
-      </div>
-
-      {/* Voice picker bottom sheet */}
-      <AnimatePresence>
-        {showVoicePicker && (
-          <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="absolute bottom-0 left-0 right-0 bg-indigo-900 rounded-t-2xl px-6 pt-5 pb-8 z-10"
+      <div className="md:!bottom-6 relative bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xl shadow-indigo-500/10 px-3 py-2.5 flex items-center gap-3">
+        {/* Pulsing mic */}
+        <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+          {isActive && (
+            <motion.span
+              className="absolute inset-0 rounded-full bg-indigo-500/25"
+              animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+            />
+          )}
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.92 }}
+            onClick={() => phase === 'idle' && startListening()}
+            className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${
+              phase === 'idle' ? 'bg-indigo-400' : 'bg-gradient-to-br from-indigo-500 to-purple-500'
+            }`}
+            title={phase === 'idle' ? 'Tap to speak' : phaseLabel}
+            aria-label={phaseLabel}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-base">Choose Voice</h3>
-              <button onClick={() => setShowVoicePicker(false)} className="text-indigo-300 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex flex-col gap-2">
-              {VOICE_OPTIONS.map((v) => (
-                <button
-                  key={v.id}
-                  type="button"
-                  className={`flex items-center justify-between rounded-xl px-4 py-3 cursor-pointer transition-colors w-full text-left ${
-                    activeVoiceId === v.id ? 'bg-indigo-600' : 'bg-indigo-800/60 hover:bg-indigo-700/60'
-                  }`}
-                  onClick={() => { setSelectedVoice(v.id); setActiveVoiceId(v.id); }}
-                >
-                  <div>
-                    <p className="text-white text-sm font-medium">{v.label}</p>
-                    <p className="text-indigo-300 text-xs">{v.description}</p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      speak('Hello! I am your Howzy dot in property advisor. How can I help you?', v.lang !== 'en-IN' ? v.lang : 'en-IN');
-                    }}
-                    className="ml-3 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-white text-xs font-medium transition-colors"
-                  >
-                    ▶ Sample
-                  </button>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {phase === 'processing'
+              ? <Loader2 className="w-5 h-5 animate-spin" />
+              : <Mic className="w-5 h-5" />}
+          </motion.button>
+        </div>
+
+        {/* Status + loading strip */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-slate-600 truncate">{phaseLabel}</p>
+          <div className="mt-1 h-1 rounded-full bg-slate-100 overflow-hidden">
+            <ProgressStripe active={isActive} processing={phase === 'processing'} />
+          </div>
+          {(transcript || displayText) && (
+            <p className="mt-1 text-[11px] text-slate-500 truncate italic">
+              {transcript ? `"${transcript}"` : displayText}
+            </p>
+          )}
+          {error && (
+            <p className="mt-1 text-[11px] text-red-500 truncate">{error}</p>
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsMuted((m) => !m)}
+            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            title={isMuted ? 'Unmute' : 'Mute'}
+            aria-label={isMuted ? 'Unmute assistant' : 'Mute assistant'}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={onTextFallback}
+            className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            title="Type instead"
+            aria-label="Open text chat"
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors"
+            title="Close"
+            aria-label="Close voice assistant"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }
@@ -742,6 +679,28 @@ function TextChatPanel({
 }
 
 // ─── Shared Sub-components ───────────────────────────────────────────────────
+
+function ProgressStripe({ active, processing }: Readonly<{ active: boolean; processing: boolean }>) {
+  if (active) {
+    return (
+      <motion.div
+        className="h-full w-1/3 bg-gradient-to-r from-indigo-500 to-purple-500"
+        animate={{ x: ['-100%', '300%'] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    );
+  }
+  if (processing) {
+    return (
+      <motion.div
+        className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+        animate={{ width: ['20%', '80%', '20%'] }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    );
+  }
+  return <div className="h-full w-0" />;
+}
 
 function PanelShell({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
