@@ -196,25 +196,32 @@ export interface ClientChatWidgetProps {
   onLoginClick?: () => void; // kept for backward compat; no longer used
   /** Incrementing counter that triggers the voice overlay to open from outside (e.g. header/footer AI button). */
   openSignal?: number;
+  /** Increments each time the user presses (pointer-down) the AI button — starts push-to-talk recording. */
+  holdStartSignal?: number;
+  /** Increments each time the user releases (pointer-up/leave/cancel) the AI button — stops recording and sends. */
+  holdEndSignal?: number;
 }
 
 // ─── Root Widget ──────────────────────────────────────────────────────────────
 
 export default function ClientChatWidget({
-  uid, userEmail, openSignal,
+  uid, userEmail, openSignal, holdStartSignal, holdEndSignal,
 }: Readonly<ClientChatWidgetProps>) {
   const [mode, setMode] = useState<'closed' | 'voice' | 'text'>('closed');
   // Shared across voice ↔ text so conversation continues seamlessly
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Open chat when parent increments openSignal.
+  // Open chat when parent increments openSignal OR when a hold starts.
   // Always try the voice bar first — it is tiny and sits above the footer.
   // If speech recognition isn't supported or errors out, the bar auto-escalates
   // to the TextChatPanel (see VoiceOverlay's fallback logic).
   useEffect(() => {
     if (openSignal && openSignal > 0) setMode('voice');
   }, [openSignal]);
+  useEffect(() => {
+    if (holdStartSignal && holdStartSignal > 0) setMode('voice');
+  }, [holdStartSignal]);
 
   function handleClose() {
     setMode('closed');
@@ -235,6 +242,8 @@ export default function ClientChatWidget({
           <VoiceOverlay
             sessionId={sessionId}
             initialMessages={messages}
+            holdStartSignal={holdStartSignal}
+            holdEndSignal={holdEndSignal}
             onSessionId={setSessionId}
             onMessages={setMessages}
             onTextFallback={() => setMode('text')}
@@ -267,6 +276,8 @@ export default function ClientChatWidget({
 function VoiceOverlay({
   sessionId,
   initialMessages,
+  holdStartSignal,
+  holdEndSignal,
   onSessionId,
   onMessages,
   onTextFallback,
@@ -274,6 +285,8 @@ function VoiceOverlay({
 }: {
   sessionId: string | null;
   initialMessages: ChatMessage[];
+  holdStartSignal?: number;
+  holdEndSignal?: number;
   onSessionId: (id: string) => void;
   onMessages: (msgs: ChatMessage[]) => void;
   onTextFallback: () => void;
@@ -292,7 +305,9 @@ function VoiceOverlay({
   const isMutedRef = useRef(isMuted);
   const recRef = useRef<any>(null);
   const transcriptRef = useRef('');
-  const hasGreetedRef = useRef(initialMessages.length > 0);
+  // True while a push-to-talk hold is in progress, so the onend handler can
+  // send the transcript immediately on release (vs. restart listening).
+  const pttActiveRef = useRef(false);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -305,7 +320,7 @@ function VoiceOverlay({
       onTextFallback();
       return () => { mountedRef.current = false; };
     }
-    init();
+    void initSession();
     return () => {
       mountedRef.current = false;
       recRef.current?.abort();
@@ -314,13 +329,24 @@ function VoiceOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Push-to-talk: start recording when the parent signals a hold start.
+  useEffect(() => {
+    if (holdStartSignal && holdStartSignal > 0) beginPTT();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdStartSignal]);
+  // Release: stop recording; onend will auto-send the transcript.
+  useEffect(() => {
+    if (holdEndSignal && holdEndSignal > 0) endPTT();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdEndSignal]);
+
   function addMessage(msg: ChatMessage) {
     const next = [...messagesRef.current, msg];
     messagesRef.current = next;
     onMessages(next);
   }
 
-  async function init() {
+  async function initSession() {
     try {
       let sid = sessionRef.current;
       if (!sid) {
@@ -330,20 +356,7 @@ function VoiceOverlay({
         sessionRef.current = sid;
         onSessionId(sid);
       }
-
-      if (!hasGreetedRef.current) {
-        hasGreetedRef.current = true;
-        const greeting = getNativeGreeting();
-        if (mountedRef.current) {
-          setDisplayText(greeting.display);
-          setPhase('greeting');
-          // Add greeting to messages so AI knows it was already said
-          addMessage({ role: 'model', content: greeting.display, timestamp: new Date().toISOString() });
-        }
-        if (!isMutedRef.current) await speak(greeting.speakText, greeting.lang);
-      }
-
-      if (mountedRef.current) startListening(sid);
+      if (mountedRef.current) setPhase('idle');
     } catch {
       if (mountedRef.current) {
         setError('Could not start session.');
@@ -352,55 +365,77 @@ function VoiceOverlay({
     }
   }
 
-  const startListening = useCallback((sid?: string) => {
-    const session = sid ?? sessionRef.current;
-    if (!SpeechRec || !session || !mountedRef.current) {
-      setPhase('idle');
+  /** Start a push-to-talk recording session. Runs until endPTT() is called. */
+  const beginPTT = useCallback(() => {
+    if (!SpeechRec || !mountedRef.current) return;
+    // Interrupt any ongoing TTS so the user is heard immediately.
+    stopSpeaking();
+    // If a previous recognizer is still alive, abort it without sending.
+    pttActiveRef.current = false;
+    recRef.current?.abort();
+
+    const session = sessionRef.current;
+    if (!session) {
+      // Session not ready yet — try to create one then start.
+      void initSession().then(() => {
+        if (mountedRef.current && sessionRef.current) beginPTT();
+      });
       return;
     }
-    recRef.current?.abort();
-    const rec = new (SpeechRec as any)();
+
+    const rec = new SpeechRec();
     rec.lang = 'en-IN';
-    rec.continuous = true;   // Keep mic open so user can speak in full sentences
+    rec.continuous = true;
     rec.interimResults = true;
     recRef.current = rec;
     transcriptRef.current = '';
-    if (mountedRef.current) { setTranscript(''); setPhase('listening'); }
-
-    // Silence detection: send after 1.8s of no new speech
-    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
-    const SILENCE_MS = 1800;
+    pttActiveRef.current = true;
+    setTranscript('');
+    setError(null);
+    setPhase('listening');
 
     rec.onresult = (e: any) => {
       const t = Array.from(e.results as any[]).map((r: any) => r[0].transcript).join('');
-      if (mountedRef.current) { setTranscript(t); }
       transcriptRef.current = t;
-      // Reset silence timer on every new speech chunk
-      if (silenceTimer) clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => {
-        rec.stop(); // triggers onend → send
-      }, SILENCE_MS);
+      if (mountedRef.current) setTranscript(t);
     };
     rec.onerror = (e: any) => {
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       if (!mountedRef.current) return;
+      pttActiveRef.current = false;
       if (e.error === 'no-speech') {
-        startListening();
-      } else {
-        // Real recognition failure (not-allowed, audio-capture, service-not-allowed, network…)
-        // — fall back to the text chat popup so the user isn't stuck.
         setPhase('idle');
-        onTextFallback();
+        return;
       }
+      // Real recognition failure — escalate to text chat so user isn't stuck.
+      setPhase('idle');
+      onTextFallback();
     };
     rec.onend = () => {
-      if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
       if (!mountedRef.current) return;
+      const wasActive = pttActiveRef.current;
+      pttActiveRef.current = false;
       const text = transcriptRef.current.trim();
-      if (text) sendVoice(text, session);
-      else startListening(session); // no speech detected, listen again
+      if (wasActive && text) {
+        void sendVoice(text, session);
+      } else {
+        setPhase('idle');
+      }
     };
-    rec.start();
+    try {
+      rec.start();
+    } catch {
+      // Already started — ignore.
+    }
+  }, []);
+
+  /** Stop the push-to-talk recorder; onend will send the captured transcript. */
+  const endPTT = useCallback(() => {
+    if (!recRef.current || !pttActiveRef.current) return;
+    try {
+      recRef.current.stop();
+    } catch {
+      // Ignore — will fall through to onend.
+    }
   }, []);
 
   async function sendVoice(text: string, sid: string) {
@@ -418,7 +453,7 @@ function VoiceOverlay({
       if (!isMutedRef.current) {
         await speak(res.reply, detectLang(res.reply));
       }
-      if (mountedRef.current) startListening();
+      if (mountedRef.current) setPhase('idle');
     } catch (err: any) {
       if (!mountedRef.current) return;
       let msg = 'Failed to get a response.';
@@ -432,11 +467,10 @@ function VoiceOverlay({
 
   const phaseLabel = (() => {
     if (phase === 'init') return 'Starting…';
-    if (phase === 'greeting') return 'Greeting you…';
-    if (phase === 'listening') return 'Listening…';
+    if (phase === 'listening') return 'Listening — keep holding';
     if (phase === 'processing') return 'Thinking…';
     if (phase === 'speaking') return 'Speaking…';
-    return 'Tap the mic to speak';
+    return 'Hold the AI button to speak';
   })();
 
   // Compact voice bar — sits above the mobile footer (h-16 + safe-area) on mobile,
@@ -464,11 +498,15 @@ function VoiceOverlay({
           <motion.button
             type="button"
             whileTap={{ scale: 0.92 }}
-            onClick={() => phase === 'idle' && startListening()}
+            onPointerDown={(e) => { e.preventDefault(); beginPTT(); }}
+            onPointerUp={endPTT}
+            onPointerLeave={endPTT}
+            onPointerCancel={endPTT}
+            style={{ touchAction: 'none' }}
             className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${
               phase === 'idle' ? 'bg-indigo-400' : 'bg-gradient-to-br from-indigo-500 to-purple-500'
             }`}
-            title={phase === 'idle' ? 'Tap to speak' : phaseLabel}
+            title={phase === 'idle' ? 'Hold to speak' : phaseLabel}
             aria-label={phaseLabel}
           >
             {phase === 'processing'
