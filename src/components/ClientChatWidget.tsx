@@ -111,6 +111,42 @@ async function speakBrowser(text: string, lang: string): Promise<void> {
   });
 }
 
+/** Escape a string for inclusion inside SSML (&, <, >, ", '). */
+function escapeSsml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Build SSML with an Indian-English conversational cadence:
+ *  • longer pauses after full stops / question marks (550ms)
+ *  • medium pauses after commas / semicolons (280ms)
+ *  • slight pitch lift + slightly slower rate for a warm, friendly tone
+ *  • currency / sqft expansion so the voice says them naturally
+ */
+function buildIndianSsml(text: string): string {
+  let t = escapeSsml(text.trim());
+  // Natural Indian phrasing for common real-estate shorthand.
+  t = t
+    .replace(/\bBHK\b/g, '<sub alias="B H K">BHK</sub>')
+    .replace(/\bsq\s*ft\b/gi, 'square feet')
+    .replace(/\bsqft\b/gi, 'square feet')
+    .replace(/\u20B9\s*/g, 'rupees ')
+    .replace(/\bRs\.?\s*/g, 'rupees ')
+    .replace(/\bCr\b/g, 'crore')
+    .replace(/\bLakh?s?\b/gi, 'lakhs');
+  // Insert breaks after punctuation for conversational pacing.
+  t = t
+    .replace(/([.!?])\s+/g, '$1<break time="550ms"/> ')
+    .replace(/([,;:])\s+/g, '$1<break time="280ms"/> ');
+  // Warm, friendly Indian advisor tone: slight pitch lift, medium rate.
+  return `<speak><prosody rate="96%" pitch="+1st">${t}</prosody></speak>`;
+}
+
 /**
  * Speak text using Google Cloud TTS Neural2 voice.
  * Uses the user-selected voice; falls back to browser TTS if backend fails.
@@ -119,8 +155,13 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
   const voice = getSelectedVoice();
   const effectiveLang = lang !== 'en-IN' ? lang : voice.lang;
   const voiceName = lang !== 'en-IN' ? undefined : voice.voiceName;
+  const ssml = buildIndianSsml(text);
   try {
-    const { audioContent } = await api.textToSpeech(text, effectiveLang, voiceName);
+    const { audioContent } = await api.textToSpeech(text, effectiveLang, voiceName, {
+      ssml,
+      speakingRate: 0.96,
+      pitch: 1.5,
+    });
     const binary = atob(audioContent);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
