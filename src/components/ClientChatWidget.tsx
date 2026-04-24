@@ -138,9 +138,34 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
   }
 }
 
-/** Return welcome greeting — separate display text (clean) and speak text (pronounceable). */
-// getNativeGreeting removed — the assistant no longer auto-greets; it speaks
-// only in response to a user hold on the AI button.
+/** Enthusiastic welcome greeting, returned in the user's native language.
+ *  Display text is clean; speak text is pronounceable for TTS. */
+function getNativeGreeting(): { display: string; speakText: string; lang: string } {
+  const locale = (typeof navigator !== 'undefined' && navigator.language) || 'en';
+  if (locale.startsWith('te'))
+    return {
+      display: 'హలో, శుభదినం! Howzy AI ఏజెంట్‌కు స్వాగతం. మీకు సరైన ఆస్తిని కనుగొనడంలో నేను సహాయం చేస్తాను. ఎలాంటి ఆస్తి కావాలో చెప్పండి!',
+      speakText: 'హలో, శుభదినం! హౌజీ ఏఐ ఏజెంట్‌కు స్వాగతం. మీకు సరైన ఆస్తిని కనుగొనడంలో నేను సహాయం చేస్తాను. ఎలాంటి ఆస్తి కావాలో చెప్పండి!',
+      lang: 'te-IN',
+    };
+  if (locale.startsWith('hi'))
+    return {
+      display: 'नमस्ते, आपका दिन शुभ हो! Howzy AI एजेंट में आपका स्वागत है। मैं आपके लिए सही प्रॉपर्टी ढूँढने में मदद करूँगी। बताइए, कैसी प्रॉपर्टी चाहिए?',
+      speakText: 'नमस्ते, आपका दिन शुभ हो! Howzy ए आई एजेंट में आपका स्वागत है। मैं आपके लिए सही प्रॉपर्टी ढूँढने में मदद करूँगी। बताइए, कैसी प्रॉपर्टी चाहिए?',
+      lang: 'hi-IN',
+    };
+  if (locale.startsWith('ta'))
+    return {
+      display: 'வணக்கம், இனிய நாள்! Howzy AI முகவருக்கு வரவேற்கிறோம். உங்களுக்கு சரியான சொத்தை கண்டுபிடிக்க நான் உதவுகிறேன். எப்படிப்பட்ட சொத்து வேண்டும் சொல்லுங்கள்!',
+      speakText: 'வணக்கம், இனிய நாள்! ஹௌஸி ஏஐ முகவருக்கு வரவேற்கிறோம். உங்களுக்கு சரியான சொத்தை கண்டுபிடிக்க நான் உதவுகிறேன். எப்படிப்பட்ட சொத்து வேண்டும் சொல்லுங்கள்!',
+      lang: 'ta-IN',
+    };
+  return {
+    display: 'Hello, good day! Welcome to the Howzy AI agent — I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
+    speakText: 'Hello, good day! Welcome to the Howzy AI agent. I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
+    lang: 'en-IN',
+  };
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,6 +293,9 @@ function VoiceOverlay({
   // True while a push-to-talk hold is in progress, so the onend handler can
   // send the transcript immediately on release (vs. restart listening).
   const pttActiveRef = useRef(false);
+  // True once the greeting has played in this mount; we only greet on the
+  // very first hold so the conversation feels natural afterwards.
+  const hasGreetedRef = useRef(initialMessages.length > 0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -287,7 +315,7 @@ function VoiceOverlay({
 
   // Push-to-talk: start recording when the parent signals a hold start.
   useEffect(() => {
-    if (holdStartSignal && holdStartSignal > 0) beginPTT();
+    if (holdStartSignal && holdStartSignal > 0) void beginPTT();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdStartSignal]);
   // Release: stop recording; onend will auto-send the transcript.
@@ -314,22 +342,44 @@ function VoiceOverlay({
     }
   }
 
-  /** Start a push-to-talk recording session. Runs until endPTT() is called. */
-  const beginPTT = useCallback(() => {
+  /** Start a push-to-talk recording session. Runs until endPTT() is called.
+   *  On the very first hold we play an enthusiastic greeting before opening
+   *  the mic — so the user hears Howzy welcome them, then speaks. */
+  const beginPTT = useCallback(async () => {
     if (!SpeechRec || !mountedRef.current) return;
     // Interrupt any ongoing TTS so the user is heard immediately.
     stopSpeaking();
     // If a previous recognizer is still alive, abort it without sending.
-    pttActiveRef.current = false;
     recRef.current?.abort();
+
+    // Mark the hold active up-front, so endPTT() during the greeting will
+    // cancel the mic-start and stop speech.
+    pttActiveRef.current = true;
 
     const session = sessionRef.current;
     if (!session) {
-      // Session not ready yet — try to create one then start.
-      void initSession().then(() => {
-        if (mountedRef.current && sessionRef.current) beginPTT();
-      });
+      // Session not ready yet — create one and re-enter once ready.
+      pttActiveRef.current = false;
+      await initSession();
+      if (mountedRef.current && sessionRef.current) void beginPTT();
       return;
+    }
+
+    // First hold of this mount → greet before listening.
+    if (!hasGreetedRef.current) {
+      hasGreetedRef.current = true;
+      const greeting = getNativeGreeting();
+      addMessage({ role: 'model', content: greeting.display, timestamp: new Date().toISOString() });
+      try {
+        await speak(greeting.speakText, greeting.lang);
+      } catch {
+        // TTS failed — fall through silently.
+      }
+      // If the user released during the greeting, don't open the mic.
+      if (!mountedRef.current || !pttActiveRef.current) {
+        pttActiveRef.current = false;
+        return;
+      }
     }
 
     const rec = new SpeechRec();
@@ -338,7 +388,6 @@ function VoiceOverlay({
     rec.interimResults = true;
     recRef.current = rec;
     transcriptRef.current = '';
-    pttActiveRef.current = true;
 
     rec.onresult = (e: any) => {
       const t = Array.from(e.results as any[]).map((r: any) => r[0].transcript).join('');
@@ -365,11 +414,16 @@ function VoiceOverlay({
     }
   }, []);
 
-  /** Stop the push-to-talk recorder; onend will send the captured transcript. */
+  /** Stop the push-to-talk recorder; onend will send the captured transcript.
+   *  Also cancels any in-flight greeting so the mic never opens for a hold
+   *  that the user already released. */
   const endPTT = useCallback(() => {
-    if (!recRef.current || !pttActiveRef.current) return;
+    if (!pttActiveRef.current) return;
+    pttActiveRef.current = false;
+    // Interrupt greeting / response playback the moment the user lets go.
+    stopSpeaking();
     try {
-      recRef.current.stop();
+      recRef.current?.stop();
     } catch {
       // Ignore — will fall through to onend.
     }
