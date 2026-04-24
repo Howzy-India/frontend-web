@@ -34,7 +34,7 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
     projectFilters: ["Trending Projects", "Luxury Projects", "Budget Homes", "Ready to Move", "New Launches"],
     locations: ["Gachibowli", "Hitech City", "Kondapur", "Whitefield", "Noida Extension"],
     services: ["Home Loans", "Instant Property Evaluation", "Documentation Support", "Schedule Site Visit"],
-    company: ["About HOWZY", "Why HOWZY", "Careers", "Blog"],
+    company: ["About Us", "Careers", "Blog", "Partners"],
     partners: ["Channel Partner Program", "List Your Property", "Contact Us", "FAQs"],
     legal: ["Privacy Policy", "Terms & Conditions"],
     contact: {
@@ -72,10 +72,10 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
               <p className="text-slate-500 text-sm italic">Not Just Listings — Experiences.</p>
             </div>
             <div className="flex items-center gap-4 pt-4">
-              <a href="https://instagram.com/howzy" target="_blank" rel="noopener noreferrer" className="p-2.5 bg-slate-900 rounded-lg hover:bg-indigo-600 text-slate-400 hover:text-white transition-all hover:-translate-y-1">
+              <a href="https://www.instagram.com/howzy.india?igsh=MW14b2Uyb3pwa3lhYg%3D%3D" target="_blank" rel="noopener noreferrer" className="p-2.5 bg-slate-900 rounded-lg hover:bg-indigo-600 text-slate-400 hover:text-white transition-all hover:-translate-y-1">
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="https://linkedin.com/company/howzy" target="_blank" rel="noopener noreferrer" className="p-2.5 bg-slate-900 rounded-lg hover:bg-indigo-600 text-slate-400 hover:text-white transition-all hover:-translate-y-1">
+              <a href="https://www.linkedin.com/authwall?trk=bf&trkInfo=AQFwpPwX0CAqNwAAAZ2qPxxgcLlZQOK-OwpD05U_HP2INjZY1aG5rPO2LJ-AWDqkMAV2UfM-XrLr5lMTuJdguiXD4bwkuKQQNrDRkXe88WZSAqSKxQB1paKD6Tyc7hFcTMMcWP8=&original_referer=&sessionRedirect=https%3A%2F%2Fwww.linkedin.com%2Fcompany%2Fhowzy.in%2F" target="_blank" rel="noopener noreferrer" className="p-2.5 bg-slate-900 rounded-lg hover:bg-indigo-600 text-slate-400 hover:text-white transition-all hover:-translate-y-1">
                 <Linkedin className="w-5 h-5" />
               </a>
               <a href="https://youtube.com/@howzy" target="_blank" rel="noopener noreferrer" className="p-2.5 bg-slate-900 rounded-lg hover:bg-indigo-600 text-slate-400 hover:text-white transition-all hover:-translate-y-1">
@@ -88,10 +88,10 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
           <div className="space-y-6">
             <h3 className="text-white font-bold text-base tracking-tight">Explore</h3>
             <ul className="space-y-3 text-sm">
-              <li><button onClick={() => onProjectFilterClick?.('Trending')} className="hover:text-white transition-colors">Projects</button></li>
-              <li><button onClick={() => onLocationClick?.('All')} className="hover:text-white transition-colors">Locations</button></li>
-              <li><button onClick={() => onCategoryClick?.('Resale')} className="hover:text-white transition-colors">Resale</button></li>
-              <li><button onClick={() => onCategoryClick?.('Commercial')} className="hover:text-white transition-colors">Commercial</button></li>
+              <li><button onClick={() => onProjectFilterClick?.('All')} className="hover:text-white transition-colors">Projects</button></li>
+              <li><button onClick={() => onLocationClick?.('TrendingLocations')} className="hover:text-white transition-colors">Locations</button></li>
+              <li><button onClick={() => onCategoryClick?.('Resale Homes')} className="hover:text-white transition-colors">Resale</button></li>
+              <li><button onClick={() => onCategoryClick?.('Commercial Spaces')} className="hover:text-white transition-colors">Commercial</button></li>
             </ul>
           </div>
 
@@ -99,10 +99,11 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
           <div className="space-y-6">
             <h3 className="text-white font-bold text-base tracking-tight">Company</h3>
             <ul className="space-y-3 text-sm">
-              <li><button onClick={() => onCompanyClick?.('About Us')} className="hover:text-white transition-colors">About Us</button></li>
-              <li><button onClick={() => onCompanyClick?.('Careers')} className="hover:text-white transition-colors">Careers</button></li>
-              <li><button onClick={() => onCompanyClick?.('Blog')} className="hover:text-white transition-colors">Blog</button></li>
-              <li><button onClick={() => onCompanyClick?.('Partners')} className="hover:text-white transition-colors">Partners</button></li>
+              {footerConfig.company.map((item: string) => (
+                <li key={item}>
+                  <button onClick={() => onCompanyClick?.(item)} className="hover:text-white transition-colors">{item}</button>
+                </li>
+              ))}
             </ul>
           </div>
 
