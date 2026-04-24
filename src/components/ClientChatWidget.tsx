@@ -179,33 +179,75 @@ async function speak(text: string, lang = 'en-IN'): Promise<void> {
   }
 }
 
-/** Enthusiastic welcome greeting, returned in the user's native language.
- *  Display text is clean; speak text is pronounceable for TTS. */
-function getNativeGreeting(): { display: string; speakText: string; lang: string } {
-  const locale = (typeof navigator !== 'undefined' && navigator.language) || 'en';
-  if (locale.startsWith('te'))
-    return {
+/** Localised assistant messages — each entry carries a display variant (shown
+ *  in the chat bubble) and a TTS variant (pronounceable for Neural2). Adding
+ *  a new phrase only requires adding a row here. */
+type SpokenMessage = { display: string; speakText: string; lang: string };
+type MessageKey = 'greeting' | 'unrecognizable';
+type LangKey = 'te' | 'hi' | 'ta' | 'en';
+
+const ASSISTANT_MESSAGES: Record<LangKey, Record<MessageKey, SpokenMessage>> = {
+  te: {
+    greeting: {
       display: 'హలో, శుభదినం! Howzy AI ఏజెంట్‌కు స్వాగతం. మీకు సరైన ఆస్తిని కనుగొనడంలో నేను సహాయం చేస్తాను. ఎలాంటి ఆస్తి కావాలో చెప్పండి!',
       speakText: 'హలో, శుభదినం! హౌజీ ఏఐ ఏజెంట్‌కు స్వాగతం. మీకు సరైన ఆస్తిని కనుగొనడంలో నేను సహాయం చేస్తాను. ఎలాంటి ఆస్తి కావాలో చెప్పండి!',
       lang: 'te-IN',
-    };
-  if (locale.startsWith('hi'))
-    return {
+      },
+    unrecognizable: {
+      display: 'క్షమించండి, నేను సరిగ్గా వినలేకపోయాను. దయచేసి చాట్‌ను ఉపయోగించండి లేదా అప్లికేషన్‌ను ఎక్స్‌ప్లోర్ చేయండి.',
+      speakText: 'ಕ್ಷಮಿಂಚಂಡಿ, ಮீ ಘ್ವರ் ಮ௃ಗ் ನಾಕு ಅರ்థಮಗಲேದு. ದಯವ்ಚேಸಿ ಚಾಟ் ನೆ್ ಉಪಯோಗಿಂಚಂಡಿ ಲேದಾ ಅಪ்ಲಿಕேಶನ்ನு ಎಕ್ಸ್ಪ்ಲோರ் ಚேಯಂಡಿ.',
+      lang: 'te-IN',
+      },
+  },
+  hi: {
+    greeting: {
       display: 'नमस्ते, आपका दिन शुभ हो! Howzy AI एजेंट में आपका स्वागत है। मैं आपके लिए सही प्रॉपर्टी ढूँढने में मदद करूँगी। बताइए, कैसी प्रॉपर्टी चाहिए?',
       speakText: 'नमस्ते, आपका दिन शुभ हो! Howzy ए आई एजेंट में आपका स्वागत है। मैं आपके लिए सही प्रॉपर्टी ढूँढने में मदद करूँगी। बताइए, कैसी प्रॉपर्टी चाहिए?',
       lang: 'hi-IN',
-    };
-  if (locale.startsWith('ta'))
-    return {
+      },
+    unrecognizable: {
+      display: 'माफ कीजिए, मैं आपको समझ नहीं सकी। कृपया चैट का उपयोग करें या आवेदन को एक्सप्लोर करें।',
+      speakText: 'माफ कीजिए, मैं आपको समझ नहीं सकी। कृपया चैट का उपयोग करें या आवेदन को एक्सप्लोर करें।',
+      lang: 'hi-IN',
+      },
+  },
+  ta: {
+    greeting: {
       display: 'வணக்கம், இனிய நாள்! Howzy AI முகவருக்கு வரவேற்கிறோம். உங்களுக்கு சரியான சொத்தை கண்டுபிடிக்க நான் உதவுகிறேன். எப்படிப்பட்ட சொத்து வேண்டும் சொல்லுங்கள்!',
       speakText: 'வணக்கம், இனிய நாள்! ஹௌஸி ஏஐ முகவருக்கு வரவேற்கிறோம். உங்களுக்கு சரியான சொத்தை கண்டுபிடிக்க நான் உதவுகிறேன். எப்படிப்பட்ட சொத்து வேண்டும் சொல்லுங்கள்!',
       lang: 'ta-IN',
-    };
-  return {
-    display: 'Hello, good day! Welcome to the Howzy AI agent — I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
-    speakText: 'Hello, good day! Welcome to the Howzy AI agent. I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
-    lang: 'en-IN',
-  };
+      },
+    unrecognizable: {
+      display: 'மன்னிக்கவும், நான் தெளிவாக கேடக்கவில்லை. தயவுசெய்து சாட்டை பயன்படுத்துங்கள் அல்லது பயன்பாட்டை ஆராயுங்கள்.',
+      speakText: 'மன்னிக்கவும், நான் தெளிவாக கேடக்கவில்லை. தயவுசெய்து சாட்டை பயன்படுத்துங்கள் அல்லது பயன்பாட்டை ஆராயுங்கள்.',
+      lang: 'ta-IN',
+      },
+  },
+  en: {
+    greeting: {
+      display: 'Hello, good day! Welcome to the Howzy AI agent — I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
+      speakText: 'Hello, good day! Welcome to the Howzy AI agent. I\u2019m here to help you find the right property. So, tell me what you\u2019re looking for!',
+      lang: 'en-IN',
+      },
+    unrecognizable: {
+      display: 'Sorry, I couldn’t catch that. Please use the chat or explore the application.',
+      speakText: 'Sorry, I couldn’t catch that. Please use the chat, or explore the application.',
+      lang: 'en-IN',
+      },
+  },
+};
+
+function detectLocaleKey(): LangKey {
+  const locale = (typeof navigator !== 'undefined' && navigator.language) || 'en';
+  if (locale.startsWith('te')) return 'te';
+  if (locale.startsWith('hi')) return 'hi';
+  if (locale.startsWith('ta')) return 'ta';
+  return 'en';
+}
+
+/** Look up a localised assistant message (greeting, apology, …). */
+function getAssistantMessage(key: MessageKey): SpokenMessage {
+  return ASSISTANT_MESSAGES[detectLocaleKey()][key];
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -431,18 +473,18 @@ function VoiceOverlay({
     // First hold of this mount → greet before listening.
     if (!hasGreetedRef.current) {
       hasGreetedRef.current = true;
-      const greeting = getNativeGreeting();
+      const greeting = getAssistantMessage('greeting');
       addMessage({ role: 'model', content: greeting.display, timestamp: new Date().toISOString() });
       try {
         await speak(greeting.speakText, greeting.lang);
       } catch {
         // TTS failed — fall through silently.
       }
-      // If the user released during the greeting, don't open the mic.
-      if (!mountedRef.current || !pttActiveRef.current) {
-        pttActiveRef.current = false;
-        return;
-      }
+      if (!mountedRef.current) return;
+      // After the greeting we ALWAYS open the mic so the user can reply
+      // conversationally — even if they let go of the button while we were
+      // speaking. The recognizer will idle until they speak.
+      pttActiveRef.current = true;
     }
 
     const rec = new SpeechRec();
@@ -460,9 +502,11 @@ function VoiceOverlay({
       if (!mountedRef.current) return;
       pttActiveRef.current = false;
       stopRecordingUI();
-      if (e.error === 'no-speech') return;
-      // Real recognition failure — escalate to text chat so user isn't stuck.
-      onTextFallback();
+      // Benign interruptions — ignore so the user can try again.
+      if (e.error === 'aborted' || e.error === 'no-speech') return;
+      // Real recognition failure — apologise in the user’s language, then
+      // escalate to text chat so they aren’t stuck.
+      void apologiseAndFallback();
     };
     rec.onend = () => {
       if (!mountedRef.current) return;
@@ -470,7 +514,14 @@ function VoiceOverlay({
       pttActiveRef.current = false;
       stopRecordingUI();
       const text = transcriptRef.current.trim();
-      if (wasActive && text) void sendVoice(text, session);
+      if (!wasActive) return;
+      if (text) {
+        void sendVoice(text, session);
+      } else {
+        // User held + released but nothing intelligible was captured —
+        // tell them we couldn’t understand and open the chat panel.
+        void apologiseAndFallback();
+      }
     };
     try {
       rec.start();
@@ -506,6 +557,22 @@ function VoiceOverlay({
     } catch {
       // Network / API error — silently ignore; user can try again by holding.
     }
+  }
+
+  /** Speak a polite \u201cI couldn\u2019t catch that\u201d message in the user\u2019s language,
+   *  then open the text chat panel so they can continue in writing or explore
+   *  the application manually. Used when speech recognition fails. */
+  async function apologiseAndFallback() {
+    if (!mountedRef.current) return;
+    const msg = getAssistantMessage('unrecognizable');
+    addMessage({ role: 'model', content: msg.display, timestamp: new Date().toISOString() });
+    try {
+      await speak(msg.speakText, msg.lang);
+    } catch {
+      // TTS failed — still fall back so user isn\u2019t stuck.
+    }
+    if (!mountedRef.current) return;
+    onTextFallback();
   }
 
   // While the mic is actively listening we show a floating voice-recorder
