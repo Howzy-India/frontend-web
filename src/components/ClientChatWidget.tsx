@@ -296,6 +296,27 @@ function VoiceOverlay({
   // True once the greeting has played in this mount; we only greet on the
   // very first hold so the conversation feels natural afterwards.
   const hasGreetedRef = useRef(initialMessages.length > 0);
+  // Visible recording state drives the floating voice-recorder indicator.
+  const [isRecording, setIsRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
+  const recTimerRef = useRef<number | null>(null);
+
+  function startRecordingUI() {
+    setIsRecording(true);
+    setRecSeconds(0);
+    if (recTimerRef.current) window.clearInterval(recTimerRef.current);
+    recTimerRef.current = window.setInterval(() => {
+      setRecSeconds((s) => s + 1);
+    }, 1000);
+  }
+
+  function stopRecordingUI() {
+    setIsRecording(false);
+    if (recTimerRef.current) {
+      window.clearInterval(recTimerRef.current);
+      recTimerRef.current = null;
+    }
+  }
 
   useEffect(() => {
     mountedRef.current = true;
@@ -309,6 +330,7 @@ function VoiceOverlay({
       mountedRef.current = false;
       recRef.current?.abort();
       stopSpeaking();
+      if (recTimerRef.current) window.clearInterval(recTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -396,6 +418,7 @@ function VoiceOverlay({
     rec.onerror = (e: any) => {
       if (!mountedRef.current) return;
       pttActiveRef.current = false;
+      stopRecordingUI();
       if (e.error === 'no-speech') return;
       // Real recognition failure — escalate to text chat so user isn't stuck.
       onTextFallback();
@@ -404,11 +427,13 @@ function VoiceOverlay({
       if (!mountedRef.current) return;
       const wasActive = pttActiveRef.current;
       pttActiveRef.current = false;
+      stopRecordingUI();
       const text = transcriptRef.current.trim();
       if (wasActive && text) void sendVoice(text, session);
     };
     try {
       rec.start();
+      startRecordingUI();
     } catch {
       // Already started — ignore.
     }
@@ -442,9 +467,75 @@ function VoiceOverlay({
     }
   }
 
-  // Headless: the AI button (header + footer) is the only visible control.
-  // No compact bar, no overlay — just the voice pipeline.
-  return null;
+  // While the mic is actively listening we show a floating voice-recorder
+  // indicator (red pulse + mm:ss + animated waveform bars). Otherwise this
+  // widget stays headless — the AI button in the header/footer is the only
+  // visible control.
+  return (
+    <AnimatePresence>
+      {isRecording && <RecordingIndicator seconds={recSeconds} />}
+    </AnimatePresence>
+  );
+}
+
+// ─── Recording Indicator ─────────────────────────────────────────────────────
+
+function RecordingIndicator({ seconds }: Readonly<{ seconds: number }>) {
+  const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const ss = (seconds % 60).toString().padStart(2, '0');
+  // Fixed per-bar animation delays — visually mimics a voice recorder waveform.
+  const barDelays = [0, 120, 60, 180, 90, 150, 30];
+  return (
+    <motion.div
+      key="rec-indicator"
+      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 20, scale: 0.9 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+      className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-10 z-[250] pointer-events-none"
+      role="status"
+      aria-live="polite"
+      aria-label={`Recording, ${seconds} seconds`}
+    >
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-900/95 backdrop-blur-md text-white rounded-full shadow-2xl border border-white/10">
+        {/* Pulsing red dot */}
+        <span className="relative flex w-2.5 h-2.5">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+        </span>
+        {/* Label */}
+        <span className="text-xs font-semibold tracking-wide uppercase text-red-300">Rec</span>
+        {/* Timer */}
+        <span className="text-sm font-mono tabular-nums text-white/90">{mm}:{ss}</span>
+        {/* Waveform bars */}
+        <div className="flex items-center gap-[3px] h-5">
+          {barDelays.map((delay, i) => (
+            <span
+              key={i}
+              className="w-[3px] bg-gradient-to-t from-red-400 to-red-200 rounded-full animate-howzy-wave"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
+        </div>
+        {/* Mic icon */}
+        <Mic className="w-4 h-4 text-red-300" />
+      </div>
+      {/* Scoped keyframes for the waveform bars. */}
+      <style>{`
+        @keyframes howzy-wave {
+          0%, 100% { height: 25%; }
+          20%      { height: 85%; }
+          40%      { height: 45%; }
+          60%      { height: 100%; }
+          80%      { height: 60%; }
+        }
+        .animate-howzy-wave {
+          animation: howzy-wave 0.9s ease-in-out infinite;
+          height: 25%;
+        }
+      `}</style>
+    </motion.div>
+  );
 }
 
 // ─── Text Chat Panel ── fallback when user can't use voice ────────────────────
