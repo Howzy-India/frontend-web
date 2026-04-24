@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, MicOff, X, Loader2, Bot } from 'lucide-react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import {
+  buildSystemInstruction,
+  assistantTitle,
+  type AssistantRole,
+  type AssistantContext,
+} from './aiVoicePrompts';
 
 // Audio utility functions for PCM encoding/decoding
 function encodePCM(float32Array: Float32Array): string {
@@ -33,7 +39,13 @@ function decodePCM(base64: string): Float32Array {
   return float32Array;
 }
 
-export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' | 'partner' | 'admin' }) {
+interface AiVoiceAssistantProps {
+  role?: AssistantRole;
+  /** Optional runtime context — passed into the system prompt so replies feel personal. */
+  context?: AssistantContext;
+}
+
+export default function AiVoiceAssistant({ role = 'partner', context = {} }: AiVoiceAssistantProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -153,13 +165,10 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {
+            // Zephyr = warm, expressive female voice — matches our enthusiastic sales persona.
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
           },
-          systemInstruction: role === 'agent' 
-            ? "You are a helpful AI assistant for the Howzy Partner (Agent) Dashboard. You help agents manage their leads, site visits, and bookings. Be concise and professional."
-            : role === 'admin'
-            ? "You are a helpful AI assistant for the Howzy Super Admin Dashboard. You help admins manage the platform, users, and system settings. Be concise and professional."
-            : "You are a helpful AI assistant for the Howzy Partner (Franchise Owner) Dashboard. You help partners manage builders, leads, and projects. Be concise and professional.",
+          systemInstruction: buildSystemInstruction(role, context),
         },
       });
 
@@ -214,7 +223,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
 
   return (
     <>
-      {/* Floating Button */}
+      {/* AI Button - Works as navigation item and floating button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -222,6 +231,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
         className={`fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] left-1/2 -translate-x-1/2 sm:bottom-6 sm:right-6 sm:left-auto sm:translate-x-0 w-14 h-14 rounded-full shadow-lg flex items-center justify-center z-50 transition-colors ${
           isOpen ? 'bg-slate-800 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
         }`}
+        aria-label="Open AI Assistant"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Bot className="w-6 h-6" />}
       </motion.button>
@@ -241,7 +251,7 @@ export default function AiVoiceAssistant({ role = 'partner' }: { role?: 'agent' 
               </div>
               <div>
                 <h3 className="font-bold text-sm">
-                  {role === 'agent' ? 'Howzy Partner AI' : role === 'admin' ? 'Super Admin AI' : 'Howzy AI Assistant'}
+                  {assistantTitle(role)}
                 </h3>
                 <p className="text-xs text-slate-400">
                   {isConnected ? 'Listening...' : isConnecting ? 'Connecting...' : 'Ready'}
