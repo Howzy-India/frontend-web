@@ -207,7 +207,34 @@ function getNativeGreeting(): { display: string; speakText: string; lang: string
     lang: 'en-IN',
   };
 }
-
+/** Polite “sorry, I didn’t catch that” message used when recognition fails
+ *  or returns nothing. Spoken before we escalate to the text chat panel. */
+function getUnrecognizableMessage(): { display: string; speakText: string; lang: string } {
+  const locale = (typeof navigator !== 'undefined' && navigator.language) || 'en';
+  if (locale.startsWith('te'))
+    return {
+      display: 'ಕ್ಷಮಿಂಚಂಡಿ, మீ ಘ್ವರ் ಮ௃ಗ் ದೀಟಕ் ಕுದ಼. ಕೇಮீ ಚాಡ் ಉಪಯோಗீಚబேಂಸ் ಕಿಂಬ் ಅಪ்ಲಿಕேಶನ் ಎಕ್ಸ್ಪ்ಲோಟ் ಚேಯಂಡಿ.',
+      speakText: 'ಕ್ಷಮಿಂಚಂಡಿ, ಮீ ಘ್ವರ் ಮ௃ಗ் ನಾಕு ಅರ்థಮಗಲேದு. ದಯವ்ಚேಸಿ ಚಾಟ் ನೆ್ ಉಪಯோಗಿಂಚಂಡಿ ಲேದಾ ಅಪ்ಲಿಕேಶನ்ನு ಎಕ್ಸ್ಪ்ಲோರ் ಚேಯಂಡಿ.',
+      lang: 'te-IN',
+    };
+  if (locale.startsWith('hi'))
+    return {
+      display: 'माफ कीजिए, मैं आपको समझ नहीं सकी। कृपया चैट का उपयोग करें या आवेदन को एक्सप्लोर करें।',
+      speakText: 'माफ कीजिए, मैं आपको समझ नहीं सकी। कृपया चैट का उपयोग करें या आवेदन को एक्सप्लोर करें।',
+      lang: 'hi-IN',
+    };
+  if (locale.startsWith('ta'))
+    return {
+      display: 'மன்னிக்கவும், நான் தெளிவாக கேடக்கவில்லை. தயவுசெய்து சாட்டை பயன்படுத்துங்கள் அல்லது பயன்பாட்டை ஆராயுங்கள்.',
+      speakText: 'மன்னிக்கவும், நான் தெளிவாக கேடக்கவில்லை. தயவுசெய்து சாட்டை பயன்படுத்துங்கள் அல்லது பயன்பாட்டை ஆராயுங்கள்.',
+      lang: 'ta-IN',
+    };
+  return {
+    display: 'Sorry, I couldn’t catch that. Please use the chat or explore the application.',
+    speakText: 'Sorry, I couldn’t catch that. Please use the chat, or explore the application.',
+    lang: 'en-IN',
+  };
+}
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ChatMessage {
@@ -438,11 +465,11 @@ function VoiceOverlay({
       } catch {
         // TTS failed — fall through silently.
       }
-      // If the user released during the greeting, don't open the mic.
-      if (!mountedRef.current || !pttActiveRef.current) {
-        pttActiveRef.current = false;
-        return;
-      }
+      if (!mountedRef.current) return;
+      // After the greeting we ALWAYS open the mic so the user can reply
+      // conversationally — even if they let go of the button while we were
+      // speaking. The recognizer will idle until they speak.
+      pttActiveRef.current = true;
     }
 
     const rec = new SpeechRec();
@@ -460,9 +487,11 @@ function VoiceOverlay({
       if (!mountedRef.current) return;
       pttActiveRef.current = false;
       stopRecordingUI();
-      if (e.error === 'no-speech') return;
-      // Real recognition failure — escalate to text chat so user isn't stuck.
-      onTextFallback();
+      // Benign interruptions — ignore so the user can try again.
+      if (e.error === 'aborted' || e.error === 'no-speech') return;
+      // Real recognition failure — apologise in the user’s language, then
+      // escalate to text chat so they aren’t stuck.
+      void apologiseAndFallback();
     };
     rec.onend = () => {
       if (!mountedRef.current) return;
@@ -470,7 +499,14 @@ function VoiceOverlay({
       pttActiveRef.current = false;
       stopRecordingUI();
       const text = transcriptRef.current.trim();
-      if (wasActive && text) void sendVoice(text, session);
+      if (!wasActive) return;
+      if (text) {
+        void sendVoice(text, session);
+      } else {
+        // User held + released but nothing intelligible was captured —
+        // tell them we couldn’t understand and open the chat panel.
+        void apologiseAndFallback();
+      }
     };
     try {
       rec.start();
@@ -506,6 +542,22 @@ function VoiceOverlay({
     } catch {
       // Network / API error — silently ignore; user can try again by holding.
     }
+  }
+
+  /** Speak a polite \u201cI couldn\u2019t catch that\u201d message in the user\u2019s language,
+   *  then open the text chat panel so they can continue in writing or explore
+   *  the application manually. Used when speech recognition fails. */
+  async function apologiseAndFallback() {
+    if (!mountedRef.current) return;
+    const msg = getUnrecognizableMessage();
+    addMessage({ role: 'model', content: msg.display, timestamp: new Date().toISOString() });
+    try {
+      await speak(msg.speakText, msg.lang);
+    } catch {
+      // TTS failed — still fall back so user isn\u2019t stuck.
+    }
+    if (!mountedRef.current) return;
+    onTextFallback();
   }
 
   // While the mic is actively listening we show a floating voice-recorder
