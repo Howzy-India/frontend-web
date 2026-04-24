@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useMotionValue } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bot, Loader2, Mic, Send, RefreshCw,
   MapPin, Tag, Volume2, VolumeX, MessageSquare,
@@ -194,21 +194,24 @@ export interface ClientChatWidgetProps {
   uid?: string;
   userEmail?: string;
   onLoginClick?: () => void; // kept for backward compat; no longer used
+  /** Incrementing counter that triggers the voice overlay to open from outside (e.g. header/footer AI button). */
+  openSignal?: number;
 }
 
 // ─── Root Widget ──────────────────────────────────────────────────────────────
 
 export default function ClientChatWidget({
-  uid, userEmail,
+  uid, userEmail, openSignal,
 }: Readonly<ClientChatWidgetProps>) {
   const [mode, setMode] = useState<'closed' | 'voice' | 'text'>('closed');
   // Shared across voice ↔ text so conversation continues seamlessly
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Draggable FAB position — starts above the mobile bottom nav (88px from bottom)
-  const fabX = useMotionValue(0);
-  const fabY = useMotionValue(0);
+  // Open voice overlay when parent increments openSignal.
+  useEffect(() => {
+    if (openSignal && openSignal > 0) setMode('voice');
+  }, [openSignal]);
 
   function handleClose() {
     setMode('closed');
@@ -218,28 +221,10 @@ export default function ClientChatWidget({
 
   return (
     <>
-      {/* Floating AI button — draggable, positioned above mobile footer nav */}
-      <AnimatePresence>
-        {mode === 'closed' && (
-          <motion.button
-            key="fab"
-            drag
-            dragMomentum={false}
-            dragElastic={0.1}
-            style={{ x: fabX, y: fabY }}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileTap={{ scale: 0.94 }}
-            onClick={() => setMode('voice')}
-            title="Chat with Howzy AI"
-            className="hidden md:flex fixed md:bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-grab active:cursor-grabbing flex-col items-center justify-center transition-colors"
-          >
-            <Bot className="w-6 h-6" />
-            <span className="text-[9px] font-bold tracking-wider leading-none mt-0.5">AI</span>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Floating FAB removed. The AI voice overlay is now triggered from:
+          • Desktop → AI button in the header, next to the hamburger toggle
+          • Mobile  → center AI button in the bottom nav
+          Both call setIsAIOpen((n) => n + 1), which this widget watches via the openSignal prop. */}
 
       {/* Full-screen voice overlay — primary interaction */}
       <AnimatePresence>

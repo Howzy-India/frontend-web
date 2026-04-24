@@ -198,7 +198,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [landingCategory, setLandingCategory] = useState<'All' | 'Resale' | 'Projects' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [projectCategory, setProjectCategory] = useState<'All' | 'Apartments' | 'Villas' | 'Resale' | 'Plots' | 'Commercial' | 'Farm Lands'>('All');
   const [dashboardTab, setDashboardTab] = useState<'My Listings' | 'My Enquiries' | 'My Saved Projects'>('My Saved Projects');
-  const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(0);
 
   // Admin Configuration State
   const [adminConfig, setAdminConfig] = useState({
@@ -923,26 +923,48 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                 >
                   <Menu className="w-5 h-5" />
                 </button>
+                {/* AI chat trigger — desktop only, sits alongside the menu toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsAIOpen((n) => n + 1)}
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors"
+                  aria-label="Open Howzy AI assistant"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span className="text-xs font-bold tracking-wider">AI</span>
+                </button>
               </div>
             ) : (
               /* Logged-out: Login + ☰ pill on desktop, hamburger-only on mobile */
-              <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                  <button
+                    type="button"
+                    data-testid={TEST_IDS.PORTAL.LOGIN_BTN}
+                    onClick={onLoginClick}
+                    className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                  >
+                    Login
+                  </button>
+                  <div className="hidden sm:block w-px h-6 bg-slate-200" />
+                  <button
+                    type="button"
+                    onClick={() => { setIsMobileMenuOpen(true); }}
+                    className="px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
+                </div>
+                {/* AI chat trigger — desktop only, sits alongside the menu toggle */}
                 <button
                   type="button"
-                  data-testid={TEST_IDS.PORTAL.LOGIN_BTN}
-                  onClick={onLoginClick}
-                  className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                  onClick={() => setIsAIOpen((n) => n + 1)}
+                  className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-white bg-gradient-to-br from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm transition-colors"
+                  aria-label="Open Howzy AI assistant"
                 >
-                  Login
-                </button>
-                <div className="hidden sm:block w-px h-6 bg-slate-200" />
-                <button
-                  type="button"
-                  onClick={() => { setIsMobileMenuOpen(true); }}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-50 transition-colors"
-                  aria-label="Open menu"
-                >
-                  <Menu className="w-5 h-5" />
+                  <Bot className="w-4 h-4" />
+                  <span className="text-xs font-bold tracking-wider">AI</span>
                 </button>
               </div>
             )}
@@ -2314,7 +2336,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
           else if (item === 'Contact' || item === 'Privacy Policy' || item === 'Terms & Conditions' || item === 'FAQs') setActiveTab("About");
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onAIClick={() => setIsAIOpen(!isAIOpen)}
+        onAIClick={() => setIsAIOpen((n) => n + 1)}
       />
 
       {/* Property Details Modal */}
@@ -2878,7 +2900,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
       )}
       <ErrorBoundary>
         {(!userRole || userRole === 'client') && (
-          <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} />
+          <ClientChatWidget uid={uid} userEmail={userEmail} onLoginClick={onLoginClick} openSignal={isAIOpen} />
         )}
       </ErrorBoundary>
   </React.Fragment>
