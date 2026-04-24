@@ -233,7 +233,7 @@ export default function ClientChatWidget({
             whileTap={{ scale: 0.94 }}
             onClick={() => setMode('voice')}
             title="Chat with Howzy AI"
-            className="fixed bottom-[88px] md:bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-grab active:cursor-grabbing flex flex-col items-center justify-center transition-colors"
+            className="hidden md:flex fixed md:bottom-6 right-6 z-[200] w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xl cursor-grab active:cursor-grabbing flex-col items-center justify-center transition-colors"
           >
             <Bot className="w-6 h-6" />
             <span className="text-[9px] font-bold tracking-wider leading-none mt-0.5">AI</span>

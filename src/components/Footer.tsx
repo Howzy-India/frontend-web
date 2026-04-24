@@ -128,39 +128,47 @@ const Footer = ({ config, onCategoryClick, onProjectFilterClick, onLocationClick
         </div>
       </div>
 
-      {/* Mobile Sticky Bottom Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex justify-around items-center py-3 px-4 z-40 pb-4">
-        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
-          <Home className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Home</span>
-        </button>
-        <button onClick={() => onProjectFilterClick?.('All')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
-          <Map className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Explore</span>
-        </button>
-        <motion.button 
-          onClick={onAIClick}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          className="flex flex-col items-center gap-1 text-indigo-600 hover:text-indigo-700 transition-colors"
-        >
-          <motion.div
-            className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <Bot className="w-4 h-4" />
-          </motion.div>
-          <span className="text-[10px] font-medium">AI</span>
-        </motion.button>
-        <button onClick={() => onServiceClick?.('Consultation')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
-          <MessageCircle className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Consult</span>
-        </button>
-        <button onClick={() => onCompanyClick?.('About HOWZY')} className="flex flex-col items-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors">
-          <Mail className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Contact</span>
-        </button>
+      {/* Mobile Sticky Bottom Bar — AI elevated in center, 2 items each side */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-40 pb-[env(safe-area-inset-bottom)]">
+        <div className="relative grid grid-cols-5 items-end h-16 px-2">
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors h-full">
+            <Home className="w-5 h-5" />
+            <span className="text-[11px] font-medium">Home</span>
+          </button>
+          <button onClick={() => onProjectFilterClick?.('All')} className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors h-full">
+            <Map className="w-5 h-5" />
+            <span className="text-[11px] font-medium">Explore</span>
+          </button>
+
+          {/* Center elevated AI button */}
+          <div className="flex justify-center items-end h-full">
+            <motion.button
+              onClick={onAIClick}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative -top-5 flex flex-col items-center gap-1"
+              aria-label="AI Assistant"
+            >
+              <motion.div
+                className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 ring-4 ring-white"
+                animate={{ scale: [1, 1.05, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Bot className="w-6 h-6" />
+              </motion.div>
+              <span className="text-[11px] font-semibold text-indigo-600">AI</span>
+            </motion.button>
+          </div>
+
+          <button onClick={() => onServiceClick?.('Consultation')} className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors h-full">
+            <MessageCircle className="w-5 h-5" />
+            <span className="text-[11px] font-medium">Consult</span>
+          </button>
+          <button onClick={() => onCompanyClick?.('About HOWZY')} className="flex flex-col items-center justify-center gap-1 text-slate-600 hover:text-indigo-600 transition-colors h-full">
+            <Mail className="w-5 h-5" />
+            <span className="text-[11px] font-medium">Contact</span>
+          </button>
+        </div>
       </div>
     </footer>
   );
