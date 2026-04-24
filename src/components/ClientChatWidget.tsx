@@ -208,9 +208,19 @@ export default function ClientChatWidget({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
-  // Open voice overlay when parent increments openSignal.
+  // Open chat when parent increments openSignal.
+  // Prefer voice on browsers that actually support SpeechRecognition (mainly desktop Chrome/Edge).
+  // On iOS Safari / most mobile browsers, fall back straight to the text panel so the user
+  // isn't stuck on a voice overlay that can't listen.
   useEffect(() => {
-    if (openSignal && openSignal > 0) setMode('voice');
+    if (openSignal && openSignal > 0) {
+      const isCoarsePointer =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches;
+      const voiceSupported = !!SpeechRec && !isCoarsePointer;
+      setMode(voiceSupported ? 'voice' : 'text');
+    }
   }, [openSignal]);
 
   function handleClose() {
@@ -741,7 +751,7 @@ function PanelShell({ onClose, children }: { onClose: () => void; children: Reac
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 40, scale: 0.95 }}
       transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-      className="fixed bottom-6 right-6 z-[200] w-[92vw] max-w-sm h-[560px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden"
+      className="fixed inset-x-0 bottom-0 top-0 md:inset-auto md:bottom-6 md:right-6 z-[300] md:z-[200] w-full md:w-[92vw] md:max-w-sm h-[100dvh] md:h-[560px] bg-white md:rounded-2xl shadow-2xl border-0 md:border md:border-slate-200 flex flex-col overflow-hidden"
     >
       {children}
     </motion.div>
