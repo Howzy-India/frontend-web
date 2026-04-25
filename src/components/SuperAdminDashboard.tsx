@@ -244,6 +244,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       label: 'Lead Management',
       items: [
         { id: 'enquiries', label: 'Enquiries', icon: Inbox },
+        { id: 'careers-partner-enquiries', label: 'Careers & Partner Enquiries', icon: UserCheck },
         { id: 'leads', label: 'Global Leads', icon: Briefcase },
         { id: 'social-leads', label: 'Social Media Leads', icon: Share2 },
         { id: 'lead-allocation', label: 'Lead Allocation', icon: Network },
@@ -321,6 +322,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
     switch (activeTab) {
       case 'overview': return <AdminOverview />;
       case 'enquiries': return <AdminEnquiriesPanel />;
+      case 'careers-partner-enquiries': return <AdminEnquiriesPanel title="Careers & Partner Enquiries" sourceFilter={['careers','partner']} />;
       case 'client-logins': return <ClientLoginDashboard />;
       case 'client-registrations': return <ClientRegistrationsPanel isSuperAdmin={userRole === 'super_admin'} />;
       case 'leads': return <GlobalLeadsView leads={leads} />;
