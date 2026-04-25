@@ -21,8 +21,7 @@ import ClientChatWidget from './ClientChatWidget';
 import ErrorBoundary from './ErrorBoundary';
 import type { AppRole } from '../hooks/useAuth';
 import { getClientProfile } from '../hooks/useClientProfile';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { uploadResaleFloorPlan } from '../utils/storageUpload';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -531,24 +530,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
     setFloorPlanError('');
     setFloorPlanFileName(file.name);
     try {
-      const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
-      const task = uploadBytesResumable(r, file, { contentType: file.type || undefined });
-      await new Promise<void>((resolve, reject) => {
-        task.on(
-          'state_changed',
-          (snap) => {
-            if (snap.totalBytes > 0) {
-              setFloorPlanProgress(Math.min(100, Math.round((snap.bytesTransferred / snap.totalBytes) * 100)));
-            }
-          },
-          (err) => {
-            console.error('[ClientPortal:floorPlanUpload] failed', { code: err.code, message: err.message });
-            reject(err);
-          },
-          () => resolve(),
-        );
-      });
-      const url = await getDownloadURL(task.snapshot.ref);
+      const url = await uploadResaleFloorPlan(file, setFloorPlanProgress);
       setResaleForm(f => ({ ...f, floorPlan: url }));
       setFloorPlanProgress(100);
     } catch (err) {

@@ -1,7 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { X, Upload, Loader2, Trash2, Plus, Link, Eye, EyeOff } from 'lucide-react';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { uploadFileWithProgress } from '../utils/storageUpload';
 import {
   api, CreateProjectInput, PropertyType, ProjectType, ProjectSegment,
   PossessionStatus, DensityType, ProjectZone, ProjectStatus,
@@ -112,40 +111,9 @@ function ErrTip({ msg }: { msg: string }) {
 }
 
 // ── Firebase Storage upload helper ───────────────────────────────────
-// Uses resumable upload so we can report real-time progress (0-100) to the UI.
-async function uploadToStorage(
-  file: File,
-  path: string,
-  onProgress?: (percent: number) => void,
-): Promise<string> {
-  const r = storageRef(storage, path);
-  const task = uploadBytesResumable(r, file, { contentType: file.type || undefined });
-  return new Promise<string>((resolve, reject) => {
-    task.on(
-      'state_changed',
-      (snap) => {
-        if (onProgress && snap.totalBytes > 0) {
-          const pct = Math.min(100, Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
-          onProgress(pct);
-        }
-      },
-      (err) => {
-        // Surface the real Firebase Storage error so callers (and tests) can see it.
-        console.error('[uploadToStorage] failed', { path, code: err.code, message: err.message });
-        reject(err);
-      },
-      async () => {
-        try {
-          const url = await getDownloadURL(task.snapshot.ref);
-          resolve(url);
-        } catch (err) {
-          console.error('[uploadToStorage] getDownloadURL failed', { path, err });
-          reject(err);
-        }
-      },
-    );
-  });
-}
+// Thin wrapper around the shared resumable-upload helper so callers below
+// don't need to know the import path; progress is reported via callback.
+const uploadToStorage = uploadFileWithProgress;
 
 // ── Upload UI helpers ────────────────────────────────────────────────
 function fileFieldLabel(media: MediaFile): string {

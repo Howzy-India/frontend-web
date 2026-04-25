@@ -6,8 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { TEST_IDS } from '../constants/testIds';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { uploadResaleFloorPlan } from '../utils/storageUpload';
 import { 
   LayoutDashboard, 
   Users, 
@@ -597,24 +596,7 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
     setFloorPlanError('');
     setFloorPlanFileName(file.name);
     try {
-      const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
-      const task = uploadBytesResumable(r, file, { contentType: file.type || undefined });
-      await new Promise<void>((resolve, reject) => {
-        task.on(
-          'state_changed',
-          (snap) => {
-            if (snap.totalBytes > 0) {
-              setFloorPlanProgress(Math.min(100, Math.round((snap.bytesTransferred / snap.totalBytes) * 100)));
-            }
-          },
-          (err) => {
-            console.error('[SuperAdminDashboard:floorPlanUpload] failed', { code: err.code, message: err.message });
-            reject(err);
-          },
-          () => resolve(),
-        );
-      });
-      const url = await getDownloadURL(task.snapshot.ref);
+      const url = await uploadResaleFloorPlan(file, setFloorPlanProgress);
       setAddForm(f => ({ ...f, floorPlan: url }));
       setFloorPlanProgress(100);
     } catch (err) {
