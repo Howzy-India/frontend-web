@@ -41,7 +41,11 @@ interface ConfigRow { bhkCount: string; minSft: string; maxSft: string; unitCoun
 interface MediaFile  { file: File | null; fileKey: string; uploadedUrl: string; uploading: boolean; error: string; progress: number; }
 const emptyMedia = (): MediaFile => ({ file: null, fileKey: '', uploadedUrl: '', uploading: false, error: '', progress: 0 });
 
-const getFileKey = (file: File): string => `${file.name}:${file.size}:${file.type}`;
+// Stable per-file identity. `lastModified` makes two screenshots / two camera
+// captures with the same name+size+type still resolve to distinct keys, so the
+// dedup logic below doesn't silently swallow the user's second pick.
+const getFileKey = (file: File): string =>
+  `${file.name}:${file.size}:${file.lastModified}:${file.type}`;
 
 interface FormState {
   name: string; developerName: string; reraNumber: string;
@@ -832,33 +836,57 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                   uploadFolder={uploadFolder.current}
                   error={errors.photoFiles}
                   onAdd={(newFiles) => {
+                    // ⚠️ Compute dedup + pending uploads BEFORE calling setPhotos.
+                    // React 18 StrictMode invokes setState updaters twice in dev to
+                    // verify purity. Mutating `uploadingPhotoKeys.current` inside
+                    // the updater would mark a file as in-flight on the first
+                    // invocation, then cause the second invocation to skip it,
+                    // resulting in `pendingUploads` and the committed photo state
+                    // disagreeing — which manifested as "second Add Photos image
+                    // never loads".
+                    const currentPhotos = form.photoFiles;
+                    const existing = currentPhotos.filter(m => m.uploadedUrl || m.uploading || m.file);
+                    const existingKeys = new Set(existing.map(m => m.fileKey).filter(Boolean));
+                    const slots = Math.max(0, MAX_PHOTOS - existing.length);
+
+                    const seen = new Set<string>();
                     const pendingUploads: Array<{ file: File; fileKey: string }> = [];
+                    for (const file of newFiles) {
+                      if (pendingUploads.length >= slots) break;
+                      const fileKey = getFileKey(file);
+                      if (
+                        existingKeys.has(fileKey) ||
+                        uploadingPhotoKeys.current.has(fileKey) ||
+                        seen.has(fileKey)
+                      ) continue;
+                      seen.add(fileKey);
+                      pendingUploads.push({ file, fileKey });
+                    }
 
+                    if (pendingUploads.length === 0) return;
+
+                    // Reserve in-flight keys exactly once, OUTSIDE the updater.
+                    for (const { fileKey } of pendingUploads) {
+                      uploadingPhotoKeys.current.add(fileKey);
+                    }
+
+                    // Pure updater: derives next state purely from `prev`, with
+                    // a final guard against any racing entry that may have been
+                    // appended since we read `currentPhotos`.
                     setPhotos(prev => {
-                      const existing = prev.filter(m => m.uploadedUrl || m.uploading || m.file);
-                      const existingKeys = new Set(existing.map(m => m.fileKey).filter(Boolean));
-                      const slots = Math.max(0, MAX_PHOTOS - existing.length);
-
-                      for (const file of newFiles) {
-                        if (pendingUploads.length >= slots) break;
-                        const fileKey = getFileKey(file);
-                        if (existingKeys.has(fileKey) || uploadingPhotoKeys.current.has(fileKey)) continue;
-                        existingKeys.add(fileKey);
-                        uploadingPhotoKeys.current.add(fileKey);
-                        pendingUploads.push({ file, fileKey });
-                      }
-
-                      return [
-                        ...existing,
-                        ...pendingUploads.map(({ file, fileKey }) => ({
+                      const prevKeys = new Set(prev.map(m => m.fileKey).filter(Boolean));
+                      const survivors = prev.filter(m => m.uploadedUrl || m.uploading || m.file);
+                      const newEntries = pendingUploads
+                        .filter(({ fileKey }) => !prevKeys.has(fileKey))
+                        .map(({ file, fileKey }) => ({
                           file,
                           fileKey,
                           uploadedUrl: '',
                           uploading: true,
                           error: '',
                           progress: 0,
-                        })),
-                      ];
+                        }));
+                      return [...survivors, ...newEntries];
                     });
 
                     for (const { file, fileKey } of pendingUploads) {
