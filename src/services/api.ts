@@ -40,6 +40,17 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+async function put<T>(path: string, body: unknown): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 async function del<T>(path: string): Promise<T> {
   const headers = await authHeaders();
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -307,5 +318,14 @@ export const api = {
   deleteChatSession: (id: string) => del<any>(`/chat/sessions/${id}`),
   sendChatMessage: (id: string, message: string) =>
     post<{ reply: string; tool_results?: any[] }>(`/chat/sessions/${id}/message`, { message }, false),
+
+  // ── Project drafts (autosave) ──────────────────────────────────────
+  listDrafts: () =>
+    get<{ drafts: Array<{ id: string; ownerUid: string; propertyType: string | null; title: string | null; updatedAt: string | null; createdAt: string | null }> }>('/drafts'),
+  getDraft: (id: string) =>
+    get<{ id: string; ownerUid: string; propertyType: string | null; title: string | null; form: any; updatedAt: string | null; createdAt: string | null }>(`/drafts/${id}`),
+  saveDraft: (id: string, data: { propertyType?: string | null; title?: string | null; form: unknown }) =>
+    put<{ id: string; ok: true }>(`/drafts/${id}`, data),
+  deleteDraft: (id: string) => del<{ ok: true }>(`/drafts/${id}`),
 };
 

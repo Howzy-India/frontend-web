@@ -5,6 +5,7 @@ import {
   api, CreateProjectInput, PropertyType, ProjectType, ProjectSegment,
   PossessionStatus, DensityType, ProjectZone, ProjectStatus,
 } from '../services/api';
+import { useProjectDraft } from '../hooks/useProjectDraft';
 
 // ── Constants ────────────────────────────────────────────────────────
 const CITY_OPTIONS   = ['Hyderabad'] as const;
@@ -279,6 +280,32 @@ function MultiPhotoUpload({
   );
 }
 
+// ── Draft autosave status badge ──────────────────────────────────────
+function DraftStatusBadge({ status, lastSavedAt }: { status: 'idle' | 'saving' | 'saved' | 'error'; lastSavedAt: Date | null }) {
+  if (status === 'idle' && !lastSavedAt) return null;
+  let text = '';
+  let cls = 'text-slate-500';
+  if (status === 'saving') {
+    text = 'Saving…';
+    cls = 'text-slate-500';
+  } else if (status === 'error') {
+    text = 'Save failed';
+    cls = 'text-red-600';
+  } else if (lastSavedAt) {
+    const hh = String(lastSavedAt.getHours()).padStart(2, '0');
+    const mm = String(lastSavedAt.getMinutes()).padStart(2, '0');
+    text = `Saved · ${hh}:${mm}`;
+    cls = 'text-emerald-600';
+  } else {
+    return null;
+  }
+  return (
+    <span className={`text-[11px] font-medium ${cls}`} aria-live="polite" data-testid="draft-status">
+      {text}
+    </span>
+  );
+}
+
 // ── Main Modal Component ─────────────────────────────────────────────
 interface CreateProjectModalProps {
   propertyType: PropertyType;
@@ -288,9 +315,17 @@ interface CreateProjectModalProps {
   onSuccess: () => void;
   initialData?: any;
   projectId?: string;
+  /**
+   * When provided, the modal opens in "resume draft" mode: its initial form
+   * state is loaded from /drafts/:draftId on mount, and the same id is used
+   * for ongoing autosave. When omitted, a new draft id is generated.
+   */
+  draftId?: string;
+  /** Pre-fetched draft form payload (skips the GET /drafts/:id round-trip). */
+  draftForm?: any;
 }
 
-export default function CreateProjectModal({ propertyType, userRole, user, onClose, onSuccess, initialData, projectId }: CreateProjectModalProps) {
+export default function CreateProjectModal({ propertyType, userRole, user, onClose, onSuccess, initialData, projectId, draftId, draftForm }: CreateProjectModalProps) {
   const [form, setForm] = useState<FormState>(() => emptyForm(propertyType, userRole));
   const [errors, setErrors]       = useState<Record<string, string>>({});
   const [apiError, setApiError]   = useState('');
@@ -300,8 +335,10 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
   // Stable folder for this project's Storage files.
   // For edits use the existing uniqueId; for new projects generate one upfront so
   // files land in the correct folder before we even know the DB-assigned id.
+  // When resuming a draft we reuse the draftId so files uploaded before the
+  // user closed the modal remain associated.
   const uploadFolder = React.useRef<string>(
-    initialData?.uniqueId ?? `PROP-${crypto.randomUUID()}`
+    initialData?.uniqueId ?? draftId ?? `PROP-${crypto.randomUUID()}`
   );
 
   // Pre-fill form when editing
@@ -367,6 +404,43 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
     }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Draft autosave ─────────────────────────────────────────────────
+  // We always have a stable id (uploadFolder.current) — for resumed drafts
+  // it equals the original draftId; for fresh "Onboard Builder" clicks it's
+  // a new PROP-<uuid>. Autosave is disabled when editing an existing
+  // approved/pending project.
+  const draftEnabled = !projectId;
+
+  // Pre-fill form from a draft payload (passed in from the dashboard's
+  // "Resume" button to avoid an extra round-trip).
+  React.useEffect(() => {
+    if (!draftId || !draftForm || projectId) return;
+    setForm(prev => ({ ...prev, ...draftForm, _propertyType: prev._propertyType }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fallback: if we got a draftId but no form payload, fetch it.
+  React.useEffect(() => {
+    if (!draftId || draftForm || projectId) return;
+    let cancelled = false;
+    api.getDraft(draftId)
+      .then(draft => {
+        if (cancelled || !draft?.form) return;
+        setForm(prev => ({ ...prev, ...draft.form, _propertyType: prev._propertyType }));
+      })
+      .catch(err => console.warn('[CreateProjectModal] failed to load draft', err));
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const draftHook = useProjectDraft({
+    draftId: uploadFolder.current,
+    propertyType,
+    title: form.name?.trim() || null,
+    form,
+    enabled: draftEnabled,
+  });
 
   const set = (k: keyof FormState, v: unknown) => {
     if (errors[k as string]) setErrors(prev => { const n = { ...prev }; delete n[k as string]; return n; });
@@ -598,6 +672,11 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
         // as the Storage folder where files were already uploaded.
         await api.addProperty({ ...buildPayload(), uniqueId: uploadFolder.current });
       }
+      // Submission succeeded — discard the draft so it doesn't show up in
+      // "My Submissions" alongside the real project.
+      if (draftEnabled) {
+        await draftHook.deleteDraft();
+      }
       onSuccess(); onClose();
     } catch (ex: unknown) {
       setApiError(ex instanceof Error ? ex.message : 'Failed to save project. Please try again.');
@@ -617,9 +696,12 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
             <h4 className="text-lg font-bold text-slate-900">{projectId ? 'Edit' : (userRole === 'super_admin' ? 'Add' : 'Submit')} {typeLabel[pt]}</h4>
             {userRole !== 'super_admin' && <p className="text-xs text-amber-600 mt-0.5">Will be submitted for super admin approval</p>}
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-100">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {draftEnabled && <DraftStatusBadge status={draftHook.saveStatus} lastSavedAt={draftHook.lastSavedAt} />}
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors rounded-full hover:bg-slate-100">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable body */}
