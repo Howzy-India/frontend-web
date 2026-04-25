@@ -88,6 +88,7 @@ import {
 import Logo from './Logo';
 import { api } from '../services/api';
 import CreateProjectModal from './CreateProjectModal';
+import DraftsList from './DraftsList';
 import ViewProjectModal from './ViewProjectModal';
 import AdminVerificationPanel from './AdminVerificationPanel';
 import BulkPropertyUpload from './BulkPropertyUpload';
@@ -1618,6 +1619,8 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
   const [actionMenu, setActionMenu] = useState<{ id: string; x: number; y: number; project: any } | null>(null);
   const [viewProject, setViewProject] = useState<any | null>(null);
   const [editProject, setEditProject] = useState<any | null>(null);
+  const [resumingDraft, setResumingDraft] = useState<{ id: string; form: any } | null>(null);
+  const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const propertyType = PROPERTY_TYPE_MAP[type] ?? 'PROJECT';
@@ -1681,13 +1684,44 @@ const AllPropertiesView = React.memo(function AllPropertiesView({
         </div>
       </div>
 
+      {/* In-progress drafts (autosaved CreateProjectModal forms) */}
+      <DraftsList
+        refreshKey={draftsRefreshKey}
+        onResume={(id, form) => setResumingDraft({ id, form })}
+      />
+
       {showModal && (
         <CreateProjectModal
           propertyType={propertyType}
           userRole={userRole}
           user={user}
-          onClose={() => setShowModal(false)}
-          onSuccess={handleSuccess}
+          onClose={() => {
+            setShowModal(false);
+            setDraftsRefreshKey(k => k + 1);
+          }}
+          onSuccess={() => {
+            handleSuccess();
+            setDraftsRefreshKey(k => k + 1);
+          }}
+        />
+      )}
+
+      {resumingDraft && (
+        <CreateProjectModal
+          propertyType={propertyType}
+          userRole={userRole}
+          user={user}
+          draftId={resumingDraft.id}
+          draftForm={resumingDraft.form}
+          onClose={() => {
+            setResumingDraft(null);
+            setDraftsRefreshKey(k => k + 1);
+          }}
+          onSuccess={() => {
+            handleSuccess();
+            setResumingDraft(null);
+            setDraftsRefreshKey(k => k + 1);
+          }}
         />
       )}
 

@@ -26,6 +26,7 @@ import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import CreateProjectModal from './CreateProjectModal';
 import AssignedLeadsTable from './AssignedLeadsTable';
+import DraftsList from './DraftsList';
 
 interface HowzerEmployeeDashboardProps {
   readonly onLogout: () => void;
@@ -41,6 +42,8 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
   const [isPlotsModalOpen, setIsPlotsModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<{ id: string; data: any } | null>(null);
+  const [resumingDraft, setResumingDraft] = useState<{ id: string; form: any } | null>(null);
+  const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   const [viewingProject, setViewingProject] = useState<Record<string, unknown> | null>(null);
   const [projectToastMsg, setProjectToastMsg] = useState('');
   const [mySubmissions, setMySubmissions] = useState<any[]>([]);
@@ -486,6 +489,12 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
               )}
             </div>
 
+            {/* In-progress drafts (autosaved CreateProjectModal forms) */}
+            <DraftsList
+              refreshKey={draftsRefreshKey}
+              onResume={(id, form) => setResumingDraft({ id, form })}
+            />
+
             {/* My Submissions Section */}
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <div className="p-6 border-b border-slate-200 flex justify-between items-center">
@@ -625,12 +634,36 @@ export default function HowzerEmployeeDashboard({ onLogout, userEmail = '' }: Ho
           propertyType="PROJECT"
           userRole={userRole}
           user={user}
-          onClose={() => setIsProjectModalOpen(false)}
+          onClose={() => {
+            setIsProjectModalOpen(false);
+            setDraftsRefreshKey(k => k + 1);
+          }}
           onSuccess={() => {
             setIsProjectModalOpen(false);
             setProjectToastMsg('Project submitted for approval!');
             setTimeout(() => setProjectToastMsg(''), 4000);
             reloadOnboardedProjects();
+            setDraftsRefreshKey(k => k + 1);
+          }}
+        />
+      )}
+      {resumingDraft && (
+        <CreateProjectModal
+          propertyType="PROJECT"
+          userRole={userRole}
+          user={user}
+          draftId={resumingDraft.id}
+          draftForm={resumingDraft.form}
+          onClose={() => {
+            setResumingDraft(null);
+            setDraftsRefreshKey(k => k + 1);
+          }}
+          onSuccess={() => {
+            setResumingDraft(null);
+            setProjectToastMsg('Project submitted for approval!');
+            setTimeout(() => setProjectToastMsg(''), 4000);
+            reloadOnboardedProjects();
+            setDraftsRefreshKey(k => k + 1);
           }}
         />
       )}
