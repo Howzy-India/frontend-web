@@ -1,7 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { X, Upload, Loader2, Trash2, Plus, Link, Eye, EyeOff } from 'lucide-react';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { uploadFileWithProgress } from '../utils/storageUpload';
 import {
   api, CreateProjectInput, PropertyType, ProjectType, ProjectSegment,
   PossessionStatus, DensityType, ProjectZone, ProjectStatus,
@@ -39,8 +38,8 @@ const MAX_PHOTOS = 100;
 
 // ── Types ────────────────────────────────────────────────────────────
 interface ConfigRow { bhkCount: string; minSft: string; maxSft: string; unitCount: string; }
-interface MediaFile  { file: File | null; fileKey: string; uploadedUrl: string; uploading: boolean; error: string; }
-const emptyMedia = (): MediaFile => ({ file: null, fileKey: '', uploadedUrl: '', uploading: false, error: '' });
+interface MediaFile  { file: File | null; fileKey: string; uploadedUrl: string; uploading: boolean; error: string; progress: number; }
+const emptyMedia = (): MediaFile => ({ file: null, fileKey: '', uploadedUrl: '', uploading: false, error: '', progress: 0 });
 
 const getFileKey = (file: File): string => `${file.name}:${file.size}:${file.type}`;
 
@@ -112,10 +111,36 @@ function ErrTip({ msg }: { msg: string }) {
 }
 
 // ── Firebase Storage upload helper ───────────────────────────────────
-async function uploadToStorage(file: File, path: string): Promise<string> {
-  const r = storageRef(storage, path);
-  await uploadBytes(r, file);
-  return getDownloadURL(r);
+// Thin wrapper around the shared resumable-upload helper so callers below
+// don't need to know the import path; progress is reported via callback.
+const uploadToStorage = uploadFileWithProgress;
+
+// ── Upload UI helpers ────────────────────────────────────────────────
+function fileFieldLabel(media: MediaFile): string {
+  if (media.uploading) return `Uploading… ${media.progress}%`;
+  if (media.file) return media.file.name;
+  return 'Choose file…';
+}
+
+function PhotoCardContent({ photo, index }: Readonly<{ photo: MediaFile; index: number }>) {
+  if (photo.uploadedUrl) {
+    return <img src={photo.uploadedUrl} alt={`Project ${index + 1}`} className="w-full h-full object-cover" />;
+  }
+  if (photo.uploading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-1.5 px-2 w-full" data-testid="photo-uploading">
+        <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
+        <span className="text-[10px] font-semibold text-indigo-600">{photo.progress}%</span>
+        <progress
+          className="w-full h-1 [&::-webkit-progress-bar]:bg-slate-200 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-value]:bg-indigo-600 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-indigo-600"
+          value={photo.progress}
+          max={100}
+          aria-label="Uploading photo"
+        />
+      </div>
+    );
+  }
+  return <span className="text-[11px] text-slate-500 truncate px-2">{photo.file?.name}</span>;
 }
 
 // ── FileUploadField ──────────────────────────────────────────────────
@@ -143,12 +168,27 @@ function FileUploadField({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className={`w-full flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 transition-colors text-left ${fieldError ? 'border-red-300 bg-red-50/40' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+          disabled={media.uploading}
+          className={`w-full flex flex-col gap-1.5 border-2 border-dashed rounded-xl px-4 py-3 transition-colors text-left disabled:cursor-not-allowed ${fieldError ? 'border-red-300 bg-red-50/40' : 'border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30'}`}
+          data-testid={`file-upload-${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')}`}
         >
-          {media.uploading ? <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" /> : <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />}
-          <span className="text-sm text-slate-500">{media.uploading ? 'Uploading…' : media.file ? media.file.name : 'Choose file…'}</span>
-          {hint && !media.file && <span className="text-xs text-slate-400 ml-auto">{hint}</span>}
-          {media.error && <span className="text-xs text-red-600 ml-auto">{media.error}</span>}
+          <div className="flex items-center gap-3 w-full">
+            {media.uploading ? <Loader2 className="w-4 h-4 text-indigo-500 animate-spin flex-shrink-0" /> : <Upload className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+            <span className="text-sm text-slate-500 truncate">{fileFieldLabel(media)}</span>
+            {hint && !media.file && <span className="text-xs text-slate-400 ml-auto whitespace-nowrap">{hint}</span>}
+            {media.error && !media.uploading && <span className="text-xs text-red-600 ml-auto whitespace-nowrap" title={media.error}>Failed</span>}
+          </div>
+          {media.uploading && (
+            <progress
+              className="w-full h-1.5 [&::-webkit-progress-bar]:bg-slate-100 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-value]:bg-indigo-600 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-indigo-600"
+              value={media.progress}
+              max={100}
+              aria-label={`Uploading ${label}`}
+            />
+          )}
+          {media.error && !media.uploading && (
+            <span className="text-[11px] text-red-600">{media.error}</span>
+          )}
         </button>
       )}
       <input ref={inputRef} type="file" accept={accept} className="hidden"
@@ -216,15 +256,9 @@ function MultiPhotoUpload({
         <div className="grid grid-cols-3 gap-2">
           {visiblePhotos.map(({ photo, originalIndex }, i) => (
             <div key={photo.fileKey || photo.uploadedUrl || `photo-${originalIndex}`} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-50 aspect-video flex items-center justify-center">
-              {photo.uploadedUrl ? (
-                <img src={photo.uploadedUrl} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-              ) : photo.uploading ? (
-                <Loader2 className="w-5 h-5 text-indigo-500 animate-spin" />
-              ) : (
-                <span className="text-[11px] text-slate-500 truncate px-2">{photo.file?.name}</span>
-              )}
+              <PhotoCardContent photo={photo} index={i} />
               {photo.error && (
-                <span className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[10px] px-1.5 py-0.5 text-center">{photo.error}</span>
+                <span className="absolute bottom-0 left-0 right-0 bg-red-500/90 text-white text-[10px] px-1.5 py-0.5 text-center truncate" title={photo.error}>{photo.error}</span>
               )}
               <button
                 type="button"
@@ -270,7 +304,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
   React.useEffect(() => {
     if (!initialData || !projectId) return;
     const toMedia = (url?: string): MediaFile =>
-      url ? { file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '' } : emptyMedia();
+      url ? { file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '', progress: 100 } : emptyMedia();
     setForm(prev => ({
       ...prev,
       name: initialData.name ?? '',
@@ -305,7 +339,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
           }))
         : [{ bhkCount: '', minSft: '', maxSft: '', unitCount: '' }],
       photoFiles: (initialData.photos ?? []).length > 0
-        ? (initialData.photos as string[]).map(url => ({ file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '' }))
+        ? (initialData.photos as string[]).map(url => ({ file: null, fileKey: url, uploadedUrl: url, uploading: false, error: '', progress: 100 }))
         : [emptyMedia()],
       videoLink3D: initialData.videoLink3D ?? '',
       brochureFile: toMedia(initialData.brochureLink),
@@ -350,10 +384,16 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
   const handleUploadPhoto = async (file: File, fileKey: string) => {
     try {
       // Scope photos to this project's folder; timestamp avoids name collisions
-      const url = await uploadToStorage(file, `projects/${uploadFolder.current}/photos/${Date.now()}_${file.name}`);
-      updatePhotoByKey(fileKey, { uploadedUrl: url, uploading: false });
-    } catch {
-      updatePhotoByKey(fileKey, { uploading: false, error: 'Upload failed' });
+      const url = await uploadToStorage(
+        file,
+        `projects/${uploadFolder.current}/photos/${Date.now()}_${file.name}`,
+        (pct) => updatePhotoByKey(fileKey, { progress: pct }),
+      );
+      updatePhotoByKey(fileKey, { uploadedUrl: url, uploading: false, progress: 100, error: '' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      console.error('[handleUploadPhoto] failed', { fileKey, name: file.name, err });
+      updatePhotoByKey(fileKey, { uploading: false, progress: 0, error: message });
     } finally {
       uploadingPhotoKeys.current.delete(fileKey);
     }
@@ -365,11 +405,19 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
 
   const handleUploadSingle = async (field: 'brochureFile' | 'agreementFile', file: File) => {
     const subFolder = field === 'brochureFile' ? 'brochures' : 'agreements';
-    updateSingle(field, { file, uploading: true, error: '' });
+    updateSingle(field, { file, uploading: true, error: '', progress: 0 });
     try {
-      const url = await uploadToStorage(file, `projects/${uploadFolder.current}/${subFolder}/${file.name}`);
-      updateSingle(field, { uploadedUrl: url, uploading: false });
-    } catch { updateSingle(field, { uploading: false, error: 'Upload failed' }); }
+      const url = await uploadToStorage(
+        file,
+        `projects/${uploadFolder.current}/${subFolder}/${file.name}`,
+        (pct) => updateSingle(field, { progress: pct }),
+      );
+      updateSingle(field, { uploadedUrl: url, uploading: false, progress: 100, error: '' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      console.error('[handleUploadSingle] failed', { field, name: file.name, err });
+      updateSingle(field, { uploading: false, progress: 0, error: message });
+    }
   };
 
   // ── Validation ────────────────────────────────────────────────────
@@ -808,6 +856,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
                           uploadedUrl: '',
                           uploading: true,
                           error: '',
+                          progress: 0,
                         })),
                       ];
                     });
