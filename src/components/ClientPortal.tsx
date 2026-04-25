@@ -21,7 +21,7 @@ import ClientChatWidget from './ClientChatWidget';
 import ErrorBoundary from './ErrorBoundary';
 import type { AppRole } from '../hooks/useAuth';
 import { getClientProfile } from '../hooks/useClientProfile';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 
 function FilterDropdown({ label, value, options, onChange, isOpen, onToggle }: any) {
@@ -317,6 +317,8 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
   const [resaleSubmitMsg, setResaleSubmitMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingResaleId, setEditingResaleId] = useState<string | null>(null);
   const [floorPlanUploading, setFloorPlanUploading] = useState(false);
+  const [floorPlanProgress, setFloorPlanProgress] = useState(0);
+  const [floorPlanError, setFloorPlanError] = useState('');
   const [floorPlanFileName, setFloorPlanFileName] = useState('');
   const [isDelegateModalOpen, setIsDelegateModalOpen] = useState(false);
   const [delegatingResaleId, setDelegatingResaleId] = useState<string | null>(null);
@@ -525,14 +527,35 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
 
   const handleFloorPlanUpload = useCallback(async (file: File) => {
     setFloorPlanUploading(true);
+    setFloorPlanProgress(0);
+    setFloorPlanError('');
     setFloorPlanFileName(file.name);
     try {
       const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
-      await uploadBytes(r, file);
-      const url = await getDownloadURL(r);
+      const task = uploadBytesResumable(r, file, { contentType: file.type || undefined });
+      await new Promise<void>((resolve, reject) => {
+        task.on(
+          'state_changed',
+          (snap) => {
+            if (snap.totalBytes > 0) {
+              setFloorPlanProgress(Math.min(100, Math.round((snap.bytesTransferred / snap.totalBytes) * 100)));
+            }
+          },
+          (err) => {
+            console.error('[ClientPortal:floorPlanUpload] failed', { code: err.code, message: err.message });
+            reject(err);
+          },
+          () => resolve(),
+        );
+      });
+      const url = await getDownloadURL(task.snapshot.ref);
       setResaleForm(f => ({ ...f, floorPlan: url }));
-    } catch {
+      setFloorPlanProgress(100);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setFloorPlanError(message);
       setFloorPlanFileName('');
+      setFloorPlanProgress(0);
       setResaleForm(f => ({ ...f, floorPlan: '' }));
     } finally {
       setFloorPlanUploading(false);
@@ -2798,11 +2821,24 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
                         </button>
                       </div>
                     ) : (
-                      <label className={`w-full flex items-center gap-3 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors ${floorPlanUploading ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 hover:border-amber-400 hover:bg-amber-50/30'}`}>
-                        {floorPlanUploading
-                          ? <><Clock className="w-4 h-4 text-amber-500 animate-spin flex-shrink-0" /><span className="text-sm text-slate-500">Uploading…</span></>
-                          : <><Upload className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="text-sm text-slate-500">Choose image or PDF…</span></>
-                        }
+                      <label className={`w-full flex flex-col gap-1.5 border-2 border-dashed rounded-xl px-4 py-3 cursor-pointer transition-colors ${floorPlanUploading ? 'border-amber-300 bg-amber-50/30' : 'border-slate-200 hover:border-amber-400 hover:bg-amber-50/30'}`}>
+                        <div className="flex items-center gap-3 w-full">
+                          {floorPlanUploading
+                            ? <><Clock className="w-4 h-4 text-amber-500 animate-spin flex-shrink-0" /><span className="text-sm text-slate-500">Uploading… {floorPlanProgress}%</span></>
+                            : <><Upload className="w-4 h-4 text-slate-400 flex-shrink-0" /><span className="text-sm text-slate-500">Choose image or PDF…</span></>
+                          }
+                        </div>
+                        {floorPlanUploading && (
+                          <progress
+                            className="w-full h-1.5 [&::-webkit-progress-bar]:bg-amber-100 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-value]:bg-amber-500 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-amber-500"
+                            value={floorPlanProgress}
+                            max={100}
+                            aria-label="Uploading floor plan"
+                          />
+                        )}
+                        {floorPlanError && !floorPlanUploading && (
+                          <span className="text-[11px] text-red-600">{floorPlanError}</span>
+                        )}
                         <input type="file" accept="image/*,application/pdf" className="hidden" disabled={floorPlanUploading}
                           onChange={e => { const f = e.target.files?.[0]; if (f) handleFloorPlanUpload(f); e.target.value = ''; }} />
                       </label>

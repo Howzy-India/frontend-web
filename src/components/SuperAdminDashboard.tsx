@@ -6,7 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { TEST_IDS } from '../constants/testIds';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 import { 
   LayoutDashboard, 
@@ -585,20 +585,43 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
   });
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [floorPlanUploading, setFloorPlanUploading] = useState(false);
+  const [floorPlanProgress, setFloorPlanProgress] = useState(0);
+  const [floorPlanError, setFloorPlanError] = useState('');
   const [floorPlanFileName, setFloorPlanFileName] = useState('');
   const floorPlanInputRef = useRef<HTMLInputElement>(null);
   const apiService = api;
 
   const handleFloorPlanUpload = async (file: File) => {
     setFloorPlanUploading(true);
+    setFloorPlanProgress(0);
+    setFloorPlanError('');
     setFloorPlanFileName(file.name);
     try {
       const r = storageRef(storage, `resale/floor-plans/${Date.now()}_${file.name}`);
-      await uploadBytes(r, file);
-      const url = await getDownloadURL(r);
+      const task = uploadBytesResumable(r, file, { contentType: file.type || undefined });
+      await new Promise<void>((resolve, reject) => {
+        task.on(
+          'state_changed',
+          (snap) => {
+            if (snap.totalBytes > 0) {
+              setFloorPlanProgress(Math.min(100, Math.round((snap.bytesTransferred / snap.totalBytes) * 100)));
+            }
+          },
+          (err) => {
+            console.error('[SuperAdminDashboard:floorPlanUpload] failed', { code: err.code, message: err.message });
+            reject(err);
+          },
+          () => resolve(),
+        );
+      });
+      const url = await getDownloadURL(task.snapshot.ref);
       setAddForm(f => ({ ...f, floorPlan: url }));
-    } catch {
+      setFloorPlanProgress(100);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      setFloorPlanError(message);
       setFloorPlanFileName('');
+      setFloorPlanProgress(0);
       setAddForm(f => ({ ...f, floorPlan: '' }));
     } finally {
       setFloorPlanUploading(false);
@@ -812,8 +835,19 @@ function ResalePropertiesAdmin({ userRole }: { readonly userRole: string }) {
               ) : (
                 <button type="button" disabled={floorPlanUploading}
                   onClick={() => floorPlanInputRef.current?.click()}
-                  className="w-full flex items-center gap-2 border-2 border-dashed border-slate-200 hover:border-amber-400 rounded-lg px-3 py-2 text-sm text-slate-500 transition-colors disabled:opacity-60">
-                  {floorPlanUploading ? 'Uploading…' : 'Choose image or PDF…'}
+                  className="w-full flex flex-col items-start gap-1.5 border-2 border-dashed border-slate-200 hover:border-amber-400 rounded-lg px-3 py-2 text-sm text-slate-500 transition-colors disabled:opacity-60">
+                  <span>{floorPlanUploading ? `Uploading… ${floorPlanProgress}%` : 'Choose image or PDF…'}</span>
+                  {floorPlanUploading && (
+                    <progress
+                      className="w-full h-1.5 [&::-webkit-progress-bar]:bg-amber-100 [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-value]:bg-amber-500 [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:bg-amber-500"
+                      value={floorPlanProgress}
+                      max={100}
+                      aria-label="Uploading floor plan"
+                    />
+                  )}
+                  {floorPlanError && !floorPlanUploading && (
+                    <span className="text-[11px] text-red-600">{floorPlanError}</span>
+                  )}
                 </button>
               )}
               <input ref={floorPlanInputRef} type="file" accept="image/*,application/pdf" className="hidden" disabled={floorPlanUploading}
