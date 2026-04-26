@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
-import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot, Upload, Menu } from 'lucide-react';
+import { Search, MapPin, Filter, Heart, Home, Trees, Map, Building2, Phone, Calendar, ArrowLeft, ArrowRight, LogOut, FileText, CheckCircle2, Clock, X, Plus, Bell, Star, Shield, MessageCircle, Mail, User, RefreshCw, Briefcase, TrendingUp, Sparkles, Tag, ChevronLeft, ChevronDown, TrendingDown, Globe, DollarSign, Eye, Users, Key, Zap, Layout, FileCheck, PenTool, Landmark, Palette, Leaf, Sun, Apple, Wind, Moon, ShoppingBag, Truck, BarChart3, Settings, CreditCard, Bot, Upload, Menu } from 'lucide-react';
 
 function WhatsAppIcon({ className = 'w-5 h-5' }: Readonly<{ className?: string }>) {
   return (
@@ -1222,7 +1222,29 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full space-y-8 pb-32 md:pb-8">
-        
+        {selectedProperty && (
+          <ProjectDetailsPage
+            property={selectedProperty}
+            similar={properties
+              .filter(p =>
+                p.id !== selectedProperty.id &&
+                p.type === selectedProperty.type &&
+                (
+                  !selectedProperty.details?.city ||
+                  !p.details?.city ||
+                  String(p.details.city).toLowerCase() === String(selectedProperty.details.city).toLowerCase() ||
+                  String(p.details?.location || '').toLowerCase() === String(selectedProperty.details?.location || '').toLowerCase()
+                )
+              )
+              .slice(0, 6)}
+            savedIds={savedProperties}
+            onSave={handleSaveProperty}
+            onSelectSimilar={(p) => { setSelectedProperty(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            onBack={() => setSelectedProperty(null)}
+            onEnquiry={handleEnquiry}
+          />
+        )}
+        {!selectedProperty && (<>
         {activeTab === 'Home' && (
           <div className="space-y-12 md:space-y-16 pb-12">
             {/* Category Selector */}
@@ -2331,6 +2353,7 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
             </div>
           </div>
         )}
+        </>)}
 
       </main>
 
@@ -2374,158 +2397,6 @@ export default function ClientPortal({ uid, onLogout, onLoginClick, onProfileUpd
         onAIPressEnd={onAIPressEnd}
       />
 
-      {/* Property Details Modal */}
-      <AnimatePresence>
-        {selectedProperty && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
-            >
-              <div className="flex-1 overflow-y-auto">
-                {/* Header Image */}
-                <div className="h-64 md:h-80 bg-slate-200 relative">
-                  <img 
-                    src={`https://images.unsplash.com/photo-${selectedProperty.type === 'Farm Land' ? '1500382017468-9049fed747ef' : '1600596542815-ffad4c1539a9'}?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80`} 
-                    alt={selectedProperty.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
-                  
-                  <button
-                    onClick={() => setSelectedProperty(null)}
-                    className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 backdrop-blur-md text-white rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-
-                  <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-3 py-1 bg-indigo-500 text-white text-xs font-bold rounded-lg uppercase tracking-wider">
-                          {selectedProperty.type}
-                        </span>
-                        <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-xs font-medium rounded-lg">
-                          ID: {selectedProperty.id}
-                        </span>
-                      </div>
-                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">{selectedProperty.name}</h2>
-                      <div className="flex items-center gap-2 text-slate-200 text-sm">
-                        <MapPin className="w-4 h-4 shrink-0" />
-                        <span className="line-clamp-1">{selectedProperty.details?.location || selectedProperty.details?.city || 'Location not specified'}</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => handleSaveProperty(selectedProperty.id)}
-                      className={`p-3 rounded-full backdrop-blur-md transition-colors self-start sm:self-auto ${
-                        savedProperties.includes(selectedProperty.id) 
-                          ? 'bg-red-500 text-white' 
-                          : 'bg-white/20 text-white hover:bg-white/40'
-                      }`}
-                    >
-                      <Heart className={`w-6 h-6 ${savedProperties.includes(selectedProperty.id) ? 'fill-current' : ''}`} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 space-y-8">
-                    {/* Description */}
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-4">About this Property</h3>
-                      <p className="text-slate-600 leading-relaxed">
-                        {selectedProperty.details?.description || 'No description provided for this property. Please contact us for more details.'}
-                      </p>
-                    </div>
-
-                    {/* Key Details */}
-                    <div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-4">Key Details</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {Object.entries(selectedProperty.details || {})
-                          .filter(([key]) => !['documents', 'media', 'remarks', 'description', 'location', 'city'].includes(key))
-                          .slice(0, 6)
-                          .map(([key, value]) => (
-                          <div key={key} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                            <span className="block text-xs font-medium text-slate-500 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                            <span className="block text-sm font-bold text-slate-900 truncate">
-                              {Array.isArray(value) ? value.join(', ') : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Amenities */}
-                    {selectedProperty.details?.amenities && (
-                      <div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-4">Amenities</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {Array.isArray(selectedProperty.details.amenities) 
-                            ? selectedProperty.details.amenities.map((amenity: string, i: number) => (
-                                <span key={i} className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-medium border border-indigo-100">
-                                  {amenity}
-                                </span>
-                              ))
-                            : String(selectedProperty.details.amenities).split(',').map((amenity: string, i: number) => (
-                                <span key={i} className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-medium border border-indigo-100">
-                                  {amenity.trim()}
-                                </span>
-                              ))
-                          }
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action Sidebar */}
-                  <div className="space-y-6">
-                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
-                      <div className="mb-6">
-                        <span className="block text-sm font-medium text-slate-500 mb-1">Price Range</span>
-                        <span className="text-3xl font-bold text-slate-900">
-                          {selectedProperty.details?.price || selectedProperty.details?.budget || 'On Request'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <button 
-                          onClick={() => handleEnquiry(selectedProperty, 'General Enquiry')}
-                          className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm"
-                        >
-                          <FileText className="w-5 h-5" /> Send Enquiry
-                        </button>
-                        <button 
-                          onClick={() => handleEnquiry(selectedProperty, 'Request Call Back')}
-                          className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors border border-slate-200 shadow-sm"
-                        >
-                          <Phone className="w-5 h-5" /> Request Call Back
-                        </button>
-                        <button 
-                          onClick={() => handleEnquiry(selectedProperty, 'Site Visit')}
-                          className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors border border-slate-200 shadow-sm"
-                        >
-                          <Calendar className="w-5 h-5" /> Schedule Site Visit
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100">
-                      <h4 className="font-bold text-indigo-900 mb-2">Need Help?</h4>
-                      <p className="text-sm text-indigo-700 mb-4">Our property experts are here to assist you with any questions.</p>
-                      <a href="tel:+911234567890" className="flex items-center gap-2 text-indigo-600 font-bold hover:underline">
-                        <Phone className="w-4 h-4" /> +91 12345 67890
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
       <FarmLandOnboardingModal
         isOpen={isFarmLandModalOpen}
         onClose={() => setIsFarmLandModalOpen(false)}
@@ -4183,5 +4054,194 @@ function PropertyCard({ property, isSaved, onSave, onClick, category }: any) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+interface ProjectDetailsPageProps {
+  property: any;
+  similar: any[];
+  savedIds: string[];
+  onSave: (id: string) => void;
+  onSelectSimilar: (p: any) => void;
+  onBack: () => void;
+  onEnquiry: (p: any, kind: string) => void;
+}
+
+function ProjectDetailsPage({ property, similar, savedIds, onSave, onSelectSimilar, onBack, onEnquiry }: Readonly<ProjectDetailsPageProps>) {
+  const isSaved = savedIds.includes(property.id);
+  const heroPhoto = property.details?.media?.[0]
+    || property.details?.photos?.[0]
+    || `https://images.unsplash.com/photo-${property.type === 'Farm Land' ? '1500382017468-9049fed747ef' : '1600596542815-ffad4c1539a9'}?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80`;
+
+  const detailEntries = Object.entries(property.details || {})
+    .filter(([key]) => !['documents', 'media', 'photos', 'remarks', 'description', 'location', 'city', 'amenities'].includes(key))
+    .slice(0, 9);
+
+  return (
+    <div className="space-y-10">
+      {/* Back navigation */}
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to listings
+      </button>
+
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Hero */}
+        <div className="h-64 md:h-96 bg-slate-200 relative">
+          <img
+            src={heroPhoto}
+            alt={property.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
+          <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-3 py-1 bg-indigo-500 text-white text-xs font-bold rounded-lg uppercase tracking-wider">
+                  {property.type}
+                </span>
+                <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-white text-xs font-medium rounded-lg">
+                  ID: {property.id}
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-4xl font-bold text-white mb-1">{property.name}</h1>
+              <div className="flex items-center gap-2 text-slate-200 text-sm">
+                <MapPin className="w-4 h-4 shrink-0" />
+                <span className="line-clamp-1">{property.details?.location || property.details?.city || 'Location not specified'}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => onSave(property.id)}
+              className={`p-3 rounded-full backdrop-blur-md transition-colors self-start sm:self-auto ${
+                isSaved ? 'bg-red-500 text-white' : 'bg-white/20 text-white hover:bg-white/40'
+              }`}
+              aria-label={isSaved ? 'Unsave property' : 'Save property'}
+            >
+              <Heart className={`w-6 h-6 ${isSaved ? 'fill-current' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 md:p-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-4">About this Property</h2>
+              <p className="text-slate-600 leading-relaxed whitespace-pre-line">
+                {property.details?.description || 'No description provided for this property. Please contact us for more details.'}
+              </p>
+            </div>
+
+            {detailEntries.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-4">Key Details</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {detailEntries.map(([key, value]) => (
+                    <div key={key} className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                      <span className="block text-xs font-medium text-slate-500 capitalize mb-1">
+                        {key.replaceAll(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <span className="block text-sm font-bold text-slate-900 truncate">
+                        {Array.isArray(value) ? value.join(', ') : String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {property.details?.amenities && (
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-4">Amenities</h2>
+                <div className="flex flex-wrap gap-2">
+                  {(Array.isArray(property.details.amenities)
+                    ? property.details.amenities
+                    : String(property.details.amenities).split(',')
+                  ).map((amenity: string) => {
+                    const label = String(amenity).trim();
+                    return (
+                      <span key={label} className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-medium border border-indigo-100">
+                        {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action sidebar */}
+          <aside className="space-y-6">
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+              <div className="mb-6">
+                <span className="block text-sm font-medium text-slate-500 mb-1">Price Range</span>
+                <span className="text-3xl font-bold text-slate-900">
+                  {property.details?.price || property.details?.budget || 'On Request'}
+                </span>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => onEnquiry(property, 'General Enquiry')}
+                  className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm"
+                >
+                  <FileText className="w-5 h-5" /> Send Enquiry
+                </button>
+                <button
+                  onClick={() => onEnquiry(property, 'Request Call Back')}
+                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors border border-slate-200 shadow-sm"
+                >
+                  <Phone className="w-5 h-5" /> Request Call Back
+                </button>
+                <button
+                  onClick={() => onEnquiry(property, 'Site Visit')}
+                  className="w-full flex items-center justify-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl transition-colors border border-slate-200 shadow-sm"
+                >
+                  <Calendar className="w-5 h-5" /> Schedule Site Visit
+                </button>
+              </div>
+            </div>
+            <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100">
+              <h3 className="font-bold text-indigo-900 mb-2">Need Help?</h3>
+              <p className="text-sm text-indigo-700 mb-4">Our property experts are here to assist you with any questions.</p>
+              <a href="tel:+911234567890" className="flex items-center gap-2 text-indigo-600 font-bold hover:underline">
+                <Phone className="w-4 h-4" /> +91 12345 67890
+              </a>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {/* Similar Projects */}
+      <section>
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Similar Projects</h2>
+            <p className="text-slate-500 text-sm">Recommended properties you may also like</p>
+          </div>
+        </div>
+        {similar.length === 0 ? (
+          <div className="p-10 text-center bg-white rounded-2xl border border-slate-200">
+            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm">No similar projects found right now.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {similar.map((p) => (
+              <PropertyCard
+                key={p.id}
+                property={p}
+                isSaved={savedIds.includes(p.id)}
+                onSave={() => onSave(p.id)}
+                onClick={() => onSelectSimilar(p)}
+                category={p.type}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
