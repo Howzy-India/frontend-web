@@ -69,6 +69,7 @@ interface FormState {
   commissionType: string;
   commissionValue: string;
   usp: string; details: string; amenities: string[];
+  _propertyType: PropertyType;
 }
 
 function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
@@ -93,7 +94,7 @@ function emptyForm(propertyType: PropertyType, userRole?: string): FormState {
     commissionValue: '',
     usp: '', details: '', amenities: [],
     _propertyType: propertyType,
-  } as FormState & { _propertyType: PropertyType };
+  };
 }
 
 // ── Styling ──────────────────────────────────────────────────────────
@@ -609,7 +610,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
     return {
       name: form.name.trim(), developerName: form.developerName.trim(),
       reraNumber: str(form.reraNumber),
-      propertyType: (form as any)._propertyType as PropertyType,
+      propertyType: form._propertyType,
       projectType: (form.projectType as ProjectType) || undefined,
       projectSegment: (form.projectSegment as ProjectSegment) || undefined,
       possessionStatus: (form.possessionStatus as PossessionStatus) || undefined,
@@ -684,7 +685,7 @@ export default function CreateProjectModal({ propertyType, userRole, user, onClo
   };
 
   const typeLabel: Record<PropertyType, string> = { PROJECT: 'Project', PLOT: 'Plot', FARMLAND: 'Farm Land' };
-  const pt = (form as any)._propertyType as PropertyType;
+  const pt = form._propertyType;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
