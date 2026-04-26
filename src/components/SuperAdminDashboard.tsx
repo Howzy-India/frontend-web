@@ -340,7 +340,7 @@ export default function SuperAdminDashboard({ onLogout, footerConfig, onFooterCo
       case 'admin-users': return <AdminUsersManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'employees': return <EmployeesManagement isSuperAdmin={userRole === 'super_admin'} />;
       case 'attendance': return <AttendanceTrackingView />;
-      case 'verification': return <AdminVerificationPanel />;
+      case 'verification': return <AdminVerificationPanel userRole={userRole} user={user ? { name: user.name ?? null, phoneNumber: user.phoneNumber ?? null } : undefined} />;
       case 'alerts': return <MessagesAndAlertsView onBroadcast={handleBroadcast} />;
       case 'properties-config': return <PropertiesConfigView />;
       case 'category-cms': return <CategoryCMSView />;

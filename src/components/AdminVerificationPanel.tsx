@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { CheckCircle2, XCircle, Clock, Eye, EyeOff, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2, RefreshCw, ExternalLink, Download } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Eye, EyeOff, Filter, Search, Map, Trees, FileText, Image as ImageIcon, Video, X, UserPlus, Building2, RefreshCw, ExternalLink, Pencil } from 'lucide-react';
 import { api } from '../services/api';
+import CreateProjectModal from './CreateProjectModal';
 
-export default function AdminVerificationPanel() {
+interface AdminVerificationPanelProps {
+  userRole?: string;
+  user?: { name: string | null; phoneNumber: string | null };
+}
+
+export default function AdminVerificationPanel({ userRole, user }: AdminVerificationPanelProps = {}) {
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'All' | 'Farm Land' | 'Plot' | 'Project' | 'Partner' | 'Builder'>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<any | null>(null);
+  const [editingProject, setEditingProject] = useState<Record<string, any> | null>(null);
   const [remarks, setRemarks] = useState('');
   const [remarksError, setRemarksError] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
@@ -210,13 +217,25 @@ export default function AdminVerificationPanel() {
                       </span>
                     </td>
                     <td className="p-4 text-right">
-                      <button 
-                        onClick={() => openReview(sub)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Review
-                      </button>
+                      <div className="inline-flex items-center gap-2">
+                        {sub.isCloudProject && sub.status === 'Pending' && sub.rawProject && (
+                          <button
+                            onClick={() => setEditingProject(sub.rawProject)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors"
+                            title="Edit project before approval"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openReview(sub)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Review
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -342,6 +361,23 @@ export default function AdminVerificationPanel() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Project Modal — opens CreateProjectModal in edit mode for pending cloud projects */}
+      {editingProject && (
+        <CreateProjectModal
+          propertyType={editingProject.propertyType ?? 'PROJECT'}
+          userRole={userRole}
+          user={user}
+          initialData={editingProject}
+          projectId={editingProject.id}
+          onClose={() => setEditingProject(null)}
+          onSuccess={() => {
+            setEditingProject(null);
+            setToastMsg('Project updated');
+            fetchSubmissions();
+          }}
+        />
+      )}
     </div>
   );
 }
